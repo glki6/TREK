@@ -423,6 +423,34 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days, assignments, dayNotes, reservations, transportPosVersion])
 
+  // Collect drive runs from a day's merged items (shared by per-day route effect + trip-level route)
+  const collectRunsForDay = (dayId: number): { lat: number; lng: number }[][] => {
+    const merged = mergedItemsMap[dayId] || []
+    const runs: { id: number; lat: number; lng: number }[][] = []
+    let cur: { id: number; lat: number; lng: number }[] = []
+    let curHasPlace = false
+    for (const it of merged) {
+      if (it.type === 'place' && it.data.place?.lat && it.data.place?.lng) {
+        cur.push({ id: it.data.id, lat: it.data.place.lat, lng: it.data.place.lng })
+        curHasPlace = true
+      } else if (it.type === 'transport') {
+        const r = it.data
+        const { from, to } = getTransportRouteEndpoints(r, dayId)
+        if (from || to) {
+          if (from) cur.push({ id: r.id, lat: from.lat, lng: from.lng })
+          if (cur.length >= 2 && curHasPlace) runs.push(cur)
+          cur = []
+          curHasPlace = false
+          if (to) cur.push({ id: r.id, lat: to.lat, lng: to.lng })
+        } else if (cur.length > 0) {
+          cur[cur.length - 1] = { ...cur[cur.length - 1], id: r.id }
+        }
+      }
+    }
+    if (cur.length >= 2 && curHasPlace) runs.push(cur)
+    return runs.map(run => run.map(p => ({ lat: p.lat, lng: p.lng })))
+  }
+
   // Days whose inline route legs should be computed & shown. Desktop: the selected
   // day while the Route toggle is on. Mobile: each expanded day the user tapped
   // "Route" on — shown inline so seeing distances between places doesn't require
@@ -873,9 +901,9 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     try {
       const allDayRuns: { lat: number; lng: number }[][][] = []
       for (const day of days) {
-        const { runs } = planDay(day.id)
+        const runs = collectRunsForDay(day.id)
         if (runs.length > 0) {
-          allDayRuns.push(runs.map(run => run.map(p => ({ lat: p.lat, lng: p.lng }))))
+          allDayRuns.push(runs)
         }
       }
       if (allDayRuns.length === 0) { toast.error(t('dayplan.toast.needTwoPlaces')); return }
