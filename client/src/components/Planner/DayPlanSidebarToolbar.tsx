@@ -374,7 +374,7 @@ export function DayPlanSidebarToolbar({
           fontSize: 'calc(11px * var(--fs-scale-caption, 1))', fontWeight: 500,
           color: 'var(--text-primary)',
         }}>
-          Total: {tripRouteInfo.distanceText} \u00b7 {tripRouteInfo.durationText}
+          Total: {tripRouteInfo.distanceText} · {tripRouteInfo.durationText}
         </div>
       )}
     </div>
