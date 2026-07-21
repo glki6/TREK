@@ -95,7 +95,7 @@ interface Props {
   onMapReady?: (map: any | null) => void
   useDayColors?: boolean
   selectedDayIndex?: number | null
-  placeDayMap?: Record<string, { dayIndex: number; orderNumber: number } | Array<{ dayIndex: number; orderNumber: number }> | null>
+  placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
 }
 
 function createMarkerElement(place: Place & { category_color?: string; category_icon?: string }, photoUrl: string | null, orderNumbers: number[] | null, selected: boolean): HTMLDivElement {

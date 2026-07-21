@@ -102,9 +102,11 @@ interface DayPlanSidebarProps {
   /** Mobile: drag & drop reorder is disabled (touch-scroll hijack, #1432); the
    *  grip handle is hidden and the arrow reorder buttons take over instead. */
   isMobile?: boolean
-  /** T7-1c: maps each placeId → {dayIndex, orderNumber} for day-color indicators */
-  placeDayMap?: Record<string, { dayIndex: number; orderNumber: number }>
+  /** T7-1c: maps each placeId → array of {dayIndex, orderNumber} for day-color indicators (multi-day support) */
+  placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
   useDayColors?: boolean
+  /** Zero-based index of the currently selected day — used to resolve multi-day places */
+  selectedDayIndex?: number | null
 }
 
 /**
@@ -153,6 +155,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   isMobile = false,
   placeDayMap,
   useDayColors,
+  selectedDayIndex,
   } = props
   const toast = useToast()
   const { t, language, locale } = useTranslation()
@@ -1226,6 +1229,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     setExpandedRouteDayIds,
     placeDayMap,
     useDayColors,
+    selectedDayIndex,
   }
 }
 
@@ -1399,6 +1403,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     setExpandedRouteDayIds,
     placeDayMap,
     useDayColors,
+    selectedDayIndex,
   } = S
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', fontFamily: "var(--font-system)" }}>
@@ -1881,7 +1886,13 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
                             >
                               {(() => {
-                                const dayInfo = placeDayMap?.[String(place.id)]
+                                // Resolve the correct day assignment for this row from the array
+                                let dayInfo: {dayIndex:number;orderNumber:number} | null = null
+                                const rawPdm = placeDayMap?.[String(place.id)]
+                                if (rawPdm) {
+                                  const currentDayIdx = days.findIndex(d => d.id === day.id)
+                                  dayInfo = rawPdm.find(a => a.dayIndex === currentDayIdx) ?? rawPdm[0] ?? null
+                                }
                                 if (useDayColors && dayInfo) {
                                   return (
                                     <div style={{

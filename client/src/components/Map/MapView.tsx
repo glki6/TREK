@@ -451,7 +451,7 @@ interface MemoMarkerProps {
   onHoverOut: () => void
   /** Day Colors toggle (T7-1f). */
   useDayColors?: boolean
-  /** { dayIndex, orderNumber } from placeDayMap — set when place has a day assignment. */
+  /** Array of { dayIndex, orderNumber } from placeDayMap — multi-day support. */
   dayInfo?: { dayIndex: number; orderNumber: number } | null
 }
 

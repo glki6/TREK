@@ -823,13 +823,13 @@ export function useTripPlanner() {
   // Maps each place to its first day-index and position within that day.
   // A place assigned on multiple days keeps the FIRST assignment's info;
   // this is sufficient for marker coloring and sidebar circle indicators.
-  const placeDayMap = useMemo<Record<string, { dayIndex: number; orderNumber: number }>>(() => {
+  const placeDayMap = useMemo<Record<string, Array<{ dayIndex: number; orderNumber: number }>>>(() => {
     if (days.length === 0) return {}
 
     const sortedDays = [...days].sort(
       (a, b) => ((a as any).day_number ?? 0) - ((b as any).day_number ?? 0),
     )
-    const map: Record<string, { dayIndex: number; orderNumber: number }> = {}
+    const map: Record<string, Array<{ dayIndex: number; orderNumber: number }>> = {}
 
     sortedDays.forEach((day, dayIdx) => {
       const da = assignments[String(day.id)] || []
@@ -837,9 +837,9 @@ export function useTripPlanner() {
       sorted.forEach((assignment, pos) => {
         if (!assignment.place?.id) return
         const key = String(assignment.place.id)
-        // Keep first assignment only — places can appear on multiple days
-        if (map[key]) return
-        map[key] = { dayIndex: dayIdx, orderNumber: pos + 1 }
+        // Collect all assignments — multi-day places get an array resolved at render time
+        if (!map[key]) map[key] = []
+        map[key].push({ dayIndex: dayIdx, orderNumber: pos + 1 })
       })
     })
     return map
