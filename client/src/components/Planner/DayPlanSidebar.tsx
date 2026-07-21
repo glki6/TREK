@@ -914,7 +914,16 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       const allDayRuns: { lat: number; lng: number }[][][] = []
       let prevEveningHotel: { lat: number; lng: number } | null = null
 
+      // === DEBUG MARKER v2 — if you don't see this, the rebuild didn't take ===
+      if (days.length > 0) {
+        console.group('[RouteAll DEBUG v2] trip', trip?.id || 'unknown', 'days:', days.length)
+      }
       for (const day of days) {
+        const debugDays = [5, 6, 7, 8]
+        if (debugDays.includes(day.day_number)) {
+          console.log(`[D${day.day_number}] start id=${day.id}`)
+        }
+
         // Base place-to-place runs for this day
         let runs = collectRunsForDay(day.id)
 
@@ -922,6 +931,20 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         const bookends = optimizeFromAccommodation !== false
           ? getDayBookendHotels(day, days, accommodations)
           : null
+        if (debugDays.includes(day.day_number) && bookends) {
+          console.log(`[D${day.day_number}] bookends:`, {
+            morningName: bookends.morning?.name || bookends.morning?.place_name || 'null',
+            eveningName: bookends.evening?.name || bookends.evening?.place_name || 'null',
+            morningId: bookends.morning?.id,
+            eveningId: bookends.evening?.id,
+            morningLat: bookends.morning?.place_lat,
+            morningLng: bookends.morning?.place_lng,
+            eveningLat: bookends.evening?.place_lat,
+            eveningLng: bookends.evening?.place_lng,
+            morningIsSleptHere: bookends.morningIsSleptHere,
+            eveningIsOvernight: bookends.eveningIsOvernight,
+          })
+        }
         if (bookends && (bookends.morning || bookends.evening)) {
           // Collect first/last waypoints including transport endpoints (mirrors planDay)
           const merged = mergedItemsMap[day.id] || []
@@ -949,16 +972,35 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
               ? { lat: a.place_lat, lng: a.place_lng }
               : null
 
+          // On transfer days (morning ≠ evening hotel), Route All skips the return leg
+          // to avoid phantom distance — you drive to your new accommodation that's already
+          // tracked by prevEveningHotel for the next day's bridge.
+          const morningPt = drawMorning ? hotelPt(bookends.morning) : null
+          const eveningPt = drawEvening ? hotelPt(bookends.evening) : null
+          const isTransferDay = morningPt && eveningPt &&
+            (morningPt.lat !== eveningPt.lat || morningPt.lng !== eveningPt.lng)
+          const routeAllDrawEvening = isTransferDay ? false : !!eveningPt
+
           runs = withHotelBookends(
             runs,
             firstWay as { lat: number; lng: number } | undefined,
             lastWay as { lat: number; lng: number } | undefined,
-            drawMorning ? hotelPt(bookends.morning) : null,
-            drawEvening ? hotelPt(bookends.evening) : null,
+            morningPt,
+            routeAllDrawEvening ? eveningPt : null,
           )
 
+          if (debugDays.includes(day.day_number)) {
+            console.log(`[D${day.day_number}] bookends result:`, {
+              drawMorning, drawEvening, isTransferDay, routeAllDrawEvening,
+              morningPt, eveningPt,
+              runsCount: runs.length,
+              segments: runs.map(s => ({ from: s[0], to: s[s.length - 1] })),
+            })
+          }
+
           // Track evening hotel for inter-day transfer detection
-          if (drawEvening && bookends.evening?.place_lat != null) {
+          // (always track the real check-in destination, even when we skip drawing it)
+          if (bookends.evening?.place_lat != null) {
             prevEveningHotel = { lat: bookends.evening.place_lat, lng: bookends.evening.place_lng }
           } else {
             prevEveningHotel = null
@@ -969,15 +1011,36 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         }
 
         // Inter-day transfer: bridge the gap when previous evening hotel ≠ this morning hotel
+        if (debugDays.includes(day.day_number) && prevEveningHotel && bookends?.morning) {
+          const mLat = bookends.morning.place_lat ?? 0
+          const mLng = bookends.morning.place_lng ?? 0
+          console.log(`[D${day.day_number}] inter-day bridge:`, {
+            prevLat: prevEveningHotel.lat,
+            prevLng: prevEveningHotel.lng,
+            morningLat: mLat,
+            morningLng: mLng,
+            latDiff: Math.abs(prevEveningHotel.lat - mLat),
+            lngDiff: Math.abs(prevEveningHotel.lng - mLng),
+            willBridge: prevEveningHotel.lat !== mLat || prevEveningHotel.lng !== mLng,
+          })
+        }
         if (prevEveningHotel && bookends?.morning?.place_lat != null) {
           const mLat = bookends.morning.place_lat
           const mLng = bookends.morning.place_lng
-          if (prevEveningHotel.lat !== mLat || prevEveningHotel.lng !== mLng) {
+          // Use epsilon comparison to avoid phantom bridges from floating-point drift
+          const latDiff = Math.abs(prevEveningHotel.lat - mLat)
+          const lngDiff = Math.abs(prevEveningHotel.lng - mLng)
+          if (latDiff > 1e-6 || lngDiff > 1e-6) {
             runs.unshift([prevEveningHotel, { lat: mLat, lng: mLng }])
           }
         }
 
         if (runs.length > 0) {
+          if (debugDays.includes(day.day_number)) {
+            console.log(`[D${day.day_number}] FINAL segments (${runs.length}):`,
+              runs.map(s => `(${s[0].lat.toFixed(2)},${s[0].lng.toFixed(2)})→(${s[s.length-1].lat.toFixed(2)},${s[s.length-1].lng.toFixed(2)})`)
+            )
+          }
           allDayRuns.push(runs)
         }
       }
@@ -990,6 +1053,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       })
       // Pass multi-segment coordinates directly to map (bypasses per-day callback wrapping)
       onTripRouteSet?.(result.coordinates)
+      console.groupEnd() // [RouteAll DEBUG v2]
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
         toast.error(t('dayplan.toast.routeError'))
