@@ -84,6 +84,8 @@ interface DayPlanSidebarProps {
   lastActionLabel?: string | null
   onUndo?: () => void
   onRouteRefresh?: () => void
+  /** Called when trip-level route is calculated; sets multi-segment route directly */
+  onTripRouteSet?: (route: [number, number][][] | null) => void
   onAddTransport?: (dayId: number) => void
   /** Opens the public-transit route search for a day (#1065). */
   onPlanTransit?: (dayId: number) => void
@@ -134,6 +136,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   lastActionLabel = null,
   onUndo,
   onRouteRefresh,
+  onTripRouteSet,
   onAddTransport,
   onPlanTransit,
   onOpenTransit,
@@ -173,6 +176,13 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     distanceText: string
     durationText: string
   } | null>(null)
+  // Clear map route when trip route is toggled off so per-day routes can show again
+  useEffect(() => {
+    if (!tripRouteShown) {
+      onTripRouteSet?.(null)
+      setTripRouteInfo(null)
+    }
+  }, [tripRouteShown])
   // Per-segment legs keyed by day id, then by the start place's assignment id (or the
   // transport's reservation id). Nested per day so several Route-toggled mobile days
   // can't collide in one flat map — assignment ids and reservation ids come from
@@ -875,16 +885,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         distanceText: formatDistanceKmMi(result.distance),
         durationText: formatDurationSec(result.duration),
       })
-      // Pass aggregated coordinates to the map via existing callback
-      onRouteCalculated?.({
-        coordinates: result.coordinates.flat() as [number, number][],
-        distance: result.distance,
-        duration: result.duration,
-        distanceText: formatDistanceKmMi(result.distance),
-        durationText: formatDurationSec(result.duration),
-        walkingText: '',
-        drivingText: '',
-      } as any)
+      // Pass multi-segment coordinates directly to map (bypasses per-day callback wrapping)
+      onTripRouteSet?.(result.coordinates)
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
         toast.error(t('dayplan.toast.routeError'))
@@ -1071,6 +1073,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     lastActionLabel,
     onUndo,
     onRouteRefresh,
+    onTripRouteSet,
     onAddTransport,
     onPlanTransit,
     onOpenTransit,
@@ -1241,6 +1244,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     lastActionLabel,
     onUndo,
     onRouteRefresh,
+    onTripRouteSet,
     onAddTransport,
     onPlanTransit,
     onOpenTransit,
@@ -1384,6 +1388,10 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
         canEditDays={canEditDays}
         onReorderDays={onReorderDays}
         onAddDay={onAddDay}
+        tripRouteShown={tripRouteShown}
+        setTripRouteShown={setTripRouteShown}
+        tripRouteInfo={tripRouteInfo}
+        handleCalculateTripRoute={handleCalculateTripRoute}
       />
 
       {/* Tagesliste */}

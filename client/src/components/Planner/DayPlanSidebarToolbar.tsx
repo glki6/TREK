@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { ChevronsDownUp, ChevronsUpDown, FileDown, Undo2, ArrowUpDown, CalendarPlus } from 'lucide-react'
+import { ChevronsDownUp, ChevronsUpDown, FileDown, Undo2, ArrowUpDown, CalendarPlus, Route as RouteIcon } from 'lucide-react'
 import { downloadTripPDF } from '../PDF/TripPDF'
 import { DayReorderPopup } from './DayReorderPopup'
 import Tooltip from '../shared/Tooltip'
@@ -33,6 +33,11 @@ interface DayPlanSidebarToolbarProps {
   canEditDays?: boolean
   onReorderDays?: (orderedIds: number[]) => void
   onAddDay?: (position?: number) => void
+  // Trip-level route
+  tripRouteShown?: boolean
+  setTripRouteShown?: (v: boolean) => void
+  tripRouteInfo?: { distanceText: string; durationText: string } | null
+  handleCalculateTripRoute?: () => Promise<void>
 }
 
 export function DayPlanSidebarToolbar({
@@ -40,6 +45,7 @@ export function DayPlanSidebarToolbar({
   t, locale, toast, pdfHover, setPdfHover, setIcsHover,
   expandedDays, setExpandedDays, onUndo, canUndo, undoHover, setUndoHover, lastActionLabel,
   canEditDays, onReorderDays, onAddDay,
+  tripRouteShown = false, setTripRouteShown, tripRouteInfo, handleCalculateTripRoute,
 }: DayPlanSidebarToolbarProps) {
   const [reorderOpen, setReorderOpen] = useState(false)
   const [subscribeOpen, setSubscribeOpen] = useState(false)
@@ -295,7 +301,45 @@ export function DayPlanSidebarToolbar({
             />
           </div>
         )}
+        {handleCalculateTripRoute && (
+          <Tooltip label={tripRouteShown ? 'Hide trip route' : 'Route All'} placement="bottom">
+            <button
+              onClick={() => {
+                if (!tripRouteShown) {
+                  setTripRouteShown?.(true)
+                  handleCalculateTripRoute()
+                } else {
+                  setTripRouteShown?.(false)
+                }
+              }}
+              aria-label="Route All"
+              aria-pressed={tripRouteShown}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 30, height: 30, borderRadius: 8,
+                border: '1px solid var(--border-primary)',
+                background: tripRouteShown ? 'var(--bg-accent, #e0f2fe)' : 'none',
+                color: tripRouteShown ? 'var(--accent, #0284c7)' : 'var(--text-primary)',
+                cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                transition: 'color 0.15s, border-color 0.15s, background 0.15s',
+              }}
+            >
+              <RouteIcon size={14} strokeWidth={2} />
+            </button>
+          </Tooltip>
+        )}
       </div>
+      {tripRouteShown && tripRouteInfo && (
+        <div style={{
+          marginTop: 8, padding: '6px 10px', borderRadius: 8,
+          background: 'var(--bg-accent, #f0f9ff)',
+          border: '1px solid var(--border-faint, #e5e7eb)',
+          fontSize: 'calc(11px * var(--fs-scale-caption, 1))', fontWeight: 500,
+          color: 'var(--text-primary)',
+        }}>
+          Total: {tripRouteInfo.distanceText} \u00b7 {tripRouteInfo.durationText}
+        </div>
+      )}
     </div>
   )
 }
