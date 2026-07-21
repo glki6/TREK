@@ -6,7 +6,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 're
 import { avatarSrc } from '../../utils/avatarSrc'
 import { ChevronDown, ChevronRight, ChevronUp, Navigation, RotateCcw, ExternalLink, Clock, Pencil, GripVertical, Ticket, Plus, FileText, Trash2, Car, Lock, Hotel, Footprints, Route as RouteIcon, Bookmark, TramFront } from 'lucide-react'
 import { assignmentsApi, reservationsApi } from '../../api/client'
-import { calculateRoute, calculateRouteWithLegs, calculateTripRoute, optimizeRoute, generateGoogleMapsUrl } from '../Map/RouteCalculator'
+import { calculateRoute, calculateRouteWithLegs, calculateTripRoute, withHotelBookends, optimizeRoute, generateGoogleMapsUrl } from '../Map/RouteCalculator'
 import PlaceAvatar from '../shared/PlaceAvatar'
 import { getDayColor } from '../../utils/dayColors'
 import ConfirmDialog from '../shared/ConfirmDialog'
@@ -912,8 +912,71 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     setIsCalculating(true)
     try {
       const allDayRuns: { lat: number; lng: number }[][][] = []
+      let prevEveningHotel: { lat: number; lng: number } | null = null
+
       for (const day of days) {
-        const runs = collectRunsForDay(day.id)
+        // Base place-to-place runs for this day
+        let runs = collectRunsForDay(day.id)
+
+        // Add hotel bookends (same logic as per-day planDay so map + sidebar stay consistent)
+        const bookends = optimizeFromAccommodation !== false
+          ? getDayBookendHotels(day, days, accommodations)
+          : null
+        if (bookends && (bookends.morning || bookends.evening)) {
+          // Collect first/last waypoints including transport endpoints (mirrors planDay)
+          const merged = mergedItemsMap[day.id] || []
+          const wayPts: { lat: number; lng: number; isPlace: boolean }[] = []
+          for (const it of merged) {
+            if (it.type === 'place' && it.data.place?.lat && it.data.place?.lng) {
+              wayPts.push({ lat: it.data.place.lat, lng: it.data.place.lng, isPlace: true })
+            } else if (it.type === 'transport') {
+              const { from, to } = getTransportRouteEndpoints(it.data, day.id)
+              if (from) wayPts.push({ lat: from.lat, lng: from.lng, isPlace: false })
+              if (to) wayPts.push({ lat: to.lat, lng: to.lng, isPlace: false })
+            }
+          }
+          const firstWay = wayPts[0] ?? null
+          const lastWay = wayPts[wayPts.length - 1] ?? null
+
+          // Arrival/departure suppression (identical to planDay)
+          const isArrival = isArrivalDay(day, days, accommodations)
+          const isDeparture = isDepartureDay(day, days, accommodations)
+          const drawMorning = (!isArrival || !!bookends.morningIsSleptHere) && ((firstWay?.isPlace ?? false) || !!bookends.morningIsSleptHere)
+          const drawEvening = !isDeparture && ((lastWay?.isPlace ?? false) || !!bookends.eveningIsOvernight)
+
+          const hotelPt = (a?: Accommodation) =>
+            a && a.place_lat != null && a.place_lng != null
+              ? { lat: a.place_lat, lng: a.place_lng }
+              : null
+
+          runs = withHotelBookends(
+            runs,
+            firstWay as { lat: number; lng: number } | undefined,
+            lastWay as { lat: number; lng: number } | undefined,
+            drawMorning ? hotelPt(bookends.morning) : null,
+            drawEvening ? hotelPt(bookends.evening) : null,
+          )
+
+          // Track evening hotel for inter-day transfer detection
+          if (drawEvening && bookends.evening?.place_lat != null) {
+            prevEveningHotel = { lat: bookends.evening.place_lat, lng: bookends.evening.place_lng }
+          } else {
+            prevEveningHotel = null
+          }
+        } else if (runs.length > 0) {
+          // No hotel bookends for this day — clear transfer tracking
+          prevEveningHotel = null
+        }
+
+        // Inter-day transfer: bridge the gap when previous evening hotel ≠ this morning hotel
+        if (prevEveningHotel && bookends?.morning?.place_lat != null) {
+          const mLat = bookends.morning.place_lat
+          const mLng = bookends.morning.place_lng
+          if (prevEveningHotel.lat !== mLat || prevEveningHotel.lng !== mLng) {
+            runs.unshift([prevEveningHotel, { lat: mLat, lng: mLng }])
+          }
+        }
+
         if (runs.length > 0) {
           allDayRuns.push(runs)
         }
