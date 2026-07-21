@@ -1,6 +1,6 @@
 import type { AssignmentPlace, Place } from '../../types'
 
-type PlaceLike = Pick<Place | AssignmentPlace, 'lat' | 'lng'>
+type PlaceLike = Pick<Place | AssignmentPlace, 'lat' | 'lng' | 'google_place_id'>
 
 /** URL pair returned by the map helpers: native app scheme + HTTPS fallback */
 export interface MapsUrlPair {
