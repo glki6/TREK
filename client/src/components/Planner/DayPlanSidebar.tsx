@@ -223,9 +223,6 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // Trip-level inter-day bridge legs — drive from previous day's evening hotel to this
   // day's morning hotel. Keyed by destination day id.
   const [tripBridgeLegs, setTripBridgeLegs] = useState<Record<number, { seg: RouteSegment; name: string }>>({})
-  // Trip-level inter-day bridge legs — drive from previous day's evening hotel to this
-  // day's morning hotel. Keyed by destination day id.
-  const [tripBridgeLegs, setTripBridgeLegs] = useState<Record<number, { seg: RouteSegment; name: string }>>({})
   const optimizeFromAccommodation = useSettingsStore(s => s.settings.optimize_from_accommodation)
   // Recompute the hotel/route legs when the user flips km↔mi so the connector
   // distances refresh instead of showing stale cached text (#1300).
