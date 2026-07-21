@@ -160,6 +160,31 @@ function createDayColorIcon(dayIndex: number, orderNumber: number, isSelected: b
   })
 }
 
+/**
+ * Day-colored circle marker for accommodation places.
+ * Same as createDayColorIcon but shows a home icon instead of the sequence number.
+ */
+function createAccommodationDayIcon(dayIndex: number, isSelected: boolean): L.DivIcon {
+  const size = isSelected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = isSelected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const homeSvg = categoryIconSvg('Home', isSelected ? 22 : 18)
+  return L.divIcon({
+    className: "",
+    html: `<div style="\
+      width:${size}px;height:${size}px;border-radius:50%;\
+      background:${color};border:${isSelected ? 3 : 2.5}px solid white;\
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;\
+      cursor:pointer;line-height:1;overflow:hidden;\
+    ">${homeSvg}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    tooltipAnchor: [size / 2 + 6, 0],
+  })
+}
+
 // Clears the hover tooltip the moment the camera starts moving and suppresses
 // re-showing it until the move ends: after a click-recenter the marker slides
 // away under a stationary cursor, so the browser never fires mouseout — and
@@ -453,18 +478,24 @@ interface MemoMarkerProps {
   useDayColors?: boolean
   /** Array of { dayIndex, orderNumber } from placeDayMap — multi-day support. */
   dayInfo?: { dayIndex: number; orderNumber: number } | null
+  /** Set of place IDs that are linked to accommodations (T7-1g). */
+  accommodationPlaceIds?: Set<number>
 }
 
 const MemoMarker = memo(function MemoMarker({
   place, isSelected, orderNumbers, photoUrl, onClickPlace, onHover, onHoverOut,
-  useDayColors = false, dayInfo,
+  useDayColors = false, dayInfo, accommodationPlaceIds,
 }: MemoMarkerProps) {
   // T7-1f: when Day Colors toggle is ON and the place has a day assignment,
   // render a solid coloured circle with the sequence number instead of the
   // photo / category icon.
+  // T7-1g: accommodation places show home icon without the sequence number.
   const useDayIcon = useDayColors && !!dayInfo
+  const isAccommodation = !!accommodationPlaceIds?.has(place.id)
   const icon = useDayIcon
-    ? createDayColorIcon(dayInfo.dayIndex, dayInfo.orderNumber, isSelected)
+    ? (isAccommodation
+        ? createAccommodationDayIcon(dayInfo.dayIndex, isSelected)
+        : createDayColorIcon(dayInfo.dayIndex, dayInfo.orderNumber, isSelected))
     : createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
   return (
     <Marker
@@ -514,6 +545,7 @@ export const MapView = memo(function MapView({
   placeDayMap = {},
   useDayColors = false,
   selectedDayIndex = null,
+  accommodationPlaceIds = new Set(),
 }: any) {
 
   // Per-day route color: use day palette when toggle ON + a day is selected;
@@ -762,10 +794,12 @@ export const MapView = memo(function MapView({
         onHoverOut={handleMarkerHoverOut}
         useDayColors={useDayColors}
         dayInfo={dayInfo}
+        accommodationPlaceIds={accommodationPlaceIds}
       />
     )
   }), [places, selectedPlaceId, dayOrderMap, photoUrls, handleMarkerClick,
-       handleMarkerHover, handleMarkerHoverOut, placeDayMap, useDayColors, selectedDayIndex])
+       handleMarkerHover, handleMarkerHoverOut, placeDayMap, useDayColors,
+       selectedDayIndex, accommodationPlaceIds])
 
   const gpxPolylines = useMemo(() => places.flatMap(place => {
     if (!place.route_geometry) return []

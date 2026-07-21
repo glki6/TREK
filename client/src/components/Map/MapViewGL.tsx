@@ -96,6 +96,7 @@ interface Props {
   useDayColors?: boolean
   selectedDayIndex?: number | null
   placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
+  accommodationPlaceIds?: Set<number>
 }
 
 function createMarkerElement(place: Place & { category_color?: string; category_icon?: string }, photoUrl: string | null, orderNumbers: number[] | null, selected: boolean): HTMLDivElement {
@@ -199,6 +200,33 @@ function createDayColorMarkerElement(dayIndex: number, orderNumber: number, sele
       font-family:var(--font-system);line-height:1;
       box-sizing:content-box;
     ">${orderNumber}</div>
+  `
+  return el
+}
+
+/**
+ * T7-1g: Day-colored circle marker for accommodation places (GL version).
+ * Same as createDayColorMarkerElement but shows a home icon instead of the sequence number.
+ */
+function createAccommodationDayMarkerElement(dayIndex: number, selected: boolean): HTMLDivElement {
+  const size = selected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = selected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const outer = size + (selected ? 3 : 2.5) * 2
+  const HomeIcon = CATEGORY_ICON_MAP['Home']
+  const homeSvg = HomeIcon ? renderToStaticMarkup(createElement(HomeIcon, { size: selected ? 22 : 18, color: 'white', strokeWidth: 2.5 })) : ''
+  const el = document.createElement('div')
+  el.style.cssText = `width:${outer}px;height:${outer}px;cursor:pointer;`
+  el.innerHTML = `
+    <div style="
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:${selected ? 3 : 2.5}px solid white;
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
+      line-height:1;overflow:hidden;
+    ">${homeSvg}</div>
   `
   return el
 }
@@ -800,8 +828,11 @@ export function MapViewGL({
           }
         }
         const useDayIconGL = useDayColors && !!dayInfoGL
+        const isAccommodation = !!accommodationPlaceIds?.has(place.id)
         const el = useDayIconGL
-          ? createDayColorMarkerElement(dayInfoGL.dayIndex, dayInfoGL.orderNumber, selected)
+          ? (isAccommodation
+              ? createAccommodationDayMarkerElement(dayInfoGL.dayIndex, selected)
+              : createDayColorMarkerElement(dayInfoGL.dayIndex, dayInfoGL.orderNumber, selected))
           : createMarkerElement(place as Place & { category_color?: string; category_icon?: string }, photoUrl, orderNumbers, selected)
         el.addEventListener('click', (ev) => {
           ev.stopPropagation()

@@ -231,6 +231,15 @@ export default function TripPlannerPage(): React.ReactElement | null {
     return idx >= 0 ? idx : null
   }, [days, showDayDetail?.id, activeRouteDayId, selectedDayId])
 
+  // T7-1g: set of place IDs linked to accommodations — used for map marker styling.
+  const accommodationPlaceIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const acc of tripAccommodations) {
+      if (acc.place_id) ids.add(acc.place_id)
+    }
+    return ids
+  }, [tripAccommodations])
+
   // Costs expense editor opened from a booking modal (save-then-open). Lives at the
   // page level so it has tripMembers / base currency / current user available.
   const meId = useAuthStore(s => s.user?.id ?? -1)
@@ -354,6 +363,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
               placeDayMap={placeDayMap}
               useDayColors={useDayColors}
               selectedDayIndex={selectedDayIndex}
+              accommodationPlaceIds={accommodationPlaceIds}
             />
 
             {(poiPillEnabled || glMap) && (
