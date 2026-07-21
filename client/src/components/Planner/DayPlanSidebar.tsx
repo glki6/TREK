@@ -1494,13 +1494,16 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                   const wLat = loc?.place?.lat ?? geoLat
                   const wLng = loc?.place?.lng ?? geoLng
                   const hasWeather = !!(day.date && anyGeoPlace && wLat != null && wLng != null)
+                  // T7-1h: when day colors toggle is ON, use palette color for the badge background
+                  const badgeBg = useDayColors ? getDayColor(index) : (isSelected ? 'var(--accent)' : 'var(--bg-hover)')
+                  const badgeColor = useDayColors ? '#fff' : (isSelected ? 'var(--accent-text)' : 'var(--text-muted)')
                   return (
                     <div style={{
                       flexShrink: 0, alignSelf: 'flex-start',
                       width: hasWeather ? 34 : 26,
                       borderRadius: hasWeather ? 11 : '50%',
-                      background: isSelected ? 'var(--accent)' : 'var(--bg-hover)',
-                      color: isSelected ? 'var(--accent-text)' : 'var(--text-muted)',
+                      background: badgeBg,
+                      color: badgeColor,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden',
                     }}>
                       <div style={{ width: '100%', height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'calc(11px * var(--fs-scale-caption, 1))', fontWeight: 700 }}>
