@@ -227,7 +227,24 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // Mobile only: days the user tapped "Route" on. Their leg distances show inline in
   // the expanded day, so seeing distances doesn't require selecting the day (which
   // closes the mobile sheet) — #1374.
-  const [expandedRouteDayIds, setExpandedRouteDayIds] = useState<Set<number>>(new Set())
+  // Persisted to localStorage so routes survive mobile sidebar close/open (DayPlanSidebar
+  // unmounts when overlay closes; without persistence, all route UI state is lost).
+  // Unlike v2 which persisted complex route geometry + toggle state (caused flicker/race conditions),
+  // this persists ONLY the Set of day IDs — simple numbers that can't go stale.
+  const [expandedRouteDayIds, setExpandedRouteDayIds] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem(`route-days-${tripId}`)
+      if (saved) return new Set<number>(JSON.parse(saved) as number[])
+    } catch {}
+    return new Set<number>()
+  })
+  // Persist expandedRouteDayIds to localStorage on change.
+  // Use a ref guard to avoid writing during initial restore (prevents unnecessary re-renders).
+  const routeDaysRestored = useRef(false)
+  useEffect(() => {
+    if (!routeDaysRestored.current) { routeDaysRestored.current = true; return }
+    try { localStorage.setItem(`route-days-${tripId}`, JSON.stringify([...expandedRouteDayIds])) } catch {}
+  }, [expandedRouteDayIds, tripId])
   // Trip-level route legs keyed by day id then assignment id (same shape as routeLegs)
   // so connector pills can show drive times between stops when Route All is active — #1458.
   const [tripRouteLegs, setTripRouteLegs] = useState<Record<number, Record<number, RouteSegment>>>({})
