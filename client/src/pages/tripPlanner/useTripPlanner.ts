@@ -839,7 +839,16 @@ export function useTripPlanner() {
     return da.map(a => a.place).filter(p => p?.lat && p?.lng)
   }, [selectedDayId, assignments])
 
-  const mapTileUrl = settings.map_tile_url || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+  // Auto-switch map tiles to dark theme when in dark mode (matches CollectionMap + Navbar pattern)
+  const LIGHT_TILE = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+  const DARK_TILE  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+
+  // dark_mode can be: boolean, 'light', 'dark', or 'auto' (system preference)
+  const isDark = settings.dark_mode === true || settings.dark_mode === 'dark' ||
+    (settings.dark_mode === 'auto' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  // User's custom tile URL always wins; auto-switch only applies to defaults
+  const mapTileUrl = settings.map_tile_url || (isDark ? DARK_TILE : LIGHT_TILE)
   const defaultCenter = [settings.default_lat || 48.8566, settings.default_lng || 2.3522]
   const defaultZoom = settings.default_zoom || 10
 
