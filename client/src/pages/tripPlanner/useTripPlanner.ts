@@ -819,6 +819,32 @@ export function useTripPlanner() {
 
   const selectedPlace = selectedPlaceId ? places.find(p => p.id === selectedPlaceId) : null
 
+  // ── T7-1c: Global place → {dayIndex, orderNumber} map (all days) ───────────
+  // Maps each place to its first day-index and position within that day.
+  // A place assigned on multiple days keeps the FIRST assignment's info;
+  // this is sufficient for marker coloring and sidebar circle indicators.
+  const placeDayMap = useMemo<Record<string, { dayIndex: number; orderNumber: number }>>(() => {
+    if (days.length === 0) return {}
+
+    const sortedDays = [...days].sort(
+      (a, b) => ((a as any).day_number ?? 0) - ((b as any).day_number ?? 0),
+    )
+    const map: Record<string, { dayIndex: number; orderNumber: number }> = {}
+
+    sortedDays.forEach((day, dayIdx) => {
+      const da = assignments[String(day.id)] || []
+      const sorted = [...da].sort((a, b) => a.order_index - b.order_index)
+      sorted.forEach((assignment, pos) => {
+        if (!assignment.place?.id) return
+        const key = String(assignment.place.id)
+        // Keep first assignment only — places can appear on multiple days
+        if (map[key]) return
+        map[key] = { dayIndex: dayIdx, orderNumber: pos + 1 }
+      })
+    })
+    return map
+  }, [days, assignments])
+
   // Build placeId → order-number map from the selected day's assignments
   const dayOrderMap = useMemo(() => {
     if (!selectedDayId) return {}
@@ -897,7 +923,7 @@ export function useTripPlanner() {
     handleSavePlace, openPlaceEditor, handleDeletePlace, confirmDeletePlace, confirmDeletePlaces, confirmChangeCategory,
     handleAssignToDay, handleRemoveAssignment, handleReorder, handleReorderDays, handleAddDay, handleUpdateDayTitle,
     handleSaveReservation, handleSaveTransport, handleDeleteReservation,
-    selectedPlace, dayOrderMap, dayPlaces,
+    selectedPlace, dayOrderMap, dayPlaces, placeDayMap,
     mapTileUrl, defaultCenter, defaultZoom, fontStyle, splashDone,
   }
 }

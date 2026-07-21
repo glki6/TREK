@@ -210,7 +210,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
     handleSavePlace, openPlaceEditor, handleDeletePlace, confirmDeletePlace, confirmDeletePlaces, confirmChangeCategory,
     handleAssignToDay, handleRemoveAssignment, handleReorder, handleReorderDays, handleAddDay, handleUpdateDayTitle,
     handleSaveReservation, handleSaveTransport, handleDeleteReservation,
-    selectedPlace, dayOrderMap, dayPlaces,
+    selectedPlace, dayOrderMap, dayPlaces, placeDayMap,
     mapTileUrl, defaultCenter, defaultZoom, fontStyle, splashDone,
   } = useTripPlanner()
 
@@ -340,6 +340,8 @@ export default function TripPlannerPage(): React.ReactElement | null {
               onViewportChange={poi.onViewportChange}
               disableClustering={disableClustering}
               onMapReady={setGlMap}
+              placeDayMap={placeDayMap}
+              useDayColors={useDayColors}
             />
 
             {(poiPillEnabled || glMap) && (
@@ -597,6 +599,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
                   onUndo={handleUndo}
                   onRouteRefresh={() => { if (selectedDayId) updateRouteForDay(selectedDayId) }}
                   onAddBookingToAssignment={can('day_edit', trip) ? (dayId, assignmentId) => { tripActions.setSelectedDay(dayId); setBookingForAssignmentId(assignmentId); setEditingReservation(null); setShowReservationModal(true) } : undefined}
+                  placeDayMap={placeDayMap}
                 />
                 {!leftCollapsed && (
                   <div
@@ -663,6 +666,8 @@ export default function TripPlannerPage(): React.ReactElement | null {
                     pushUndo={pushUndo}
                     days={days}
                     isMobile={false}
+                    placeDayMap={placeDayMap}
+                    useDayColors={useDayColors}
                   />
                 </div>
               </div>

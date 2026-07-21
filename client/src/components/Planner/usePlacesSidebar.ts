@@ -36,6 +36,9 @@ export interface PlacesSidebarProps {
   pushUndo?: (label: string, undoFn: () => Promise<void> | void) => void
   initialScrollTop?: number
   onScrollTopChange?: (top: number) => void
+  /** T7-1c: maps each placeId → {dayIndex, orderNumber} for day-color indicators */
+  placeDayMap?: Record<string, { dayIndex: number; orderNumber: number }>
+  useDayColors?: boolean
 }
 
 /**

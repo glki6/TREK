@@ -101,6 +101,9 @@ interface DayPlanSidebarProps {
   /** Mobile: drag & drop reorder is disabled (touch-scroll hijack, #1432); the
    *  grip handle is hidden and the arrow reorder buttons take over instead. */
   isMobile?: boolean
+  /** T7-1c: maps each placeId → {dayIndex, orderNumber} for day-color indicators */
+  placeDayMap?: Record<string, { dayIndex: number; orderNumber: number }>
+  useDayColors?: boolean
 }
 
 /**
