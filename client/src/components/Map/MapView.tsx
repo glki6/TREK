@@ -609,9 +609,11 @@ export const MapView = memo(function MapView({
   const thumbRafRef = useRef<number | null>(null)
 
   const placeIds = useMemo(() => places.map(p => p.id).join(','), [places])
-  // Flattened [lat,lng] points of the selected day's route, so the bounds fit can
-  // include the full polyline once it has been computed.
-  const routeCoords = useMemo<[number, number][]>(() => (route || []).flat() as [number, number][], [route])
+  // Flattened [lat,lng] points of the selected day's route (or all days for trip-level
+  // multi-day routes), so the bounds fit can include the full polyline once computed.
+  // .flat(2) handles both single-day ([number,number][][] → flat) and
+  // multi-day trip routes ([number,number][][][] → flat) (T7-1g).
+  const routeCoords = useMemo<[number, number][]>(() => (route || []).flat(2) as [number, number][], [route])
   useEffect(() => {
     if (!places || places.length === 0 || !placesPhotosEnabled) return
     const cleanups: (() => void)[] = []
@@ -792,19 +794,61 @@ export const MapView = memo(function MapView({
         </MarkerClusterGroup>
       )}
 
-      {/* Apple-Maps style: casing under core, rounded. Color respects day-colors toggle (T7-1e). */}
-      {route && route.length > 0 && route.flatMap((seg, i) => seg.length > 1 ? [
-        <Polyline
-          key={`${i}-casing`}
-          positions={seg}
-          pathOptions={{ color: routeColor, weight: 8, opacity: casingOpacity, lineCap: 'round', lineJoin: 'round' }}
-        />,
-        <Polyline
-          key={`${i}-core`}
-          positions={seg}
-          pathOptions={{ color: routeColor, weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
-        />,
-      ] : [])}
+      {/* Apple-Maps style: casing under core, rounded.
+         * T7-1e: per-day route color when Day Colors toggle ON + single day selected
+         * T7-1g: multi-color trip routes — each day's segments in its own palette color
+         */}
+      {route && route.length > 0 && (() => {
+        // Detect shape: if the first element is an array of arrays, we have a multi-day
+        // trip route [day][seg][coords]; otherwise it's a single-day route [seg][coords].
+        const isMultiDay = Array.isArray(route[0]) && route[0]?.length > 0 && typeof route[0][0] !== 'number'
+
+        if (isMultiDay) {
+          // Multi-day trip route: render each day's segments in its own color when toggle ON,
+          // or standard blue when OFF. No inter-day lines are drawn.
+          const days = route as [number, number][][][]
+          return days.flatMap((daySegs, dayIdx) =>
+            daySegs.flatMap((seg, segIdx) => seg.length > 1 ? [
+              <Polyline
+                key={`md-${dayIdx}-${segIdx}-casing`}
+                positions={seg}
+                pathOptions={{
+                  color: useDayColors ? getDayColor(dayIdx) : '#0a84ff',
+                  weight: 8,
+                  opacity: casingOpacity,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />,
+              <Polyline
+                key={`md-${dayIdx}-${segIdx}-core`}
+                positions={seg}
+                pathOptions={{
+                  color: useDayColors ? getDayColor(dayIdx) : '#0a84ff',
+                  weight: 5,
+                  opacity: 1,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />,
+            ] : [])
+          )
+        }
+
+        // Single-day route (existing behavior)
+        return route.flatMap((seg, i) => seg.length > 1 ? [
+          <Polyline
+            key={`${i}-casing`}
+            positions={seg}
+            pathOptions={{ color: routeColor, weight: 8, opacity: casingOpacity, lineCap: 'round', lineJoin: 'round' }}
+          />,
+          <Polyline
+            key={`${i}-core`}
+            positions={seg}
+            pathOptions={{ color: routeColor, weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
+          />,
+        ] : [])
+      })()}
 
       {/* GPX imported route geometries */}
       {gpxPolylines}

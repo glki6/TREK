@@ -85,8 +85,8 @@ interface DayPlanSidebarProps {
   lastActionLabel?: string | null
   onUndo?: () => void
   onRouteRefresh?: () => void
-  /** Called when trip-level route is calculated; sets multi-segment route directly */
-  onTripRouteSet?: (route: [number, number][][] | null) => void
+  /** Called when trip-level route is calculated; sets multi-segment route grouped by day (T7-1g) */
+  onTripRouteSet?: (route: [number, number][][][] | null) => void
   onAddTransport?: (dayId: number) => void
   /** Opens the public-transit route search for a day (#1065). */
   onPlanTransit?: (dayId: number) => void

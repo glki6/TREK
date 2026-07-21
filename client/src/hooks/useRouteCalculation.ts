@@ -17,7 +17,8 @@ const NO_ACCOMMODATIONS: Accommodation[] = []
  * road geometry with per-segment durations. Aborts in-flight requests when the day changes.
  */
 export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: number | null, enabled: boolean = true, profile: 'driving' | 'walking' | 'cycling' = 'driving', accommodations: Accommodation[] = NO_ACCOMMODATIONS) {
-  const [route, setRoute] = useState<[number, number][][] | null>(null)
+  // Accepts per-day route ([number,number][][]), multi-day trip route ([number,number][][][]), or null (T7-1g)
+  const [route, setRoute] = useState<([number, number][][] | [number, number][][][]) | null>(null)
   const [routeInfo, setRouteInfo] = useState<RouteResult | null>(null)
   const [routeSegments, setRouteSegments] = useState<RouteSegment[]>([])
   const routeAbortRef = useRef<AbortController | null>(null)

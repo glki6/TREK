@@ -66,7 +66,8 @@ interface RouteSegment {
 interface Props {
   places: Place[]
   dayPlaces?: Place[]
-  route?: [number, number][][] | null
+  // Accepts per-day route ([number,number][][]), multi-day trip route ([number,number][][][]), or null (T7-1g)
+  route?: ([number, number][][] | [number, number][][][]) | null
   routeSegments?: RouteSegment[]
   selectedPlaceId?: number | null
   onMarkerClick?: (id: number) => void
@@ -917,24 +918,74 @@ export function MapViewGL({
     if (!map) return
     const src = map.getSource('trip-route') as mapboxgl.GeoJSONSource | undefined
     if (!src) return
-    const features = (route || []).filter(seg => seg && seg.length > 1).map(seg => ({
-      type: 'Feature' as const,
-      properties: {},
-      geometry: { type: 'LineString' as const, coordinates: seg.map(([lat, lng]) => [lng, lat]) },
-    }))
+
+    // Detect multi-day trip route shape: [day][seg][coords] vs single-day [seg][coords]
+    const isMultiDay = Array.isArray(route) && route.length > 0
+      && typeof route[0]?.[0] !== 'number'
+
+    let features: {
+      type: 'Feature';
+      properties: { dayIndex?: number };
+      geometry: { type: 'LineString'; coordinates: [number, number][] }
+    }[] = []
+
+    if (isMultiDay) {
+      // Multi-day trip route: flatten days into features with a `dayIndex` property (T7-1g)
+      const days = route as [number, number][][][]
+      for (let d = 0; d < days.length; d++) {
+        for (const seg of days[d]) {
+          if (!seg || seg.length < 2) continue
+          features.push({
+            type: 'Feature',
+            properties: { dayIndex: d },
+            geometry: { type: 'LineString', coordinates: seg.map(([lat, lng]) => [lng, lat]) },
+          })
+        }
+      }
+    } else {
+      // Single-day route (existing behavior)
+      features = (route as [number, number][][]).filter(seg => seg && seg.length > 1).map(seg => ({
+        type: 'Feature' as const,
+        properties: {},
+        geometry: { type: 'LineString' as const, coordinates: seg.map(([lat, lng]) => [lng, lat]) },
+      }))
+    }
+
     src.setData({ type: 'FeatureCollection', features })
   }, [route, mapReady])
 
   // Update route line colors when day-colors toggle or selected day changes (T7-1e).
+  // T7-1g: for multi-day trip routes with Day Colors ON, use data-driven per-feature
+  // coloring so each day's segments get its own palette color.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
     try {
-      map.setPaintProperty('trip-route-casing', 'line-color', routeColor)
+      // Detect whether we have a multi-day trip route with day colors enabled
+      const isMultiDay = Array.isArray(route) && route.length > 0
+        && typeof route[0]?.[0] !== 'number'
+
+      let colorValue: string | unknown[]
+      if (isMultiDay && useDayColors) {
+        // Data-driven color: map each feature's `dayIndex` property to the palette.
+        // Build a match expression for up to N days (use 20 as practical max).
+        const dayCount = (route as [number, number][][][]).length
+        const maxDays = Math.min(dayCount, 20)
+        colorValue = ['match', ['get', 'dayIndex']] as unknown[]
+        for (let d = 0; d < maxDays; d++) {
+          ;(colorValue as unknown[]).push(d, getDayColor(d))
+        }
+        // Fallback color for any day beyond our palette
+        ;(colorValue as unknown[]).push(getDayColor(maxDays))
+      } else {
+        colorValue = routeColor
+      }
+
+      map.setPaintProperty('trip-route-casing', 'line-color', colorValue)
       map.setPaintProperty('trip-route-casing', 'line-opacity', 0.75)
-      map.setPaintProperty('trip-route-line', 'line-color', routeColor)
+      map.setPaintProperty('trip-route-line', 'line-color', colorValue)
     } catch { /* layer may not exist yet */ }
-  }, [routeColor, mapReady])
+  }, [routeColor, mapReady, route, useDayColors])
 
   // Travel times now live in the day sidebar (per-segment connectors), not on the map.
 

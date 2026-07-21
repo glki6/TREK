@@ -327,7 +327,8 @@ export async function calculateRouteWithLegs(
 /**
  * Calculates route geometry + stats for an entire trip by iterating all day runs.
  * Reuses calculateRouteWithLegs() internally (benefits from existing cache).
- * Returns aggregated geometry suitable for MapViewGL route prop.
+ * Returns aggregated geometry grouped by day — each day's polyline segments are
+ * kept together so the map can colour them independently (T7-1g).
  *
  * @param allDayRuns - Outer array = days, inner arrays = runs within each day
  */
@@ -335,19 +336,21 @@ export async function calculateTripRoute(
   allDayRuns: Waypoint[][][],
   { signal, profile = 'driving' }: { signal?: AbortSignal; profile?: 'driving' | 'walking' | 'cycling' } = {}
 ): Promise<{
-  coordinates: [number, number][][];
+  /** Outer array = days, inner arrays = runs within each day */
+  coordinates: [number, number][][][];
   distance: number;
   duration: number;
   legs: RouteSegment[];
   dayBreakdown: { distance: number; duration: number }[];
 }> {
-  const allCoordinates: [number, number][][] = []
+  const allCoordinates: [number, number][][][] = []
   let totalDistance = 0
   let totalDuration = 0
   const allLegs: RouteSegment[] = []
   const dayBreakdown: { distance: number; duration: number }[] = []
 
   for (const dayRuns of allDayRuns) {
+    const dayCoords: [number, number][][] = []
     let dayDistance = 0
     let dayDuration = 0
 
@@ -355,7 +358,7 @@ export async function calculateTripRoute(
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
       try {
         const r = await calculateRouteWithLegs(run, { signal, profile })
-        allCoordinates.push(r.coordinates)
+        dayCoords.push(r.coordinates)
         totalDistance += r.distance
         dayDistance += r.distance
         totalDuration += r.duration
@@ -366,6 +369,7 @@ export async function calculateTripRoute(
         console.warn('[RouteCalculator] calculateTripRoute: run failed, continuing with partial results', err)
       }
     }
+    allCoordinates.push(dayCoords)
     dayBreakdown.push({ distance: dayDistance, duration: dayDuration })
   }
 
