@@ -333,13 +333,6 @@ export function useTripPlanner() {
 
   const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, selectedDayId, routeShown, routeProfile, tripAccommodations)
 
-  // Clear per-day route when switching trips so stale coords don't persist on the map
-  useEffect(() => {
-    setRoute(null)
-    setRouteSegments([])
-    setRouteInfo(null)
-  }, [tripId])
-
   const handleSelectDay = useCallback((dayId: number | null, skipFit?: boolean) => {
     const changed = dayId !== selectedDayId
     tripActions.setSelectedDay(dayId)
