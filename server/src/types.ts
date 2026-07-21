@@ -71,6 +71,7 @@ export interface Place {
   image_url?: string | null;
   google_place_id?: string | null;
   google_ftid?: string | null;
+  google_cid?: string | null;
   osm_id?: string | null;
   website?: string | null;
   phone?: string | null;

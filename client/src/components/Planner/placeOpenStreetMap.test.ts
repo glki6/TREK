@@ -4,6 +4,20 @@ import { getOpenStreetMapUrlForPlace } from './placeOpenStreetMap'
 const base = { name: 'Eiffel Tower', lat: 48.8584, lng: 2.2945 } as any
 
 describe('getOpenStreetMapUrlForPlace', () => {
+  it('FE-PLACE-OSM-T317-001: prefers google_cid over google_place_id', () => {
+    const place = { id: 1, name: 'Test Place', lat: 51.0, lng: -114.0, google_place_id: 'ChIJx', google_cid: '12345' } as any;
+    const result = getOpenStreetMapUrlForPlace(place);
+    expect(result).not.toBeNull();
+    expect(result!.native).toContain('cid=12345');
+  });
+
+  it('FE-PLACE-OSM-T317-002: falls back to place_id when google_cid is null', () => {
+    const place = { id: 1, name: 'Test Place', lat: 51.0, lng: -114.0, google_place_id: 'ChIJabcdef', google_cid: null } as any;
+    const result = getOpenStreetMapUrlForPlace(place);
+    expect(result).not.toBeNull();
+    expect(result!.native).toContain('place_id:ChIJabcdef');
+  });
+
   it('FE-PLACE-OSM-T314-001: returns HTTPS URLs for place_id (native scheme unreliable on mobile) (T3-14)', () => {
     const pair = getOpenStreetMapUrlForPlace({
       ...base,
