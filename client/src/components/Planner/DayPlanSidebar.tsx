@@ -528,7 +528,11 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // selected day on desktop, each Route-toggled day on mobile (#1374).
   useEffect(() => {
     if (legsAbortRef.current) legsAbortRef.current.abort()
-    if (routeDayIds.length === 0) { setRouteLegs({}); setHotelLegs({}); return }
+    // When no days are active for routing (all collapsed, route toggle off),
+    // preserve existing legs so they restore instantly on re-expand.
+    // Stale legs are cleared when the route is explicitly toggled off or
+    // when new legs are computed for the active set below.
+    if (routeDayIds.length === 0) return
 
     const hotelName = (a: Accommodation) => (a as any).place_name || (a as any).reservation_title || ''
 

@@ -33,7 +33,8 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
   const updateRouteForDay = useCallback(async (dayId: number | null) => {
     if (routeAbortRef.current) routeAbortRef.current.abort()
     // Route is manual: only compute when explicitly enabled (the "show route" toggle).
-    if (!dayId || !enabled) { setRoute(null); setRouteSegments([]); return }
+    if (!enabled) { setRoute(null); setRouteSegments([]); return }
+    if (!dayId) return // Preserve existing route; just skip recalc
     // Read directly from store (not a render-phase ref) so callers after optimistic
     // updates or non-optimistic deletes always see the latest assignments.
     const currentAssignments = useTripStore.getState().assignments || {}
@@ -213,7 +214,8 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
   // Recalculate when assignments or transport positions for the SELECTED day change
   const selectedDayAssignments = selectedDayId ? tripStore.assignments?.[String(selectedDayId)] : null
   useEffect(() => {
-    if (!selectedDayId) { setRoute(null); setRouteSegments([]); return }
+    if (!enabled) { setRoute(null); setRouteSegments([]); return }
+    if (!selectedDayId) return // Preserve route during transient null (sidebar collapse, place click)
     updateRouteForDay(selectedDayId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayId, selectedDayAssignments, transportSignature, enabled, profile, accommodations, optimizeFromAccommodation, distanceUnit])
