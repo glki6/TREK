@@ -37,6 +37,9 @@ interface DayPlanSidebarToolbarProps {
   // Trip-level route
   tripRouteShown?: boolean
   setTripRouteShown?: (v: boolean) => void
+  // Per-day route (for mutual exclusion)
+  routeShown?: boolean
+  onToggleRoute?: () => void
   tripRouteInfo?: { distanceText: string; durationText: string } | null
   handleCalculateTripRoute?: () => Promise<void>
   // Accommodations for hotel bookends in the full-trip Google Maps export
@@ -48,7 +51,9 @@ export function DayPlanSidebarToolbar({
   t, locale, toast, pdfHover, setPdfHover, setIcsHover,
   expandedDays, setExpandedDays, onUndo, canUndo, undoHover, setUndoHover, lastActionLabel,
   canEditDays, onReorderDays, onAddDay,
-  tripRouteShown = false, setTripRouteShown, tripRouteInfo, handleCalculateTripRoute,
+  tripRouteShown = false, setTripRouteShown,
+  routeShown = false, onToggleRoute,
+  tripRouteInfo, handleCalculateTripRoute,
   accommodations = [],
 }: DayPlanSidebarToolbarProps) {
   const [reorderOpen, setReorderOpen] = useState(false)
@@ -310,6 +315,8 @@ export function DayPlanSidebarToolbar({
             <button
               onClick={() => {
                 if (!tripRouteShown) {
+                  // Mutual exclusion: clear per-day route before showing Route All
+                  if (routeShown && onToggleRoute) { onToggleRoute() }
                   setTripRouteShown?.(true)
                   handleCalculateTripRoute()
                 } else {

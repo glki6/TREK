@@ -192,6 +192,13 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       setTripRouteInfo(null)
     }
   }, [tripRouteShown])
+  // Mutual exclusion: turning on per-day route clears Route All, and vice versa
+  const handleTogglePerDayRoute = () => {
+    if (!routeShown && tripRouteShown) {
+      setTripRouteShown(false)
+    }
+    onToggleRoute?.()
+  }
   // Per-segment legs keyed by day id, then by the start place's assignment id (or the
   // transport's reservation id). Nested per day so several Route-toggled mobile days
   // can't collide in one flat map — assignment ids and reservation ids come from
@@ -1581,6 +1588,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
         onAddDay={onAddDay}
         tripRouteShown={tripRouteShown}
         setTripRouteShown={setTripRouteShown}
+        routeShown={routeShown}
+        onToggleRoute={handleTogglePerDayRoute}
         tripRouteInfo={tripRouteInfo}
         handleCalculateTripRoute={handleCalculateTripRoute}
         accommodations={accommodations}
@@ -2627,10 +2636,10 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                                 next.has(day.id) ? next.delete(day.id) : next.add(day.id)
                                 return next
                               })
-                            } else if (isSelected) { onToggleRoute?.() }
+                            } else if (isSelected) { handleTogglePerDayRoute() }
                             // Desktop: the route is computed for the globally selected day,
                             // so tapping Route on another day first points the selection here.
-                            else { onSelectDay(day.id, true); if (!routeShown) onToggleRoute?.() }
+                            else { onSelectDay(day.id, true); if (!routeShown) handleTogglePerDayRoute() }
                           }}
                           className={routeActive ? 'bg-accent text-accent-text' : 'bg-transparent text-content-secondary'}
                           style={{
