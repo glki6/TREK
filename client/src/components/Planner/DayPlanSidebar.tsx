@@ -203,6 +203,14 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     }
     prevTripRouteShown.current = tripRouteShown
   }, [tripRouteShown])
+  // Mutual exclusion: Route All ON → clear per-day route state (expandedRouteDayIds + legs)
+  useEffect(() => {
+    if (tripRouteShown) {
+      setExpandedRouteDayIds(new Set())
+      setRouteLegs({})
+      setHotelLegs({})
+    }
+  }, [tripRouteShown])
   // Mutual exclusion: turning on per-day route clears Route All, and vice versa.
   // When per-day routes are turned off, also clear expanded day IDs to prevent stale
   // connector pills from showing for non-existent routes (#mobile-route-persist).
@@ -2818,14 +2826,14 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                         <button
                           onClick={() => {
                             if (showRouteToolsWhenExpanded) {
-                              // Mobile: toggle this day's inline leg distances in place.
-                              // Selecting the day would close the sheet, so we don't — the
-                              // distances between places appear right here instead (#1374).
+                              // Mobile: per-day Route = at most ONE active day. Toggle ON replaces; OFF clears.
                               setExpandedRouteDayIds(prev => {
-                                const next = new Set(prev)
-                                next.has(day.id) ? next.delete(day.id) : next.add(day.id)
-                                return next
+                                return prev.has(day.id)
+                                  ? new Set()            // toggle OFF → clear
+                                  : new Set([day.id])    // toggle ON → replace with this day only
                               })
+                              // Mutual exclusion: per-day ON → clear Route All (tripRouteShown)
+                              if (tripRouteShown) setTripRouteShown(false)
                             } else if (isSelected) { handleTogglePerDayRoute() }
                             // Desktop: the route is computed for the globally selected day,
                             // so tapping Route on another day first points the selection here.

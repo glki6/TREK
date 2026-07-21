@@ -340,10 +340,9 @@ export function useTripPlanner() {
   // Derive a target day from mobileRouteDays so useRouteCalculation has something to calculate (#Issue B).
   const routeTargetDayId = useMemo<number | null>(() => {
     if (mobileRouteDays.size > 0) {
-      // Prefer selectedDayId if it's one of the routed days; otherwise pick the first routed day.
-      return selectedDayId && mobileRouteDays.has(selectedDayId)
-        ? selectedDayId
-        : Array.from(mobileRouteDays.values())[0] ?? null
+      // Mobile per-day Route: at most ONE active day. Never follow selectedDayId —
+      // header clicks must not change the route target, only the Route button does.
+      return Array.from(mobileRouteDays.values())[0] ?? null
     }
     return selectedDayId
   }, [selectedDayId, mobileRouteDays])
@@ -354,8 +353,10 @@ export function useTripPlanner() {
     tripActions.setSelectedDay(dayId)
     if (changed && !skipFit) setFitKey(k => k + 1)
     setMobileSidebarOpen(null)
-    updateRouteForDay(dayId)
-  }, [updateRouteForDay, selectedDayId])
+    // On mobile with per-day routes active, header clicks must not change route target (#Issue B UI fix).
+    // Only the Route button changes which day's route is drawn.
+    if (mobileRouteDays.size === 0) updateRouteForDay(dayId)
+  }, [updateRouteForDay, selectedDayId, mobileRouteDays])
 
   const handlePlaceClick = useCallback((placeId: number | null, assignmentId?: number | null) => {
     if (assignmentId) {
