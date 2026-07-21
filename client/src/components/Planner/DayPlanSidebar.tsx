@@ -6,7 +6,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 're
 import { avatarSrc } from '../../utils/avatarSrc'
 import { ChevronDown, ChevronRight, ChevronUp, Navigation, RotateCcw, ExternalLink, Clock, Pencil, GripVertical, Ticket, Plus, FileText, Trash2, Car, Lock, Hotel, Footprints, Route as RouteIcon, Bookmark, TramFront } from 'lucide-react'
 import { assignmentsApi, reservationsApi } from '../../api/client'
-import { calculateRoute, calculateRouteWithLegs, optimizeRoute, generateGoogleMapsUrl } from '../Map/RouteCalculator'
+import { calculateRoute, calculateRouteWithLegs, calculateTripRoute, optimizeRoute, generateGoogleMapsUrl } from '../Map/RouteCalculator'
 import PlaceAvatar from '../shared/PlaceAvatar'
 import ConfirmDialog from '../shared/ConfirmDialog'
 import { useContextMenu, ContextMenu } from '../shared/ContextMenu'
@@ -167,6 +167,12 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   const [editTitle, setEditTitle] = useState('')
   const [isCalculating, setIsCalculating] = useState(false)
   const [routeInfo, setRouteInfo] = useState(null)
+  // Trip-level route: shows combined polyline across all days
+  const [tripRouteShown, setTripRouteShown] = useState(false)
+  const [tripRouteInfo, setTripRouteInfo] = useState<{
+    distanceText: string
+    durationText: string
+  } | null>(null)
   // Per-segment legs keyed by day id, then by the start place's assignment id (or the
   // transport's reservation id). Nested per day so several Route-toggled mobile days
   // can't collide in one flat map — assignment ids and reservation ids come from
@@ -411,11 +417,13 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // day while the Route toggle is on. Mobile: each expanded day the user tapped
   // "Route" on — shown inline so seeing distances between places doesn't require
   // selecting the day, which would close the mobile sheet (#1374).
-  const routeDayIds = useMemo<number[]>(() => (
-    showRouteToolsWhenExpanded
+  const routeDayIds = useMemo<number[]>(() => {
+    // When trip-level route is shown, disable per-day routes
+    if (tripRouteShown) return []
+    return showRouteToolsWhenExpanded
       ? days.filter(d => expandedRouteDayIds.has(d.id) && expandedDays.has(d.id)).map(d => d.id)
       : (routeShown && selectedDayId ? [selectedDayId] : [])
-  ), [showRouteToolsWhenExpanded, expandedRouteDayIds, expandedDays, days, routeShown, selectedDayId])
+  }, [showRouteToolsWhenExpanded, expandedRouteDayIds, expandedDays, days, routeShown, selectedDayId, tripRouteShown])
   const routeDayKey = routeDayIds.join(',')
 
   // Per-segment travel times shown as connectors between a day's located stops.
@@ -848,6 +856,57 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     finally { setIsCalculating(false) }
   }
 
+  // Trip-level route: compute aggregated route across ALL days
+  const handleCalculateTripRoute = async () => {
+    if (!trip.length || !days.length) return
+    setIsCalculating(true)
+    try {
+      const allDayRuns: { lat: number; lng: number }[][][] = []
+      for (const day of days) {
+        const { runs } = planDay(day.id)
+        if (runs.length > 0) {
+          allDayRuns.push(runs.map(run => run.map(p => ({ lat: p.lat, lng: p.lng }))))
+        }
+      }
+      if (allDayRuns.length === 0) { toast.error(t('dayplan.toast.needTwoPlaces')); return }
+
+      const result = await calculateTripRoute(allDayRuns as any, { profile: routeProfile })
+      setTripRouteInfo({
+        distanceText: formatDistanceKmMi(result.distance),
+        durationText: formatDurationSec(result.duration),
+      })
+      // Pass aggregated coordinates to the map via existing callback
+      onRouteCalculated?.({
+        coordinates: result.coordinates.flat() as [number, number][],
+        distance: result.distance,
+        duration: result.duration,
+        distanceText: formatDistanceKmMi(result.distance),
+        durationText: formatDurationSec(result.duration),
+        walkingText: '',
+        drivingText: '',
+      } as any)
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        toast.error(t('dayplan.toast.routeError'))
+      }
+    } finally { setIsCalculating(false) }
+  }
+
+  // Helper: format distance in km/mi matching user settings
+  function formatDistanceKmMi(meters: number): string {
+    if (distanceUnit === 'imperial') {
+      const miles = meters / 1609.344
+      return `${miles.toFixed(1)} mi`
+    }
+    if (meters < 1000) return `${Math.round(meters)} m`
+    return `${(meters / 1000).toFixed(1)} km`
+  }
+  function formatDurationSec(seconds: number): string {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    return h > 0 ? `${h} h ${m} min` : `${m} min`
+  }
+
   const toggleLock = (assignmentId) => {
     const prevLocked = new Set(lockedIds)
     setLockedIds(prev => {
@@ -1055,6 +1114,10 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     setIsCalculating,
     routeInfo,
     setRouteInfo,
+    tripRouteShown,
+    setTripRouteShown,
+    tripRouteInfo,
+    handleCalculateTripRoute,
     routeLegs,
     setRouteLegs,
     hotelLegs,
@@ -1221,6 +1284,10 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     setIsCalculating,
     routeInfo,
     setRouteInfo,
+    tripRouteShown,
+    setTripRouteShown,
+    tripRouteInfo,
+    handleCalculateTripRoute,
     routeLegs,
     setRouteLegs,
     hotelLegs,
