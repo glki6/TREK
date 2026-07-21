@@ -180,7 +180,7 @@ function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAn
  */
 function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boolean): L.DivIcon {
   const size = isSelected ? 44 : 36
-  const r = (size / 2) - (isSelected ? 5.5 : 5)
+  const r = size / 2
   const cx = size / 2
   const cy = size / 2
   const shadow = isSelected
@@ -205,7 +205,7 @@ function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boole
       width:${size}px;height:${size}px;border-radius:50%;
       border:${isSelected ? 3 : 2.5}px solid white;
       box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
-      cursor:pointer;line-height:1;overflow:hidden;background:#111827;\
+      cursor:pointer;line-height:1;overflow:hidden;\
     "><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}</svg>${homeSvg}</div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
