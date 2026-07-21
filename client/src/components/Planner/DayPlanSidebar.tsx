@@ -982,7 +982,9 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
           const eveningPt = drawEvening ? hotelPt(bookends.evening) : null
           const isTransferDay = morningPt && eveningPt &&
             (morningPt.lat !== eveningPt.lat || morningPt.lng !== eveningPt.lng)
-          const routeAllDrawEvening = isTransferDay ? false : !!eveningPt
+          // Always draw the evening hotel endpoint — on transfer days the day route
+          // already covers morning→stops→evening, so there's no phantom backtracking.
+          const routeAllDrawEvening = !!eveningPt
 
           runs = withHotelBookends(
             runs,
@@ -1035,11 +1037,19 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         if (prevDayEveningHotel && bookends?.morning?.place_lat != null) {
           const mLat = bookends.morning.place_lat
           const mLng = bookends.morning.place_lng
-          // Use epsilon comparison to avoid phantom bridges from floating-point drift
-          const latDiff = Math.abs(prevDayEveningHotel.lat - mLat)
-          const lngDiff = Math.abs(prevDayEveningHotel.lng - mLng)
-          if (latDiff > 1e-6 || lngDiff > 1e-6) {
-            runs.unshift([prevDayEveningHotel, { lat: mLat, lng: mLng }])
+          // Skip bridge on transfer days — the day route already covers
+          // morning→stops→evening, so a bridge from yesterday's evening to today's
+          // morning would create phantom backtracking.
+          const isTransferDayRoute = bookends.evening?.place_lat != null &&
+            (bookends.morning.place_lat !== bookends.evening.place_lat ||
+             bookends.morning.place_lng !== bookends.evening.place_lng)
+          if (!isTransferDayRoute) {
+            // Use epsilon comparison to avoid phantom bridges from floating-point drift
+            const latDiff = Math.abs(prevDayEveningHotel.lat - mLat)
+            const lngDiff = Math.abs(prevDayEveningHotel.lng - mLng)
+            if (latDiff > 1e-6 || lngDiff > 1e-6) {
+              runs.unshift([prevDayEveningHotel, { lat: mLat, lng: mLng }])
+            }
           }
         }
 
