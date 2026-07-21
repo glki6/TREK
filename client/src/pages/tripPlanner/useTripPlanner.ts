@@ -346,6 +346,22 @@ export function useTripPlanner() {
     }
     return selectedDayId
   }, [selectedDayId, mobileRouteDays])
+
+  // Active per-day route day (mobile only). Null when no mobile route is active.
+  // Used for map fitting and marker color targeting without affecting routeTargetDayId fallback.
+  const activeRouteDayId = useMemo<number | null>(() => {
+    return mobileRouteDays.size > 0 ? Array.from(mobileRouteDays.values())[0] ?? null : null
+  }, [mobileRouteDays])
+
+  // Fit map when per-day Route activates or switches day (Minor 1).
+  // Do NOT bump on clear to null — avoid erroneous fit when Route is toggled OFF.
+  const prevActiveRouteDayId = useRef<number | null>(null)
+  useEffect(() => {
+    if (activeRouteDayId !== null && activeRouteDayId !== prevActiveRouteDayId.current) {
+      setFitKey(k => k + 1)
+    }
+    prevActiveRouteDayId.current = activeRouteDayId
+  }, [activeRouteDayId])
   const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, routeTargetDayId, routeEnabled, routeProfile, tripAccommodations)
 
   const handleSelectDay = useCallback((dayId: number | null, skipFit?: boolean) => {
@@ -876,12 +892,14 @@ export function useTripPlanner() {
     return map
   }, [selectedDayId, assignments])
 
-  // Places assigned to selected day (with coords) — used for map fitting
+  // Places assigned to selected day (with coords) — used for map fitting.
+  // When per-day Route is active on mobile, use that day so BoundsController fits correctly (Minor 1).
   const dayPlaces = useMemo(() => {
-    if (!selectedDayId) return []
-    const da = assignments[String(selectedDayId)] || []
+    const targetId = activeRouteDayId ?? selectedDayId
+    if (!targetId) return []
+    const da = assignments[String(targetId)] || []
     return da.map(a => a.place).filter(p => p?.lat && p?.lng)
-  }, [selectedDayId, assignments])
+  }, [activeRouteDayId, selectedDayId, assignments])
 
   // Auto-switch map tiles to dark theme when in dark mode (matches CollectionMap + Navbar pattern)
   const LIGHT_TILE = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
@@ -929,6 +947,7 @@ export function useTripPlanner() {
     transportModalDayId, setTransportModalDayId,
     transportModalAutomated, setTransportModalAutomated, transitPrefill, setTransitPrefill, transitJourney, setTransitJourney,
     reservationPrefill, transportPrefill, importReviewActive, startImportReview, advanceImportReview,
+    activeRouteDayId,
     routeShown, setRouteShown, mobileRouteDays, setMobileRouteDays, routeProfile, setRouteProfile, fitKey, setFitKey, fitAllKey, setFitAllKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
     deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
