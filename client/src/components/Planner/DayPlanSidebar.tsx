@@ -185,15 +185,21 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     distanceText: string
     durationText: string
   } | null>(null)
-  // Clear map route when trip route is toggled off so per-day routes can show again
+  // Clear map route when trip route is toggled off so per-day routes can show again.
+  // Use a ref to track previous value — only clear on true→false transition (user toggle),
+  // not on initial mount where tripRouteShown starts false. Fixes mobile: DayPlanSidebar
+  // unmounts when sidebar overlay closes; on remount, fresh state (tripRouteShown=false)
+  // would clear all routes including per-day routes managed by the parent (#mobile-route-persist).
+  const prevTripRouteShown = useRef(tripRouteShown)
   useEffect(() => {
-    if (!tripRouteShown) {
+    if (!tripRouteShown && prevTripRouteShown.current) {
       onTripRouteSet?.(null)
       setTripRouteInfo(null)
       setTripRouteLegs({})
       setTripHotelLegs({})
       setTripBridgeLegs({})
     }
+    prevTripRouteShown.current = tripRouteShown
   }, [tripRouteShown])
   // Mutual exclusion: turning on per-day route clears Route All, and vice versa
   const handleTogglePerDayRoute = () => {
