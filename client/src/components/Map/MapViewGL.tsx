@@ -912,6 +912,37 @@ export function MapViewGL({
     }
   }, [pois, mapReady, glProvider])
 
+  // Normalize route data to segments with day indices (T7-1h regression fix).
+  // Handles per-day routes ([seg][coords]), multi-day trip routes ([day][seg][coords]),
+  // and ambiguous cases where shape detection fails.
+  const normalizedGLSegments = useMemo<
+    { segment: [number, number][]; dayIndex: number }[]
+  >(() => {
+    if (!route || route.length === 0) return []
+    const first = route[0]
+    if (!Array.isArray(first)) return []
+    const firstSub = first[0]
+    // Try depth-3 (multi-day) first; fall back to depth-2 (per-day)
+    if (Array.isArray(firstSub) && firstSub.length > 0 && Array.isArray(firstSub[0])) {
+      const testDepth3 = route.flatMap((daySegs, di) =>
+        Array.isArray(daySegs)
+          ? (daySegs as [number, number][][]).flatMap(seg =>
+              Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+                ? [{ segment: seg as [number, number][], dayIndex: di }]
+                : []
+            )
+          : []
+      )
+      if (testDepth3.length > 0) return testDepth3
+    }
+    // Depth-2 fallback
+    return (route as [number, number][][]).flatMap(seg =>
+      Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+        ? [{ segment: seg as [number, number][], dayIndex: 0 }]
+        : []
+    )
+  }, [route])
+
   // Update route geojson
   useEffect(() => {
     const map = mapRef.current
@@ -919,57 +950,34 @@ export function MapViewGL({
     const src = map.getSource('trip-route') as mapboxgl.GeoJSONSource | undefined
     if (!src) return
 
-    // Detect multi-day trip route shape: [day][seg][coords] vs single-day [seg][coords]
-    const isMultiDay = Array.isArray(route) && route.length > 0
-      && typeof route[0]?.[0] !== 'number'
-
-    let features: {
+    const features: {
       type: 'Feature';
       properties: { dayIndex?: number };
       geometry: { type: 'LineString'; coordinates: [number, number][] }
-    }[] = []
-
-    if (isMultiDay) {
-      // Multi-day trip route: flatten days into features with a `dayIndex` property (T7-1g)
-      const days = route as [number, number][][][]
-      for (let d = 0; d < days.length; d++) {
-        for (const seg of days[d]) {
-          if (!seg || seg.length < 2) continue
-          features.push({
-            type: 'Feature',
-            properties: { dayIndex: d },
-            geometry: { type: 'LineString', coordinates: seg.map(([lat, lng]) => [lng, lat]) },
-          })
-        }
-      }
-    } else {
-      // Single-day route (existing behavior)
-      features = (route as [number, number][][]).filter(seg => seg && seg.length > 1).map(seg => ({
-        type: 'Feature' as const,
-        properties: {},
-        geometry: { type: 'LineString' as const, coordinates: seg.map(([lat, lng]) => [lng, lat]) },
-      }))
-    }
+    }[] = normalizedGLSegments.map(({ segment, dayIndex }) => ({
+      type: 'Feature' as const,
+      properties: { dayIndex },
+      geometry: { type: 'LineString' as const, coordinates: segment.map(([lat, lng]) => [lng, lat]) },
+    }))
 
     src.setData({ type: 'FeatureCollection', features })
-  }, [route, mapReady])
+  }, [normalizedGLSegments, mapReady])
 
   // Update route line colors when day-colors toggle or selected day changes (T7-1e).
   // T7-1g: for multi-day trip routes with Day Colors ON, use data-driven per-feature
   // coloring so each day's segments get its own palette color.
+  // T7-1h fix: use normalizedGLSegments instead of brittle shape detection.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
     try {
-      // Detect whether we have a multi-day trip route with day colors enabled
-      const isMultiDay = Array.isArray(route) && route.length > 0
-        && typeof route[0]?.[0] !== 'number'
+      // Check if any segment has a non-zero dayIndex (multi-day route)
+      const hasMultipleDays = normalizedGLSegments.some(s => s.dayIndex > 0)
 
       let colorValue: string | unknown[]
-      if (isMultiDay && useDayColors) {
+      if (hasMultipleDays && useDayColors) {
         // Data-driven color: map each feature's `dayIndex` property to the palette.
-        // Build a match expression for up to N days (use 20 as practical max).
-        const dayCount = (route as [number, number][][][]).length
+        const dayCount = Math.max(...normalizedGLSegments.map(s => s.dayIndex), 0) + 1
         const maxDays = Math.min(dayCount, 20)
         colorValue = ['match', ['get', 'dayIndex']] as unknown[]
         for (let d = 0; d < maxDays; d++) {
@@ -985,7 +993,7 @@ export function MapViewGL({
       map.setPaintProperty('trip-route-casing', 'line-opacity', 0.75)
       map.setPaintProperty('trip-route-line', 'line-color', colorValue)
     } catch { /* layer may not exist yet */ }
-  }, [routeColor, mapReady, route, useDayColors])
+  }, [routeColor, mapReady, normalizedGLSegments, useDayColors])
 
   // Travel times now live in the day sidebar (per-segment connectors), not on the map.
 

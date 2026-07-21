@@ -609,11 +609,56 @@ export const MapView = memo(function MapView({
   const thumbRafRef = useRef<number | null>(null)
 
   const placeIds = useMemo(() => places.map(p => p.id).join(','), [places])
-  // Flattened [lat,lng] points of the selected day's route (or all days for trip-level
-  // multi-day routes), so the bounds fit can include the full polyline once computed.
-  // .flat(2) handles both single-day ([number,number][][] → flat) and
-  // multi-day trip routes ([number,number][][][] → flat) (T7-1g).
-  const routeCoords = useMemo<[number, number][]>(() => (route || []).flat(2) as [number, number][], [route])
+  // Normalize route data to a flat list of { segment: [coord..], dayIndex }.
+  // Handles per-day routes ([seg][coords]), multi-day trip routes ([day][seg][coords]),
+  // and edge cases where shape detection is ambiguous (T7-1g regression fix).
+  const normalizedRouteSegments = useMemo<
+    { segment: [number, number][]; dayIndex: number }[]
+  >(() => {
+    if (!route || route.length === 0) return []
+    // Check depth: is this [day][seg][coords] (depth 3+) or [seg][coords] (depth 2)?
+    // Heuristic: if route[0][0] exists and route[0][0][0] is a number, we're at
+    // segment level directly. If route[0][0] is an array whose first element is ALSO
+    // an array of numbers, we have one more nesting level.
+    const first = route[0]
+    if (!Array.isArray(first)) return []
+    const firstSub = first[0]
+    let depth3 = false
+    if (Array.isArray(firstSub) && firstSub.length > 0 && Array.isArray(firstSub[0])) {
+      // Could be [day][seg][coords] OR [seg][coords] where each "segment" is actually coords.
+      // Distinguish: in [seg][coords], firstSub[0] = [lat, lng] (numbers).
+      // In [day][seg][coords], firstSub[0] = [lat, lng] too — same shape!
+      // But if route has >1 top-level element AND each sub-element also has >1 child,
+      // it's more likely multi-day. However the safest approach: check if treating as
+      // depth-3 produces valid segments.
+      // Heuristic: if firstSub.length >= 2 && firstSub[0].length >= 2 (multiple coords per seg)
+      // AND route.length matches expected day count pattern, treat as multi-day.
+      // SAFEST FIX: try depth-3 first; if it yields zero valid segments, fall back to depth-2.
+      const testDepth3 = route.flatMap((daySegs, di) =>
+        Array.isArray(daySegs)
+          ? (daySegs as [number, number][][]).flatMap(seg =>
+              Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+                ? [{ segment: seg as [number, number][], dayIndex: di }]
+                : []
+            )
+          : []
+      )
+      if (testDepth3.length > 0) {
+        depth3 = true
+        return testDepth3
+      }
+    }
+    // Depth-2 fallback (per-day route)
+    return (route as [number, number][][]).flatMap(seg =>
+      Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+        ? [{ segment: seg as [number, number][], dayIndex: 0 }]
+        : []
+    )
+  }, [route])
+
+  // Flattened [lat,lng] points for bounds fitting (T7-1g regression fix).
+  const routeCoords = useMemo<[number, number][]>
+    (() => normalizedRouteSegments.flatMap(s => s.segment), [normalizedRouteSegments])
   useEffect(() => {
     if (!places || places.length === 0 || !placesPhotosEnabled) return
     const cleanups: (() => void)[] = []
@@ -797,58 +842,37 @@ export const MapView = memo(function MapView({
       {/* Apple-Maps style: casing under core, rounded.
          * T7-1e: per-day route color when Day Colors toggle ON + single day selected
          * T7-1g: multi-color trip routes — each day's segments in its own palette color
+         * T7-1h fix: use normalizedRouteSegments to avoid shape detection crash
          */}
-      {route && route.length > 0 && (() => {
-        // Detect shape: if the first element is an array of arrays, we have a multi-day
-        // trip route [day][seg][coords]; otherwise it's a single-day route [seg][coords].
-        const isMultiDay = Array.isArray(route[0]) && route[0]?.length > 0 && typeof route[0][0] !== 'number'
-
-        if (isMultiDay) {
-          // Multi-day trip route: render each day's segments in its own color when toggle ON,
-          // or standard blue when OFF. No inter-day lines are drawn.
-          const days = route as [number, number][][][]
-          return days.flatMap((daySegs, dayIdx) =>
-            daySegs.flatMap((seg, segIdx) => seg.length > 1 ? [
-              <Polyline
-                key={`md-${dayIdx}-${segIdx}-casing`}
-                positions={seg}
-                pathOptions={{
-                  color: useDayColors ? getDayColor(dayIdx) : '#0a84ff',
-                  weight: 8,
-                  opacity: casingOpacity,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />,
-              <Polyline
-                key={`md-${dayIdx}-${segIdx}-core`}
-                positions={seg}
-                pathOptions={{
-                  color: useDayColors ? getDayColor(dayIdx) : '#0a84ff',
-                  weight: 5,
-                  opacity: 1,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />,
-            ] : [])
-          )
+      {normalizedRouteSegments.length > 0 && normalizedRouteSegments.flatMap(
+        ({ segment, dayIndex }, segIdx) => {
+          const color = useDayColors ? getDayColor(dayIndex) : routeColor
+          return [
+            <Polyline
+              key={`seg-${segIdx}-casing`}
+              positions={segment}
+              pathOptions={{
+                color,
+                weight: 8,
+                opacity: casingOpacity,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />,
+            <Polyline
+              key={`seg-${segIdx}-core`}
+              positions={segment}
+              pathOptions={{
+                color,
+                weight: 5,
+                opacity: 1,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />,
+          ]
         }
-
-        // Single-day route (existing behavior)
-        return route.flatMap((seg, i) => seg.length > 1 ? [
-          <Polyline
-            key={`${i}-casing`}
-            positions={seg}
-            pathOptions={{ color: routeColor, weight: 8, opacity: casingOpacity, lineCap: 'round', lineJoin: 'round' }}
-          />,
-          <Polyline
-            key={`${i}-core`}
-            positions={seg}
-            pathOptions={{ color: routeColor, weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
-          />,
-        ] : [])
-      })()}
+      )}
 
       {/* GPX imported route geometries */}
       {gpxPolylines}
