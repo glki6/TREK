@@ -245,7 +245,7 @@ function createAccommodationMultiDayMarkerElement(dayIndices: number[], selected
 
   // filled Home icon for pie marker (stroke-only outline looks thin on colored wedges)
   const HomeIcon = CATEGORY_ICON_MAP['Home']
-  const homeSvg = HomeIcon ? renderToStaticMarkup(createElement(HomeIcon, { size: selected ? 22 : 18, color: 'white', strokeWidth: 2.5, fill: 'white' })) : ''
+  const homeSvg = HomeIcon ? renderToStaticMarkup(createElement(HomeIcon, { size: selected ? 22 : 18, color: 'white', strokeWidth: 2.5, fill: 'rgba(255,255,255,0.3)' })) : ''
 
   const el = document.createElement('div')
   el.style.cssText = `width:${outer}px;height:${outer}px;cursor:pointer;`

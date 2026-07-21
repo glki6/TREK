@@ -201,7 +201,7 @@ function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boole
 
   // filled Home icon for pie marker (stroke-only outline looks thin on colored wedges)
   const HomeFilled = CATEGORY_ICON_MAP['Home']
-  const homeSvg = HomeFilled ? renderToStaticMarkup(createElement(HomeFilled, { size: isSelected ? 22 : 18, color: 'white', strokeWidth: 2.5, fill: 'white' })) : ''
+  const homeSvg = HomeFilled ? renderToStaticMarkup(createElement(HomeFilled, { size: isSelected ? 22 : 18, color: 'white', strokeWidth: 2.5, fill: 'rgba(255,255,255,0.3)' })) : ''
   return L.divIcon({
     className: "",
     html: `<div style="\
