@@ -284,6 +284,54 @@ export async function calculateRouteWithLegs(
   return result
 }
 
+/**
+ * Calculates route geometry + stats for an entire trip by iterating all day runs.
+ * Reuses calculateRouteWithLegs() internally (benefits from existing cache).
+ * Returns aggregated geometry suitable for MapViewGL route prop.
+ *
+ * @param allDayRuns - Outer array = days, inner arrays = runs within each day
+ */
+export async function calculateTripRoute(
+  allDayRuns: Waypoint[][][],
+  { signal, profile = 'driving' }: { signal?: AbortSignal; profile?: 'driving' | 'walking' | 'cycling' } = {}
+): Promise<{
+  coordinates: [number, number][][];
+  distance: number;
+  duration: number;
+  legs: RouteSegment[];
+  dayBreakdown: { distance: number; duration: number }[];
+}> {
+  const allCoordinates: [number, number][][] = []
+  let totalDistance = 0
+  let totalDuration = 0
+  const allLegs: RouteSegment[] = []
+  const dayBreakdown: { distance: number; duration: number }[] = []
+
+  for (const dayRuns of allDayRuns) {
+    let dayDistance = 0
+    let dayDuration = 0
+
+    for (const run of dayRuns) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      try {
+        const r = await calculateRouteWithLegs(run, { signal, profile })
+        allCoordinates.push(r.coordinates)
+        totalDistance += r.distance
+        dayDistance += r.distance
+        totalDuration += r.duration
+        dayDuration += r.duration
+        allLegs.push(...r.legs)
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') throw err
+        console.warn('[RouteCalculator] calculateTripRoute: run failed, continuing with partial results', err)
+      }
+    }
+    dayBreakdown.push({ distance: dayDistance, duration: dayDuration })
+  }
+
+  return { coordinates: allCoordinates, distance: totalDistance, duration: totalDuration, legs: allLegs, dayBreakdown }
+}
+
 function getDistanceUnit(): DistanceUnit {
   return useSettingsStore.getState().settings.distance_unit === 'imperial' ? 'imperial' : 'metric'
 }
