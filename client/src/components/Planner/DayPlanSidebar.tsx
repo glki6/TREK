@@ -179,8 +179,15 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   const [editTitle, setEditTitle] = useState('')
   const [isCalculating, setIsCalculating] = useState(false)
   const [routeInfo, setRouteInfo] = useState(null)
-  // Trip-level route: shows combined polyline across all days
-  const [tripRouteShown, setTripRouteShown] = useState(false)
+  // Trip-level route: shows combined polyline across all days.
+  // Persisted to localStorage so Route All toggle survives DayPlanSidebar unmount/remount on mobile.
+  const [tripRouteShown, setTripRouteShown] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`route-all-${tripId}`)
+      if (saved) return JSON.parse(saved) as boolean
+    } catch {}
+    return false
+  })
   const [tripRouteInfo, setTripRouteInfo] = useState<{
     distanceText: string
     durationText: string
@@ -201,6 +208,10 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     }
     prevTripRouteShown.current = tripRouteShown
   }, [tripRouteShown])
+  // Sync tripRouteShown to localStorage so it survives mobile sidebar unmount/remount
+  useEffect(() => {
+    try { localStorage.setItem(`route-all-${tripId}`, JSON.stringify(tripRouteShown)) } catch {}
+  }, [tripRouteShown, tripId])
   // Mutual exclusion: turning on per-day route clears Route All, and vice versa
   const handleTogglePerDayRoute = () => {
     if (!routeShown && tripRouteShown) {
@@ -219,7 +230,19 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // Mobile only: days the user tapped "Route" on. Their leg distances show inline in
   // the expanded day, so seeing distances doesn't require selecting the day (which
   // closes the mobile sheet) — #1374.
-  const [expandedRouteDayIds, setExpandedRouteDayIds] = useState<Set<number>>(new Set())
+  // Persisted to localStorage so per-day route toggles survive DayPlanSidebar unmount/remount
+  // on mobile (sidebar overlay close → component destroyed → remount with fresh state).
+  const [expandedRouteDayIds, setExpandedRouteDayIds] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem(`route-days-${tripId}`)
+      if (saved) return new Set<number>(JSON.parse(saved) as number[])
+    } catch {}
+    return new Set()
+  })
+  // Sync expandedRouteDayIds to localStorage on change
+  useEffect(() => {
+    try { localStorage.setItem(`route-days-${tripId}`, JSON.stringify([...expandedRouteDayIds])) } catch {}
+  }, [expandedRouteDayIds, tripId])
   // Trip-level route legs keyed by day id then assignment id (same shape as routeLegs)
   // so connector pills can show drive times between stops when Route All is active — #1458.
   const [tripRouteLegs, setTripRouteLegs] = useState<Record<number, Record<number, RouteSegment>>>({})
