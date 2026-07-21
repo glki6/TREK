@@ -16,6 +16,8 @@
 
 A feature fork of [TREK](https://github.com/mauriceboe/TREK) focused on offline-first mobile navigation and visual trip planning. Unlike stock TREK which has a Google Maps button and an OpenStreetMap button that both open web pages, this build replaces them with **Navigate** (launches the Google Maps app via `comgooglemaps://` native deep links — works in airplane mode) and **View** (opens rich Google place pages using `google_cid`, showing reviews, photos, and hours). The map features day-colored markers that make it easy to see which places belong to which trip day at a glance, multi-day pie-chart markers for accommodations spanning several nights, and a Route All button that draws all trip segments simultaneously with per-day colors, drive-time pills, and inter-day hotel connectors. Map tiles auto-switch to dark theme in dark mode.
 
+> **Based on TREK v3.2.1** — not yet synced with upstream 3.3.x / 3.4.x releases.
+
 <br />
 
 <a href="https://demo.liketrek.com"><img alt="Demo" src="https://img.shields.io/badge/Demo-try-111827?style=for-the-badge" /></a>
