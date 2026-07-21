@@ -896,7 +896,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
 
   // Trip-level route: compute aggregated route across ALL days
   const handleCalculateTripRoute = async () => {
-    if (!trip.length || !days.length) return
+    if (!trip || !days.length) return
     setIsCalculating(true)
     try {
       const allDayRuns: { lat: number; lng: number }[][][] = []
