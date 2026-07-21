@@ -217,6 +217,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
   const poi = usePoiExplore()
   const [glMap, setGlMap] = useState<CompassMap | null>(null)
   const poiPillEnabled = useSettingsStore(s => s.settings.map_poi_pill_enabled) !== false
+  const [disableClustering, setDisableClustering] = useState(false)
 
   // Costs expense editor opened from a booking modal (save-then-open). Lives at the
   // page level so it has tripMembers / base currency / current user available.
@@ -334,6 +335,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
               pois={poi.pois}
               onPoiClick={openAddPlaceFromPoi}
               onViewportChange={poi.onViewportChange}
+              disableClustering={disableClustering}
               onMapReady={setGlMap}
             />
 
@@ -343,6 +345,27 @@ export default function TripPlannerPage(): React.ReactElement | null {
                   <PoiCategoryPill active={poi.active} onToggle={poi.toggle} loadingKeys={poi.loadingKeys} errorKeys={poi.errorKeys} moved={poi.moved} onSearchArea={poi.searchArea} />
                 )}
                 {glMap && <MapCompassPill map={glMap} />}
+                <button
+                  onClick={() => setDisableClustering(c => !c)}
+                  style={{
+                    pointerEvents: 'auto',
+                    padding: '6px 12px',
+                    borderRadius: 20,
+                    border: 'none',
+                    background: disableClustering ? 'var(--accent)' : 'rgba(255,255,255,0.7)',
+                    color: disableClustering ? '#fff' : 'var(--text-primary)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    transition: 'background 0.15s',
+                  }}
+                  title={disableClustering ? 'Re-enable marker clustering' : 'Disable marker clustering'}
+                >
+                  {disableClustering ? 'Cluster OFF' : 'Cluster ON'}
+                </button>
               </div>
             )}
 
