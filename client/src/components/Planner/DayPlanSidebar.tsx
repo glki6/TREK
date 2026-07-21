@@ -1095,32 +1095,34 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
           ? getDayBookendHotels(days[i], days, accommodations)
           : null
         if (!bookends) continue
-        // Collect first/last waypoints — track whether each is a real place
-        // vs. a transport endpoint (airport, station) so we can skip bogus
-        // hotel legs on arrival/departure days where the first/last stop IS the airport.
+        // Collect first/last waypoints — track whether each is a transport endpoint
+        // (airport/station with category_id=5, or from a transport reservation)
+        // so we can skip bogus hotel legs on arrival/departure days.
         const merged = mergedItemsMap[days[i].id] || []
-        const wayPts: { lat: number; lng: number; isPlace: boolean }[] = []
+        const wayPts: { lat: number; lng: number; isTransportEndpoint: boolean }[] = []
         for (const it of merged) {
-          if (it.type === 'place' && it.data.place?.lat && it.data.place?.lng)
-            wayPts.push({ lat: it.data.place.lat, lng: it.data.place.lng, isPlace: true })
-          else if (it.type === 'transport') {
+          if (it.type === 'place' && it.data.place?.lat && it.data.place?.lng) {
+            // Places with Transport category (airports, stations) are endpoints
+            const isTrans = it.data.place.category_id === 5
+            wayPts.push({ lat: it.data.place.lat, lng: it.data.place.lng, isTransportEndpoint: isTrans })
+          } else if (it.type === 'transport') {
             const { from, to } = getTransportRouteEndpoints(it.data, days[i].id)
-            if (from) wayPts.push({ lat: from.lat, lng: from.lng, isPlace: false })
-            if (to) wayPts.push({ lat: to.lat, lng: to.lng, isPlace: false })
+            if (from) wayPts.push({ lat: from.lat, lng: from.lng, isTransportEndpoint: true })
+            if (to) wayPts.push({ lat: to.lat, lng: to.lng, isTransportEndpoint: true })
           }
         }
         const firstWay = wayPts[0] ?? null
         const lastWay = wayPts[wayPts.length - 1] ?? null
         // Morning hotel leg — skip if the first stop is an airport/transport endpoint
         // (arrival day: you fly in, you don't drive from the hotel)
-        if (bookends.morning?.place_lat != null && firstWay && firstWay.isPlace) {
+        if (bookends.morning?.place_lat != null && firstWay && !firstWay.isTransportEndpoint) {
           workItems.push({ dayIdx: i, kind: 'hotel', side: 'top',
             from: { lat: bookends.morning.place_lat, lng: bookends.morning.place_lng },
             to: { lat: firstWay.lat, lng: firstWay.lng }, hotel: bookends.morning })
         }
         // Evening hotel leg — skip if the last stop is an airport/transport endpoint
         // (departure day: you fly out, you don't drive back to the hotel)
-        if (bookends.evening?.place_lat != null && lastWay && lastWay.isPlace) {
+        if (bookends.evening?.place_lat != null && lastWay && !lastWay.isTransportEndpoint) {
           workItems.push({ dayIdx: i, kind: 'hotel', side: 'bottom',
             from: { lat: lastWay.lat, lng: lastWay.lng },
             to: { lat: bookends.evening.place_lat, lng: bookends.evening.place_lng },
