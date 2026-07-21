@@ -141,8 +141,8 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
     const isArrival = day ? isArrivalDay(day, allDays, accommodations) : false
     const isDeparture = day ? isDepartureDay(day, allDays, accommodations) : false
     const drawMorning = (!isArrival || !!bookends?.morningIsSleptHere) && (firstStop?.kind === 'place' || !!bookends?.morningIsSleptHere)
-    // On departure days: suppress return leg unless last activity is an actual place to visit
-    const drawEvening = (!isDeparture || lastStop?.kind === 'place') && (lastStop?.kind === 'place' || !!bookends?.eveningIsOvernight)
+    // On departure days: suppress evening return leg entirely (you're checking out, not staying)
+    const drawEvening = !isDeparture && (lastStop?.kind === 'place' || !!bookends?.eveningIsOvernight)
     const runsWithHotel = withHotelBookends(
       runs,
       flatPts[0],

@@ -544,8 +544,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       const isArrival = isArrivalDay(day, days, accommodations)
       const isDeparture = isDepartureDay(day, days, accommodations)
       const wantTop = !!(startHotel && firstWay && (bookends?.morningIsSleptHere || (!isArrival && firstWay.isPlace)))
-      // On departure days: suppress return leg unless you have actual places to visit that evening
-      const wantBottom = !!(endHotel && lastWay && (!isDeparture || lastWay.isPlace) && (lastWay.isPlace || bookends?.eveningIsOvernight))
+      // On departure days: suppress evening return leg entirely (you're checking out, not staying)
+      const wantBottom = !!(endHotel && lastWay && !isDeparture && (lastWay.isPlace || bookends?.eveningIsOvernight))
       return { runs, startHotel, endHotel, firstWay, lastWay, wantTop, wantBottom }
     }
 
