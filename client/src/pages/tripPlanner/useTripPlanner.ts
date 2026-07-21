@@ -856,14 +856,21 @@ export function useTripPlanner() {
   // Maps each place to its first day-index and position within that day.
   // A place assigned on multiple days keeps the FIRST assignment's info;
   // this is sufficient for marker coloring and sidebar circle indicators.
+  // T7-1g: accommodation-only places (no day assignments) get entries from
+  // their stay range [start_day_id, end_day_id] so they render home icons.
   const placeDayMap = useMemo<Record<string, Array<{ dayIndex: number; orderNumber: number }>>>(() => {
     if (days.length === 0) return {}
 
     const sortedDays = [...days].sort(
       (a, b) => ((a as any).day_number ?? 0) - ((b as any).day_number ?? 0),
     )
+    // day.id → zero-based index lookup
+    const dayIndexByDayId: Record<number, number> = {}
+    sortedDays.forEach((d, i) => { dayIndexByDayId[d.id] = i })
+
     const map: Record<string, Array<{ dayIndex: number; orderNumber: number }>> = {}
 
+    // 1. Entries from day assignments (existing logic)
     sortedDays.forEach((day, dayIdx) => {
       const da = assignments[String(day.id)] || []
       const sorted = [...da].sort((a, b) => a.order_index - b.order_index)
@@ -875,8 +882,30 @@ export function useTripPlanner() {
         map[key].push({ dayIndex: dayIdx, orderNumber: pos + 1 })
       })
     })
+
+    // 2. T7-1g: entries from accommodation stay ranges (covers places with no assignments)
+    if (tripAccommodations.length > 0) {
+      for (const acc of tripAccommodations) {
+        if (!acc.place_id) continue
+        const key = String(acc.place_id)
+        const startIdx = dayIndexByDayId[acc.start_day_id]
+        const endIdx = dayIndexByDayId[acc.end_day_id]
+        if (startIdx === undefined || endIdx === undefined) continue
+        // Build span: every day in [start, end] inclusive
+        const lo = Math.min(startIdx, endIdx)
+        const hi = Math.max(startIdx, endIdx)
+        for (let di = lo; di <= hi; di++) {
+          if (!map[key]) map[key] = []
+          // Keep existing entry (assignment) with its orderNumber; add stay-only days at 0
+          if (!map[key].some(e => e.dayIndex === di)) {
+            map[key].push({ dayIndex: di, orderNumber: 0 })
+          }
+        }
+      }
+    }
+
     return map
-  }, [days, assignments])
+  }, [days, assignments, tripAccommodations])
 
   // Build placeId → order-number map from the selected day's assignments
   const dayOrderMap = useMemo(() => {
