@@ -19,6 +19,8 @@ import { memoryStorage } from 'multer';
 import type { User } from '../../types';
 import { PlacesService } from './places.service';
 import { isUpdateConflict } from '../../services/conflictResult';
+import { db } from '../../db/database';
+import { enrichImportedPlaces, type EnrichablePlace } from '../../services/placeEnrichment';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 
@@ -319,5 +321,19 @@ export class PlacesController {
     }
     this.places.broadcast(tripId, 'place:deleted', { placeId: Number(id) }, socketId);
     return { success: true };
+  }
+
+  @Post('enrich')
+  @HttpCode(200)
+  enrich(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    const trip = this.requireTrip(tripId, user);
+    this.requireEdit(trip, user);
+    const rows = db.prepare(
+      `SELECT id, name, lat, lng, google_place_id, google_ftid, address, website, phone, image_url
+       FROM places WHERE trip_id = ? AND (google_place_id IS NULL OR google_place_id = '')`,
+    ).all(tripId) as EnrichablePlace[];
+    // Fire-and-forget: enrichment runs in background via websockets for live updates
+    void enrichImportedPlaces(tripId, user.id, rows);
+    return { enriched: rows.length, message: `${rows.length} places queued for enrichment` };
   }
 }
