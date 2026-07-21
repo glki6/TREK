@@ -322,7 +322,7 @@ export function DayPlanSidebarToolbar({
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 30, height: 30, borderRadius: 8,
                 border: '1px solid var(--border-primary)',
-                background: tripRouteShown ? 'var(--bg-accent, #e0f2fe)' : 'none',
+                background: tripRouteShown ? 'var(--bg-secondary)' : 'none',
                 color: tripRouteShown ? 'var(--accent, #0284c7)' : 'var(--text-primary)',
                 cursor: 'pointer', fontFamily: 'inherit', padding: 0,
                 transition: 'color 0.15s, border-color 0.15s, background 0.15s',
@@ -362,8 +362,8 @@ export function DayPlanSidebarToolbar({
       {tripRouteShown && tripRouteInfo && (
         <div style={{
           marginTop: 8, padding: '6px 10px', borderRadius: 8,
-          background: 'var(--bg-accent, #f0f9ff)',
-          border: '1px solid var(--border-faint, #e5e7eb)',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-primary)',
           fontSize: 'calc(11px * var(--fs-scale-caption, 1))', fontWeight: 500,
           color: 'var(--text-primary)',
         }}>
