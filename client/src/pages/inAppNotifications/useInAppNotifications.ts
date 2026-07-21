@@ -6,7 +6,7 @@ import { useInAppNotificationStore } from '../../store/inAppNotificationStore.ts
  * filter, the initial + filter-change fetches and the infinite-scroll observer.
  * InAppNotificationsPage is a pure wiring container. Behaviour is identical to
  * the previous in-component logic.
- */
+*/
 export function useInAppNotifications() {
   const { notifications, unreadCount, total, isLoading, hasMore, fetchNotifications, markAllRead, deleteAll } = useInAppNotificationStore()
   const [unreadOnly, setUnreadOnly] = useState(false)

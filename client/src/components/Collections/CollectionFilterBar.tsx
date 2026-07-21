@@ -13,7 +13,7 @@ interface Opt {
   count?: number
 }
 
-/** Small custom dropdown — compact trigger + click-away popover. */
+/** Small custom dropdown — compact trigger + click-away popover.*/
 function Dropdown({ current, options, onSelect, lead }: {
   current: string | number
   options: Opt[]
@@ -86,7 +86,7 @@ interface CollectionFilterBarProps {
  * Filter row above the places — a status dropdown (All / Idea / Want / Visited
  * with counts) and, when the list has categorised places, a category dropdown.
  * Custom compact dropdowns so they barely take any space.
- */
+*/
 export default function CollectionFilterBar({
   statusFilter, counts, categoryFilter, categoryOptions, onStatusFilter, onCategoryFilter,
   showLabels, labelOptions, labelFilter, onLabelFilter, canManageLabels, onManageLabels,

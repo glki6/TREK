@@ -16,7 +16,7 @@ type Provider = NonNullable<Settings['llm_provider']>
  * instance-wide model on the addon — the server resolves the admin config first.
  * The API key is stored encrypted and never prefilled: a blank field keeps the
  * stored key (mirrors the AirTrail connection layout).
- */
+*/
 export default function LlmConnectionSection(): React.ReactElement {
   const { t } = useTranslation()
   const toast = useToast()

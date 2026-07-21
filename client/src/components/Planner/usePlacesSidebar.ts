@@ -36,7 +36,7 @@ export interface PlacesSidebarProps {
   pushUndo?: (label: string, undoFn: () => Promise<void> | void) => void
   initialScrollTop?: number
   onScrollTopChange?: (top: number) => void
-  /** T7-1c: maps each placeId → array of {dayIndex, orderNumber} for day-color indicators (multi-day support) */
+  /** maps each placeId → array of {dayIndex, orderNumber} for day-color indicators (multi-day support)*/
   placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
   useDayColors?: boolean
 }
@@ -45,7 +45,7 @@ export interface PlacesSidebarProps {
  * Sidebar state: file/list import, search + filter + category multi-select,
  * multi-select/bulk-delete and the mobile day-picker sheet. Kept in one hook so
  * PlacesSidebar stays a thin layout shell over the sub-sections below.
- */
+*/
 export function usePlacesSidebar(props: PlacesSidebarProps) {
   const {
     tripId, places, assignments, selectedDayId,

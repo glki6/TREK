@@ -21,9 +21,9 @@ export interface UseGeolocationReturn {
   position: GeoPosition | null
   mode: TrackingMode
   error: string | null
-  /** Toggle through off → show → follow → off. Also triggers iOS orientation permission on first call. */
+  /** Toggle through off → show → follow → off. Also triggers iOS orientation permission on first call.*/
   cycleMode: () => Promise<void>
-  /** Force-set mode. Accepts a function for derived updates like `prev => prev === 'follow' ? 'show' : prev`. */
+  /** Force-set mode. Accepts a function for derived updates like `prev => prev === 'follow' ? 'show' : prev`.*/
   setMode: (m: TrackingMode | ((prev: TrackingMode) => TrackingMode)) => void
 }
 

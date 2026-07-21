@@ -10,7 +10,7 @@ export function katColor(kat: string, allCategories?: string[]): string {
   return KAT_COLORS[Math.abs(h) % KAT_COLORS.length]
 }
 
-/** Weight an item contributes to a total: unit weight times quantity (defaults: 0 g, qty 1). */
+/** Weight an item contributes to a total: unit weight times quantity (defaults: 0 g, qty 1).*/
 export const itemWeight = (i: { weight_grams?: number | null; quantity?: number | null }): number =>
   (i.weight_grams || 0) * (i.quantity || 1)
 

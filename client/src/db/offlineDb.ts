@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { Trip, Day, Place, PackingItem, TodoItem, BudgetItem, Reservation, TripFile, Accommodation, TripMember, Tag, Category } from '../types';
 
-/** TripMember enriched with tripId so we can index by trip. */
+/** TripMember enriched with tripId so we can index by trip.*/
 export interface CachedTripMember extends TripMember {
   tripId: number;
 }
@@ -14,7 +14,7 @@ export interface CachedTripMember extends TripMember {
 export type MutationStatus = 'pending' | 'syncing' | 'failed' | 'conflict';
 
 export interface QueuedMutation {
-  /** UUID — also used as X-Idempotency-Key sent to the server */
+  /** UUID — also used as X-Idempotency-Key sent to the server*/
   id: string;
   tripId: number;
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -24,32 +24,32 @@ export interface QueuedMutation {
   status: MutationStatus;
   attempts: number;
   lastError: string | null;
-  /** Dexie table name to write the server response into after flush (e.g. 'places') */
+  /** Dexie table name to write the server response into after flush (e.g. 'places')*/
   resource?: string;
-  /** For CREATE mutations enqueued offline: the temporary negative id written to Dexie */
+  /** For CREATE mutations enqueued offline: the temporary negative id written to Dexie*/
   tempId?: number;
-  /** For DELETE mutations: the entity id to remove from Dexie on flush */
+  /** For DELETE mutations: the entity id to remove from Dexie on flush*/
   entityId?: number;
   /**
    * For PUT/DELETE enqueued offline against a still-unsynced (negative-id) entity:
    * the temp id of the target. The url carries an `{id}` placeholder that the
    * mutation queue rewrites to the real server id once the dependent CREATE flushes.
-   */
+*/
   tempEntityId?: number;
   /**
    * Optimistic-concurrency token: the entity's `updated_at` at the moment the
    * offline edit was made. Sent as `X-Base-Updated-At` on replay so the server
    * can reject the write (409) if someone else changed the entity in the
    * meantime. Absent for creates and for resources without a token.
-   */
+*/
   baseUpdatedAt?: string | null;
   /**
    * Set when the replay came back 409: the server's current version of the
    * entity, kept so the conflict resolver can show "theirs" beside "mine"
    * (which is reconstructed from `body`). Only present while status==='conflict'.
-   */
+*/
   conflictServer?: unknown;
-  /** When the conflict was detected (for ordering / display). */
+  /** When the conflict was detected (for ordering / display).*/
   conflictAt?: number;
 }
 
@@ -57,29 +57,29 @@ export interface SyncMeta {
   tripId: number;
   lastSyncedAt: number | null;
   status: 'idle' | 'syncing' | 'error';
-  /** Bounding box [minLng, minLat, maxLng, maxLat] of pre-downloaded map tiles */
+  /** Bounding box [minLng, minLat, maxLng, maxLat] of pre-downloaded map tiles*/
   tilesBbox: [number, number, number, number] | null;
   filesCachedCount: number;
 }
 
 export interface BlobCacheEntry {
-  /** Relative URL, e.g. "/api/files/42/download" */
+  /** Relative URL, e.g. "/api/files/42/download"*/
   url: string;
   /**
    * Trip this blob belongs to, so it is evicted together with the trip in
    * clearTripData. Legacy rows cached before v3 carry the sentinel -1.
-   */
+*/
   tripId: number;
   blob: Blob;
   /** Byte size captured at insert time — Blob.size is not reliably preserved
-   *  across IndexedDB round-trips, so the LRU budget reads this instead. */
+   *  across IndexedDB round-trips, so the LRU budget reads this instead.*/
   bytes: number;
   mime: string;
   cachedAt: number;
 }
 
 /** An uploaded booking-import source file, kept so the review flow can attach it to the
- *  created bookings even after a page reload during the (background) parse. Keyed by job. */
+ *  created bookings even after a page reload during the (background) parse. Keyed by job.*/
 export interface ImportSourceFile {
   jobId: string;
   fileName: string;
@@ -93,7 +93,7 @@ export interface ImportSourceFile {
  * The offline DB is scoped per user so that one account can never read another
  * account's cached data on a shared device. Anonymous (logged-out) state uses
  * the base name; a logged-in user uses `trek-offline-u<userId>`.
- */
+*/
 const ANON_DB_NAME = 'trek-offline';
 
 function userDbName(userId: number | string): string {
@@ -104,7 +104,7 @@ function userDbName(userId: number | string): string {
  * Best-effort read of the persisted auth snapshot so the very first DB opened on
  * app load (before loadUser resolves) is already the correct per-user one — the
  * PWA can render cached data offline without leaking across users.
- */
+*/
 function initialDbName(): string {
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('trek_auth_snapshot') : null;
@@ -202,12 +202,12 @@ async function switchTo(name: string): Promise<void> {
   await _db.open();
 }
 
-/** Point the offline DB at a specific user's scoped database (call on login). */
+/** Point the offline DB at a specific user's scoped database (call on login).*/
 export async function reopenForUser(userId: number | string): Promise<void> {
   await switchTo(userDbName(userId));
 }
 
-/** Point the offline DB at the anonymous database (call on logout). */
+/** Point the offline DB at the anonymous database (call on logout).*/
 export async function reopenAnonymous(): Promise<void> {
   await switchTo(ANON_DB_NAME);
 }
@@ -215,7 +215,7 @@ export async function reopenAnonymous(): Promise<void> {
 /**
  * Delete the current user's scoped database entirely and return to the anonymous
  * DB. Used on logout so no trace of the account's data remains on the device.
- */
+*/
 export async function deleteCurrentUserDb(): Promise<void> {
   if (_db.name !== ANON_DB_NAME) {
     try { await _db.delete(); } catch { /* ignore — fall through to anon */ }
@@ -284,7 +284,7 @@ export async function upsertSyncMeta(meta: SyncMeta): Promise<void> {
  * was never cached (or on any read error). The stored MIME is reapplied so the
  * caller's inline-vs-download decision stays correct even if the persisted Blob
  * lost its type.
- */
+*/
 export async function getCachedBlob(url: string): Promise<Blob | null> {
   try {
     const entry = await offlineDb.blobCache.get(url);
@@ -299,13 +299,13 @@ export async function getCachedBlob(url: string): Promise<Blob | null> {
 
 // ── Booking-import source files ─────────────────────────────────────────────
 
-/** Abandoned import files (never reviewed) are pruned after this long. */
+/** Abandoned import files (never reviewed) are pruned after this long.*/
 const IMPORT_FILE_TTL_MS = 60 * 60_000;
 
 /**
  * Persist the uploaded source files for a background import job so the per-item review can
  * attach each document to its booking even if the page reloads during the parse. Best-effort.
- */
+*/
 export async function saveImportFiles(jobId: string, files: File[]): Promise<void> {
   try {
     const now = Date.now();
@@ -315,7 +315,7 @@ export async function saveImportFiles(jobId: string, files: File[]): Promise<voi
   } catch { /* the in-memory copy still serves the no-reload path */ }
 }
 
-/** A job's stored source files, rebuilt as File objects (name + type preserved for upload). */
+/** A job's stored source files, rebuilt as File objects (name + type preserved for upload).*/
 export async function getImportFiles(jobId: string): Promise<File[]> {
   try {
     const rows = await offlineDb.importFiles.where('jobId').equals(jobId).toArray();
@@ -325,7 +325,7 @@ export async function getImportFiles(jobId: string): Promise<File[]> {
   }
 }
 
-/** Drop a job's stored source files once they've been handed to the review flow. */
+/** Drop a job's stored source files once they've been handed to the review flow.*/
 export async function deleteImportFiles(jobId: string): Promise<void> {
   try { await offlineDb.importFiles.where('jobId').equals(jobId).delete(); } catch { /* ignore */ }
 }
@@ -336,7 +336,7 @@ export async function deleteImportFiles(jobId: string): Promise<void> {
  * Upper bounds for the offline file-blob cache. Kept conservative so trip
  * documents never starve the map-tile cache (sized at MAX_TILES in
  * tilePrefetcher.ts) for the origin's storage quota.
- */
+*/
 export const BLOB_CACHE_MAX_ENTRIES = 200;
 export const BLOB_CACHE_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 
@@ -344,7 +344,7 @@ export const BLOB_CACHE_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
  * Evict oldest-by-cachedAt blobs until the cache is under both the entry-count
  * and byte budget. Call after inserting new blobs. LRU on insertion time, which
  * is a reasonable proxy for access for write-once document blobs.
- */
+*/
 export async function enforceBlobBudget(
   maxCount = BLOB_CACHE_MAX_ENTRIES,
   maxBytes = BLOB_CACHE_MAX_BYTES,
@@ -375,7 +375,7 @@ export async function enforceBlobBudget(
  * The replay only needs the queued REST request, not the cached entities, and a
  * successful flush re-adds the canonical row. The full "Clear cache" wipe goes
  * through clearAll(), which intentionally drops everything.
- */
+*/
 export async function clearTripData(tripId: number): Promise<void> {
   await offlineDb.transaction(
     'rw',
@@ -413,7 +413,7 @@ export async function clearTripData(tripId: number): Promise<void> {
   await offlineDb.trips.delete(tripId);
 }
 
-/** Wipe the entire offline database (called on logout). */
+/** Wipe the entire offline database (called on logout).*/
 export async function clearAll(): Promise<void> {
   await offlineDb.delete();
   // Re-open so subsequent operations don't fail

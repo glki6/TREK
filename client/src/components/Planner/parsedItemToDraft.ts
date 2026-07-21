@@ -6,16 +6,16 @@ import type { BookingImportPreviewItem, Reservation, ReservationEndpoint } from 
  * their form, plus the import-only `_venue`/`_accommodation` the hotel path needs
  * to suggest a place and a day range. It has no `id` — the modal stays in
  * "create" mode and the user reviews/edits before it is ever persisted.
- */
+*/
 export interface BookingReviewDraft extends Omit<Partial<Reservation>, 'metadata' | 'endpoints'> {
-  /** Type-specific extras (airline, flight_number, check_in_time, price, …) as an object. */
+  /** Type-specific extras (airline, flight_number, check_in_time, price, …) as an object.*/
   metadata?: Record<string, unknown> | null
   endpoints?: ReservationEndpoint[]
-  /** Parsed venue (auto-created place candidate) — hotel/restaurant/event. */
+  /** Parsed venue (auto-created place candidate) — hotel/restaurant/event.*/
   _venue?: BookingImportPreviewItem['_venue']
-  /** Parsed check-in/out + confirmation — hotels only. */
+  /** Parsed check-in/out + confirmation — hotels only.*/
   _accommodation?: BookingImportPreviewItem['_accommodation']
-  /** The uploaded source file(s) the item was parsed from — attached to the booking on save. */
+  /** The uploaded source file(s) the item was parsed from — attached to the booking on save.*/
   _sourceFiles?: File[]
 }
 
@@ -24,7 +24,7 @@ export interface BookingReviewDraft extends Omit<Partial<Reservation>, 'metadata
  * (no I/O). Transport items keep their geocoded endpoints; venue/accommodation
  * ride along untouched so the hotel modal can match a place by name (or create
  * one from the reviewed address on save).
- */
+*/
 export function parsedItemToDraft(item: BookingImportPreviewItem): BookingReviewDraft {
   return {
     type: item.type,
@@ -42,7 +42,7 @@ export function parsedItemToDraft(item: BookingImportPreviewItem): BookingReview
   }
 }
 
-/** Transport types route to the TransportModal; everything else to the ReservationModal. */
+/** Transport types route to the TransportModal; everything else to the ReservationModal.*/
 const TRANSPORT_TYPES = new Set(['flight', 'train', 'bus', 'car', 'taxi', 'bicycle', 'cruise', 'ferry', 'transit', 'transport_other'])
 export function isTransportItem(item: BookingImportPreviewItem): boolean {
   return TRANSPORT_TYPES.has(item.type)

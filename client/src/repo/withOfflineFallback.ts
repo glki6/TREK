@@ -7,7 +7,7 @@ import { isEffectivelyOffline } from '../sync/networkMode'
  * Axios error) means we never got one. A real HTTP error (4xx/5xx) HAS a response
  * and must NOT be treated as a network failure — the server spoke, so the caller
  * needs to see it. Non-Axios errors are surfaced too.
- */
+*/
 function isNetworkError(err: unknown): boolean {
   const e = err as { isAxiosError?: boolean; response?: unknown } | null
   return !!e && e.isAxiosError === true && e.response == null
@@ -35,7 +35,7 @@ function isNetworkError(err: unknown): boolean {
  *
  * Writes must NOT use this — they go through the mutation queue so failures are
  * surfaced and retried, not silently swallowed.
- */
+*/
 export async function onlineThenCache<T>(
   onlineFn: () => Promise<T>,
   cacheFn: () => Promise<T>,

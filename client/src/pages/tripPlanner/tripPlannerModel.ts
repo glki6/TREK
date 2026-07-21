@@ -2,7 +2,7 @@
  * Trip planner pure helpers — React/IO-free logic shared by the data hook
  * (useTripPlanner) and kept here so it can be unit-tested in isolation. Part of
  * the FE "page = wiring container + data hook" convention (see PATTERN.md).
- */
+*/
 
 import type { Assignment } from '../../types'
 
@@ -12,7 +12,7 @@ import type { Assignment } from '../../types'
  * only hydrate/persist a place's time when it is assigned to exactly one day.
  * Returns that assignment's id, or null when the place has 0 or 2+ assignments
  * (ambiguous — the modal then hides the time fields).
- */
+*/
 export function resolvePoolAssignmentId(
   assignments: Record<string | number, Assignment[]>,
   placeId: number,

@@ -22,7 +22,7 @@ import {
  * the spotlight hero bundle) and exposes derived values + handlers. The
  * DashboardPage component is a pure wiring container that renders what this
  * returns. Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useDashboard() {
   const [trips, setTrips] = useState<DashboardTrip[]>([])
   const [archivedTrips, setArchivedTrips] = useState<DashboardTrip[]>([])

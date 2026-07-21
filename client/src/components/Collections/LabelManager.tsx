@@ -16,7 +16,7 @@ interface LabelManagerProps {
   t: TranslationFn
 }
 
-/** Swatch row shared by the create form and each row's recolor control. */
+/** Swatch row shared by the create form and each row's recolor control.*/
 function Swatches({ value, onPick }: { value: string; onPick: (c: string) => void }): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -34,7 +34,7 @@ function Swatches({ value, onPick }: { value: string; onPick: (c: string) => voi
   )
 }
 
-/** One existing label: inline rename (save on blur/Enter), recolor, delete. */
+/** One existing label: inline rename (save on blur/Enter), recolor, delete.*/
 function LabelRow({ label, onUpdate, onDelete, t }: {
   label: CollectionLabel
   onUpdate: LabelManagerProps['onUpdate']
@@ -81,7 +81,7 @@ function LabelRow({ label, onUpdate, onDelete, t }: {
 /**
  * Manage a list's custom labels — create, rename, recolor and delete. Available
  * to any member who can edit the list; the labels are shared by the whole list.
- */
+*/
 export default function LabelManager({ isOpen, labels, onCreate, onUpdate, onDelete, onClose, t }: LabelManagerProps): React.ReactElement {
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(SWATCHES[0])

@@ -19,9 +19,9 @@ interface TripOption {
 interface CopyToTripModalProps {
   isOpen: boolean
   onClose: () => void
-  /** The collection place ids to copy. */
+  /** The collection place ids to copy.*/
   placeIds: number[]
-  /** Delegates to collectionStore.copyToTrip; returns the server reconcile result. */
+  /** Delegates to collectionStore.copyToTrip; returns the server reconcile result.*/
   onCopy: (tripId: number) => Promise<{ copied: number; skipped: { id: number; name: string }[] }>
   t: TranslationFn
 }
@@ -31,7 +31,7 @@ interface CopyToTripModalProps {
  * the selected collection places into the chosen trip and reconciles the server
  * dedup result into a copied / skipped-duplicates toast. Works for a single
  * place (detail panel) and bulk select-mode ("Copy N to trip").
- */
+*/
 export default function CopyToTripModal({ isOpen, onClose, placeIds, onCopy, t }: CopyToTripModalProps): React.ReactElement | null {
   const toast = useToast()
   const { language } = useTranslation()

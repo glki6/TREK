@@ -109,7 +109,7 @@ interface PlaceInspectorProps {
   categories: Category[]
   /** 'trip' (default) keeps every existing trip-planner behaviour byte-identical;
    *  'collection' hides the day/reservation/file sub-panels and swaps the footer
-   *  for the saved-place actions (copy to trip, status, remove from list). */
+   *  for the saved-place actions (copy to trip, status, remove from list).*/
   mode?: 'trip' | 'collection'
   // ── Trip-only props (optional so the collection detail panel can omit them) ──
   days?: Day[]

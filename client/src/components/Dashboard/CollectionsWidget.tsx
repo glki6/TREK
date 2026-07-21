@@ -12,7 +12,7 @@ import type { Collection } from '@trek/shared'
  * collections hero): each badge shows the list's cover image (tinted with its
  * colour) or a colour gradient, its name and place count, and jumps to that
  * list. Fetches only list() (per-list place_count), so no N+1.
- */
+*/
 export default function CollectionsWidget({ onOpen }: { onOpen: () => void }): React.ReactElement {
   const { t } = useTranslation()
   const navigate = useNavigate()

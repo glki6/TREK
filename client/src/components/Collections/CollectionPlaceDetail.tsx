@@ -22,9 +22,9 @@ interface CollectionPlaceDetailProps {
   canEdit: boolean
   canDelete: boolean
   categories: Category[]
-  /** The active list's custom labels, for the assign chips. */
+  /** The active list's custom labels, for the assign chips.*/
   labels: CollectionLabel[]
-  /** When set, dock the sheet over that column (desktop split) instead of centred. */
+  /** When set, dock the sheet over that column (desktop split) instead of centred.*/
   anchorRect?: { left: number; width: number } | null
   onClose: () => void
   onSetStatus: (status: CollectionStatus) => void
@@ -56,7 +56,7 @@ function StatusSegment({ status, onSet, t }: { status: CollectionStatus; onSet: 
  * Read mode renders the description as markdown + link chips; edit mode swaps in
  * name / category / markdown description / links, saving via updatePlace. Status
  * is an always-live segmented control (auto-saves).
- */
+*/
 export default function CollectionPlaceDetail({
   place, canEdit, canDelete, categories, labels, anchorRect, onClose, onSetStatus, onSave, onCopyToTrip, onRemove, t,
 }: CollectionPlaceDetailProps): React.ReactElement {

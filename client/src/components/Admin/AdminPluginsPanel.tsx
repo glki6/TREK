@@ -19,7 +19,7 @@ import ToggleSwitch from '../Settings/ToggleSwitch'
  * capability chips, an App-Store-style registry grid, an enriched detail dialog,
  * and the update re-consent gate. Isolation health shows as a dot on the icon
  * tile; the security section at the bottom explains the model honestly.
- */
+*/
 
 interface PluginDep { id: string; version: string }
 interface VersionMismatch { id: string; wanted: string; installed: string }
@@ -74,7 +74,7 @@ interface RegistryDetail extends RegistryItem {
   } | null
 }
 
-/** 409 error-body shape from POST /activate when a dependency blocks activation. */
+/** 409 error-body shape from POST /activate when a dependency blocks activation.*/
 interface ActivateErr {
   response?: {
     status?: number
@@ -194,7 +194,7 @@ function ReviewedBadge({ t, compact }: { t: T; compact?: boolean }) {
   )
 }
 
-/** Marks a manually-uploaded (sideloaded) plugin: no registry, unsigned, not reviewed. */
+/** Marks a manually-uploaded (sideloaded) plugin: no registry, unsigned, not reviewed.*/
 function SideloadedBadge({ t }: { t: T }) {
   return (
     <span className="inline-flex items-center gap-1 px-1.5 py-[2px] rounded-md text-[11px] font-medium bg-warning-soft text-warning border border-warning/25"

@@ -5,7 +5,7 @@
  * `files.uploadErrorType`). `t()` returns the key unchanged when it isn't a
  * known translation, so `translated === key` reliably means "not a key" — in
  * that case we fall back to a generic, always-localized message.
- */
+*/
 export function translateApiError(
   t: (key: string) => string,
   err: unknown,

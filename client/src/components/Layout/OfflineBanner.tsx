@@ -11,7 +11,7 @@
  * Rendered as a small floating pill anchored to the bottom-center of the
  * viewport so it never competes with top navigation or sticky modal
  * headers. On mobile it hovers just above the bottom tab bar.
- */
+*/
 import React, { useState, useEffect } from 'react'
 import { WifiOff, RefreshCw, AlertTriangle, GitMerge } from 'lucide-react'
 import { mutationQueue } from '../../sync/mutationQueue'

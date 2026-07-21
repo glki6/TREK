@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { helpApi, type HelpNavSection, type HelpPageData } from '../../api/client'
 
-/** State + data loading for the in-app help wiki (see PATTERN.md). */
+/** State + data loading for the in-app help wiki (see PATTERN.md).*/
 export function useHelp() {
   const { slug } = useParams<{ slug: string }>()
   const [sections, setSections] = useState<HelpNavSection[]>([])

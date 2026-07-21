@@ -167,7 +167,7 @@ function ShareLinkSection({ tripId, t }: { tripId: number; t: (key: string, para
  * Trip invite link (#1143). One rotating token per trip that an existing,
  * logged-in user opens to join the trip as a member. Mirrors ShareLinkSection
  * but the link points at /join/:token (login-required, no registration).
- */
+*/
 function TripInviteLinkSection({ tripId, t }: { tripId: number; t: (key: string, params?: Record<string, string | number>) => string }) {
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)

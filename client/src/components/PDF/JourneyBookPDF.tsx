@@ -139,7 +139,7 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
 
   @page { size: A4 landscape; margin: 0; }
 
-  /* ── Cover ─── */
+  /* ── Cover ───*/
   .cover-page {
     width: 100%; height: 100vh; position: relative; overflow: hidden;
     background: #0a0a0f; color: white; display: flex; align-items: center; justify-content: center;
@@ -157,7 +157,7 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
   .cover-stat-label { font-size: 10pt; text-transform: uppercase; letter-spacing: 2pt; opacity: 0.4; margin-top: 3pt; }
   .cover-footer { position: absolute; bottom: 20pt; left: 0; right: 0; text-align: center; font-size: 9pt; opacity: 0.2; letter-spacing: 3pt; text-transform: uppercase; }
 
-  /* ── TOC ─── */
+  /* ── TOC ───*/
   .toc-page {
     width: 100%; height: 100vh; padding: 48pt 64pt; display: flex; flex-direction: column;
     background: white; page-break-after: always;
@@ -177,14 +177,14 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
   .toc-stat-val { font-size: 18pt; font-weight: 800; color: #0a0a0f; }
   .toc-stat-label { font-size: 9pt; text-transform: uppercase; letter-spacing: 1pt; color: #94a3b8; }
 
-  /* ── Entry Page ─── */
+  /* ── Entry Page ───*/
   .entry-page {
     width: 100%; min-height: 100vh; padding: 56pt 48pt 48pt;
     page-break-after: always;
     display: flex; flex-direction: column;
   }
 
-  /* Day header — inline */
+  /* Day header — inline*/
   .day-header {
     font-size: 9pt; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
     color: #71717a; text-align: center; margin-bottom: 16pt; position: relative;
@@ -192,7 +192,7 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
   }
   .day-header::before, .day-header::after { content: ''; flex: 1; height: 0.5pt; background: #d4d4d8; }
 
-  /* Photos */
+  /* Photos*/
   .entry-photo-single { border-radius: 8pt; overflow: hidden; margin-bottom: 16pt; height: 55vh; }
   .entry-photo-single img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .entry-photo-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 6pt; border-radius: 8pt; overflow: hidden; margin-bottom: 16pt; height: 45vh; }
@@ -204,7 +204,7 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
   .photo-stack { display: flex; flex-direction: column; gap: 6pt; }
   .photo-stack .photo-cell { flex: 1; }
 
-  /* Entry content */
+  /* Entry content*/
   .entry-content { flex: 1; }
   .entry-meta { font-size: 10pt; letter-spacing: 0.04em; text-transform: uppercase; color: #71717a; font-weight: 500; margin-bottom: 6pt; }
   h2.entry-title { font-size: 28pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin: 0 0 10pt; color: #0a0a0f; }
@@ -217,7 +217,7 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
   .entry-story li { margin-bottom: 4pt; }
   .entry-story a { color: #2563eb; text-decoration: none; }
 
-  /* Verdict */
+  /* Verdict*/
   .verdict-wrap { break-inside: avoid; padding-top: 14pt; }
   .verdict-row { display: flex; gap: 10pt; }
   .verdict-card { flex: 1; padding: 10pt 12pt; border-radius: 6pt; font-size: 9.5pt; }
@@ -234,7 +234,7 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
   .verdict-card.cons li { color: #7f1d1d; }
   .verdict-card.cons li::before { color: #ef4444; }
 
-  /* ── Closing ─── */
+  /* ── Closing ───*/
   .closing-page {
     width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center;
     background: #0a0a0f; color: white; text-align: center; page-break-after: auto;
@@ -242,7 +242,7 @@ export async function downloadJourneyBookPDF(journey: JourneyDetail) {
   .closing-title { font-size: 32pt; font-weight: 300; letter-spacing: -1pt; opacity: 0.6; margin-bottom: 8pt; }
   .closing-sub { font-size: 10pt; opacity: 0.25; letter-spacing: 3pt; text-transform: uppercase; }
 
-  /* ── Print ─── */
+  /* ── Print ───*/
   @media print {
     .print-bar { display: none !important; }
     body { margin: 0; }

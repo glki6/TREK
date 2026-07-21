@@ -10,17 +10,17 @@ import type { Collection } from '@trek/shared'
 interface SaveTripPlacesToListModalProps {
   isOpen: boolean
   tripId: number
-  /** The selected trip place ids to copy into the chosen list. */
+  /** The selected trip place ids to copy into the chosen list.*/
   placeIds: number[]
   onClose: () => void
-  /** Called after a successful save (e.g. to clear the trip selection). */
+  /** Called after a successful save (e.g. to clear the trip selection).*/
   onDone: () => void
 }
 
 /**
  * Bulk "save to collection" for the trip place list: pick one of the user's lists
  * and copy every selected trip place into it at once (server dedups by name/coords).
- */
+*/
 export default function SaveTripPlacesToListModal({ isOpen, tripId, placeIds, onClose, onDone }: SaveTripPlacesToListModalProps): React.ReactElement | null {
   const { t } = useTranslation()
   const toast = useToast()

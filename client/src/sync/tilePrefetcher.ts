@@ -10,14 +10,14 @@
  *
  * Tile URL template format: Leaflet-compatible {z}/{x}/{y} with optional
  * {s} (subdomain) and {r} (retina suffix).
- */
+*/
 
 import type { Place } from '../types'
 import { offlineDb, upsertSyncMeta } from '../db/offlineDb'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/** Estimated average tile size in KB (raster basemap tiles ~15 KB). */
+/** Estimated average tile size in KB (raster basemap tiles ~15 KB).*/
 const AVG_TILE_KB = 15
 
 /**
@@ -27,7 +27,7 @@ const AVG_TILE_KB = 15
  * client/vite.config.js (kept equal). If this budget exceeds the SW cache size,
  * the LRU evicts freshly-prefetched tiles on arrival and the offline map goes
  * blank — which is exactly the bug this value was raised (from ~3413) to fix.
- */
+*/
 export const MAX_TILES = Math.floor((180 * 1024) / AVG_TILE_KB) // = 12288
 
 const DEFAULT_TILE_URL =
@@ -41,12 +41,12 @@ function nextSubdomain(): string {
 
 // ── Tile math ──────────────────────────────────────────────────────────────────
 
-/** Longitude → tile X at given zoom. */
+/** Longitude → tile X at given zoom.*/
 export function lngToTileX(lng: number, zoom: number): number {
   return Math.floor(((lng + 180) / 360) * Math.pow(2, zoom))
 }
 
-/** Latitude → tile Y at given zoom (Web Mercator, y increases southward). */
+/** Latitude → tile Y at given zoom (Web Mercator, y increases southward).*/
 export function latToTileY(lat: number, zoom: number): number {
   const n = Math.pow(2, zoom)
   const latRad = (lat * Math.PI) / 180
@@ -55,7 +55,7 @@ export function latToTileY(lat: number, zoom: number): number {
   )
 }
 
-/** Expand a single-point bbox to min 0.1° span (~10 km) in each axis. */
+/** Expand a single-point bbox to min 0.1° span (~10 km) in each axis.*/
 function ensureMinSpan(min: number, max: number, minSpan = 0.1): [number, number] {
   if (max - min < minSpan) {
     const mid = (min + max) / 2
@@ -78,7 +78,7 @@ export interface TileBbox {
 /**
  * Compute the bounding box for a list of places with optional padding.
  * Returns null if no places have coordinates.
- */
+*/
 export function computeBbox(places: Place[], paddingFraction = 0.1): TileBbox | null {
   const valid = places.filter(p => p.lat !== null && p.lng !== null)
   if (valid.length === 0) return null
@@ -103,7 +103,7 @@ export function computeBbox(places: Place[], paddingFraction = 0.1): TileBbox | 
 /**
  * Count tiles that would be fetched across the zoom range for a bbox.
  * Used to enforce the size guard without actually fetching.
- */
+*/
 export function countTiles(bbox: TileBbox, minZoom: number, maxZoom: number): number {
   let total = 0
   for (let z = minZoom; z <= maxZoom; z++) {
@@ -120,7 +120,7 @@ export function countTiles(bbox: TileBbox, minZoom: number, maxZoom: number): nu
 /**
  * Build the concrete tile URL for given z/x/y from a Leaflet template.
  * Rotates through subdomains (a–d).
- */
+*/
 export function buildTileUrl(template: string, z: number, x: number, y: number): string {
   return template
     .replace('{z}', String(z))
@@ -137,7 +137,7 @@ export function buildTileUrl(template: string, z: number, x: number, y: number):
  *   - offline
  *   - no active Service Worker (tiles won't be cached anyway)
  *   - total tile count exceeds MAX_TILES before even starting zoom 10
- */
+*/
 export async function prefetchTiles(
   bbox: TileBbox,
   tileUrlTemplate: string,
@@ -183,19 +183,19 @@ export async function prefetchTiles(
  * Drop the pre-downloaded map-tile cache. Called when the user turns off
  * "store map tiles offline" (#1135 ask 2) so the bulk tile storage — the real
  * "whole world map" concern — is reclaimed immediately.
- */
+*/
 export async function clearTileCache(): Promise<void> {
   try {
     if (typeof caches !== 'undefined') await caches.delete('map-tiles')
   } catch {
-    /* Cache Storage unavailable (no SW / private mode) — nothing to clear */
+    /* Cache Storage unavailable (no SW / private mode) — nothing to clear*/
   }
 }
 
 /**
  * Full pipeline: compute bbox → guard → prefetch → update syncMeta.
  * Designed to be called fire-and-forget from tripSyncManager.
- */
+*/
 export async function prefetchTilesForTrip(
   tripId: number,
   places: Place[],

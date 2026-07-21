@@ -86,7 +86,7 @@ interface TranslationContextValue {
    * Prefer the `<TransHtml>` component for the typical "translate + render"
    * pattern; reach for `tHtml()` directly only when you need the raw string
    * (e.g. constructing an `aria-label`).
-   */
+*/
   tHtml: (key: string, params?: Record<string, string | number>) => string
   language: string
   locale: string

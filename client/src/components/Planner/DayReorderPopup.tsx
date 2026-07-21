@@ -18,7 +18,7 @@ interface DayReorderPopupProps {
  * arrows, and add a day at the end. Day headers stay untouched — this is the
  * single surface for ordering. Reorders are applied optimistically by the store,
  * so the list reflects each move immediately.
- */
+*/
 export function DayReorderPopup({ isOpen, days, t, locale, onReorder, onAddDay, onClose }: DayReorderPopupProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)

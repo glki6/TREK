@@ -120,7 +120,7 @@ export default function HelpPage() {
   )
 }
 
-/** Markdown renderer with TREK-styled elements and SPA-internal links. */
+/** Markdown renderer with TREK-styled elements and SPA-internal links.*/
 function WikiContent({ markdown }: { markdown: string }) {
   return (
     <Markdown

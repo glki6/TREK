@@ -5,7 +5,7 @@
  * traveler goes offline and needs them (audit H8 / M6).
  *
  * Best-effort and idempotent: returns whether persistence is (now) granted.
- */
+*/
 export async function requestPersistentStorage(): Promise<boolean> {
   try {
     if (typeof navigator === 'undefined' || !navigator.storage?.persist) return false

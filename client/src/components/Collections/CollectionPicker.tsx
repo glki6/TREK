@@ -15,9 +15,9 @@ interface ListMeta { id: number; name: string; color: string | null }
 
 interface CollectionPickerProps {
   /** Trip bounding box used for autocomplete — sorts the saved places by
-   *  proximity to the trip so the relevant ones surface first. */
+   *  proximity to the trip so the relevant ones surface first.*/
   bias?: LocationBias
-  /** Fills the place form from the chosen saved place (handleSelectMapsResult). */
+  /** Fills the place form from the chosen saved place (handleSelectMapsResult).*/
   onSelect: (place: CollectionPlace) => void
   t: TranslationFn
 }
@@ -31,7 +31,7 @@ function distanceTo(p: CollectionPlace, center: { lat: number; lng: number }): n
 
 interface Opt { key: string | number; label: string; icon?: React.ReactNode; count?: number }
 
-/** Compact click-away dropdown (Tailwind — this panel lives outside .trek-dash). */
+/** Compact click-away dropdown (Tailwind — this panel lives outside .trek-dash).*/
 function FilterDropdown({ current, options, onSelect, lead }: {
   current: string | number
   options: Opt[]
@@ -79,7 +79,7 @@ function FilterDropdown({ current, options, onSelect, lead }: {
  * places, searchable, filterable by list + status, and proximity-sorted, so a
  * place saved on an earlier trip can be dropped straight into the form.
  * Desktop only — gated by the caller.
- */
+*/
 export default function CollectionPicker({ bias, onSelect, t }: CollectionPickerProps): React.ReactElement {
   const [places, setPlaces] = useState<CollectionPlace[]>([])
   const [lists, setLists] = useState<ListMeta[]>([])

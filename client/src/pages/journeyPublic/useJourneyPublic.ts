@@ -15,7 +15,7 @@ import { groupByDate, type PublicEntry, type PublicGalleryPhoto } from './journe
  * helpers (photoUrl, formatDate, mood/weather config) and the render functions
  * next to the JSX, and computes the t()-dependent `availableViews` itself.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useJourneyPublic() {
   const { token } = useParams()
   const [data, setData] = useState<any>(null)

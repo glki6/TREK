@@ -11,10 +11,10 @@ import type { BudgetItem } from '../../types'
  * category fields: when no expense is linked yet it offers a "create expense"
  * button (the modal saves the booking first, then opens the full Costs editor);
  * once linked it shows the expense with edit / remove actions.
- */
+*/
 export function BookingCostsSection({ reservationId, pendingExpense, onCreate, onEdit, onRemove }: {
   reservationId: number | null
-  /** A cost parsed from an import that will be linked on save — previewed before the booking exists. */
+  /** A cost parsed from an import that will be linked on save — previewed before the booking exists.*/
   pendingExpense?: { total_price: number; currency?: string | null; category: string } | null
   onCreate: () => void
   onEdit: (item: BudgetItem) => void

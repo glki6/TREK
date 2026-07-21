@@ -4,7 +4,7 @@ import type { SaveToCollectionTarget } from '../../store/saveToCollectionStore'
 /**
  * Build a Save-to-Collection picker target from a trip pool place, carrying the
  * provenance ids so the saved copy remembers its origin trip/place.
- */
+*/
 export function placeToSaveTarget(place: Place): SaveToCollectionTarget {
   return {
     name: place.name,

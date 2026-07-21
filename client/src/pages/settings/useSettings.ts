@@ -9,7 +9,7 @@ import { useAddonStore } from '../../store/addonStore'
  * the URL signals MFA is required. SettingsPage stays a wiring container that
  * builds the (t-dependent) tab list and renders the tab bodies.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useSettings() {
   const [searchParams] = useSearchParams()
   const { isEnabled: addonEnabled, loadAddons } = useAddonStore()

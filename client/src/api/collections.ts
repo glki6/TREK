@@ -26,7 +26,7 @@ import type {
 const ax = apiClient
 const base = '/addons/collections'
 
-/** Query for the library-wide "is this place already saved?" lookup. */
+/** Query for the library-wide "is this place already saved?" lookup.*/
 export interface MembershipQuery {
   google_place_id?: string
   google_ftid?: string
@@ -45,7 +45,7 @@ export interface CopyToTripResult {
  * vacayStore api shape — each method returns the unwrapped response body and
  * uses `satisfies` on the request payloads so the shared Zod request types stay
  * the single source of truth.
- */
+*/
 export const collectionsApi = {
   list: (): Promise<CollectionListResponse> =>
     ax.get(base).then((r: AxiosResponse) => r.data),

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { QUICK_REACTIONS } from './CollabChat.constants'
 import { TwemojiImg } from './CollabChatTwemojiImg'
 
-/* ── Reaction Quick Menu (right-click) ── */
+/* ── Reaction Quick Menu (right-click) ──*/
 interface ReactionMenuProps {
   x: number
   y: number

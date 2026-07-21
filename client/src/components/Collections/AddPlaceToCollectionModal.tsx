@@ -34,7 +34,7 @@ interface AddPlaceToCollectionModalProps {
  * fills in the location when a result is picked, plus name / category / status /
  * markdown description / links, all editable together before saving. Stays open
  * after each add so several places can be added in a row.
- */
+*/
 export default function AddPlaceToCollectionModal({ isOpen, collectionId, collectionName, categories, onClose, onAdded, t }: AddPlaceToCollectionModalProps): React.ReactElement {
   const { language } = useTranslation()
   const toast = useToast()

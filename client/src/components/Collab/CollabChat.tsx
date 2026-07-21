@@ -6,7 +6,7 @@ import { ChatMessages } from './CollabChatMessages'
 import { EmojiPicker } from './CollabChatEmojiPicker'
 import { ReactionMenu } from './CollabChatReactionMenu'
 
-/* ── Main Component ── */
+/* ── Main Component ──*/
 interface CollabChatProps {
   tripId: number
   currentUser: User

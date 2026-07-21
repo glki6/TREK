@@ -6,18 +6,18 @@ export interface PageSidebarTab {
   label: string
   icon: LucideIcon
   /** Optional group heading shown above the first tab of each group. Tabs that
-   *  share a group must be contiguous in the array. */
+   *  share a group must be contiguous in the array.*/
   group?: string
 }
 
 interface PageSidebarProps {
-  /** Uppercase label shown above the tab list, e.g. "SETTINGS". */
+  /** Uppercase label shown above the tab list, e.g. "SETTINGS".*/
   sidebarLabel: string
   tabs: PageSidebarTab[]
   activeTab: string
   onTabChange: (id: string) => void
   children: React.ReactNode
-  /** Small text at the very bottom of the sidebar (e.g. "v3.0 · self-hosted"). */
+  /** Small text at the very bottom of the sidebar (e.g. "v3.0 · self-hosted").*/
   footer?: React.ReactNode
 }
 
@@ -27,7 +27,7 @@ interface PageSidebarProps {
  * Desktop (>=1024px): sidebar is always visible at 260px; panel fills rest.
  * Mobile: sidebar collapses behind a hamburger at the top of the panel; tap
  * the hamburger to slide the sidebar in as an overlay, tap a tab to close.
- */
+*/
 export default function PageSidebar({
   sidebarLabel,
   tabs,

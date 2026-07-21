@@ -6,7 +6,7 @@ import { Footprints, MoveRight, type LucideIcon } from 'lucide-react'
  * the Transports-tab card and the journey modal all render the same language:
  * "A → B" titles with a real arrow icon, and the leg sequence as chips where
  * walks carry their minutes (🚶 3 › ⟨U2⟩ › 🚶 3) instead of a detached summary.
- */
+*/
 
 export interface TransitLegDisplay {
   mode?: string
@@ -25,7 +25,7 @@ export interface TransitLegDisplay {
  * A walk leg as a one-line centred divider — dashed rules left and right,
  * the walk itself in the middle (🚶 Walk to X · 4 min). Used by the journey
  * modal and the day-plan inline itinerary.
- */
+*/
 export function TransitWalkDivider({ leg, t, size = 'md' }: {
   leg: TransitLegDisplay
   t: (k: string, p?: Record<string, string | number>) => string
@@ -58,7 +58,7 @@ export function TransitWalkDivider({ leg, t, size = 'md' }: {
 /**
  * The itinerary folded out right inside the day-plan row (#1065): one compact
  * line per leg — time, badge or foot icon, stations — sized for the sidebar.
- */
+*/
 export function TransitItineraryInline({ legs, t }: {
   legs: TransitLegDisplay[]
   t: (k: string, p?: Record<string, string | number>) => string
@@ -103,7 +103,7 @@ export function TransitItineraryInline({ legs, t }: {
 }
 
 
-/** "1 h 9 min" / "42 min" from seconds — shared by all transit surfaces. */
+/** "1 h 9 min" / "42 min" from seconds — shared by all transit surfaces.*/
 export function fmtTransitDuration(seconds: number, t: (k: string, p?: Record<string, string | number>) => string): string {
   const mins = Math.round(seconds / 60)
   if (mins < 60) return t('transit.min', { count: mins })
@@ -115,14 +115,14 @@ export function fmtTransitDuration(seconds: number, t: (k: string, p?: Record<st
 export interface TransitMetaItem {
   icon?: LucideIcon
   text: string
-  /** De-emphasised (operator names and the like). */
+  /** De-emphasised (operator names and the like).*/
   dim?: boolean
 }
 
 /**
  * A quiet badge row replacing dot-joined meta text ("21:06 - 22:15 - 69 min -
  * 14 stops ..."): each fact becomes a small chip, optional icon in front.
- */
+*/
 export function TransitMetaBadges({ items, size = 'md' }: { items: TransitMetaItem[]; size?: 'sm' | 'md' }) {
   const font = size === 'sm' ? 'calc(10px * var(--fs-scale-caption, 1))' : 'calc(10.5px * var(--fs-scale-caption, 1))'
   return (
@@ -146,7 +146,7 @@ export function TransitMetaBadges({ items, size = 'md' }: { items: TransitMetaIt
   )
 }
 
-/** Renders "From → To" titles with an arrow icon instead of the text glyph. */
+/** Renders "From → To" titles with an arrow icon instead of the text glyph.*/
 export function TransitTitle({ title, iconSize = 12 }: { title: string; iconSize?: number }) {
   const parts = title.split(' → ')
   if (parts.length < 2) return <>{title}</>
@@ -166,7 +166,7 @@ export function TransitTitle({ title, iconSize = 12 }: { title: string; iconSize
  * The leg sequence as chips. Walk legs show their minutes right at the foot
  * icon (sub-minute walks are dropped); transit legs are line badges in their
  * colors. Optionally appends "· N transfers" — never a redundant "direct".
- */
+*/
 export function TransitLegChips({ legs, transfers, size = 'sm', t }: {
   legs: TransitLegDisplay[]
   transfers?: number

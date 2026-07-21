@@ -1,7 +1,7 @@
 import { Car, Footprints, Hotel } from 'lucide-react'
 import type { RouteSegment } from '../../types'
 
-/** Slim travel-time connector shown between two consecutive located stops in a day. */
+/** Slim travel-time connector shown between two consecutive located stops in a day.*/
 export function RouteConnector({ seg, profile }: { seg: RouteSegment; profile: 'driving' | 'walking' }) {
   const driving = profile === 'driving'
   const Icon = driving ? Car : Footprints
@@ -25,7 +25,7 @@ export function RouteConnector({ seg, profile }: { seg: RouteSegment; profile: '
  * accommodation with the drive to/from it. Rendered above the first place (the
  * morning departure from the hotel) and below the last place (the evening return),
  * when the "optimize from accommodation" setting is on and the day has a hotel.
- */
+*/
 export function HotelRouteConnector({
   seg,
   profile,

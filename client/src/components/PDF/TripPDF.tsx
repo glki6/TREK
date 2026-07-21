@@ -399,7 +399,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
   body { font-family: 'Poppins', sans-serif; background: #fff; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-  /* Footer on every printed page */
+  /* Footer on every printed page*/
   .pdf-footer {
     position: fixed;
     bottom: 20px;
@@ -417,7 +417,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
     letter-spacing: 0.5px;
   }
 
-  /* ── Cover ─────────────────────────────────────── */
+  /* ── Cover ───────────────────────────────────────*/
   .cover {
     width: 100%; min-height: 100vh;
     background: #0f172a;
@@ -455,7 +455,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
   .cover-stat-num { font-size: 28px; font-weight: 700; color: #fff; line-height: 1; }
   .cover-stat-lbl { font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.4); letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
 
-  /* ── Day ───────────────────────────────────────── */
+  /* ── Day ─────────────────────────────────────────*/
   .page-break { page-break-before: always; }
   .day-header {
     background: #0f172a; padding: 11px 28px;
@@ -467,7 +467,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
   .day-cost  { font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.65); }
   .day-body  { padding: 12px 28px 6px; }
 
-  /* accommodation info */
+  /* accommodation info*/
   .day-accommodations-overview { font-size: 12px; }
   .day-accommodations { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
   .day-accommodations.single { justify-content: center; }
@@ -483,7 +483,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
   .accommodation-center-icon { display: flex; align-items: center; gap: 4px; }
 
 
-  /* ── Place card ────────────────────────────────── */
+  /* ── Place card ──────────────────────────────────*/
   .place-card {
     display: flex; align-items: stretch;
     border: 1px solid #e2e8f0; border-radius: 8px;
@@ -524,7 +524,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
   .chip-green { background: #ecfdf5; color: #059669; }
   .chip-amber { background: #fffbeb; color: #d97706; }
 
-  /* ── Note card ─────────────────────────────────── */
+  /* ── Note card ───────────────────────────────────*/
   .note-card {
     display: flex; align-items: center; gap: 8px;
     background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
@@ -538,7 +538,7 @@ export async function downloadTripPDF({ trip, days, places, assignments, categor
 
   .empty-day { font-size: 9.5px; color: #cbd5e1; font-style: italic; text-align: center; padding: 14px 0; }
 
-  /* ── Print ─────────────────────────────────────── */
+  /* ── Print ───────────────────────────────────────*/
   @media print {
     body { margin: 0; }
     .cover { min-height: 100vh; page-break-after: always; }

@@ -4,7 +4,7 @@
  * Flow:
  *   offline create/update/delete → enqueue() → optimistic Dexie write (in repo)
  *   online trigger → flush() → replay REST with X-Idempotency-Key header → update Dexie
- */
+*/
 import { offlineDb } from '../db/offlineDb'
 import { apiClient } from '../api/client'
 import { isAuthed } from './authGate'
@@ -26,7 +26,7 @@ function getTable(resource: string): Table | undefined {
   return map[resource]
 }
 
-/** Generate a v4-style UUID using the platform crypto API. */
+/** Generate a v4-style UUID using the platform crypto API.*/
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID()
@@ -50,21 +50,21 @@ let _lastTempId = 0
 /**
  * Mint a collision-free temporary (negative) id for an offline-created entity.
  * Monotonic across the session so same-millisecond creates never collide.
- */
+*/
 export function nextTempId(): number {
   const now = Date.now()
   _lastTempId = now > _lastTempId ? now : _lastTempId + 1
   return -_lastTempId
 }
 
-/** HTTP statuses that should be retried later rather than treated as terminal. */
+/** HTTP statuses that should be retried later rather than treated as terminal.*/
 function isRetryableStatus(status: number | undefined): boolean {
   // 401: token expired mid-flush (offline window) — retry after re-auth.
   // 408/425/429: timeout / too-early / rate-limited — transient.
   return status === 401 || status === 408 || status === 425 || status === 429
 }
 
-/** Pull the server's current entity out of a 409 response body ({ server: {...} }). */
+/** Pull the server's current entity out of a 409 response body ({ server: {...} }).*/
 function extractConflictServer(err: unknown): unknown {
   const data = (err as { response?: { data?: unknown } })?.response?.data
   if (data && typeof data === 'object' && 'server' in data) {
@@ -73,7 +73,7 @@ function extractConflictServer(err: unknown): unknown {
   return null
 }
 
-/** Write a server entity into its Dexie table (used when "theirs" wins a conflict). */
+/** Write a server entity into its Dexie table (used when "theirs" wins a conflict).*/
 async function applyServerEntity(mutation: QueuedMutation, server: unknown): Promise<void> {
   if (!mutation.resource || !server || typeof server !== 'object' || !('id' in server)) return
   const table = getTable(mutation.resource)
@@ -84,7 +84,7 @@ export const mutationQueue = {
   /**
    * Add a mutation to the queue.
    * Returns the UUID (= idempotency key).
-   */
+*/
   async enqueue(
     mutation: Omit<QueuedMutation, 'status' | 'attempts' | 'createdAt' | 'lastError'>,
   ): Promise<string> {
@@ -105,7 +105,7 @@ export const mutationQueue = {
    * Drain the queue: replay each pending mutation against the server in FIFO order.
    * Stops on first network error (will retry on next trigger).
    * 4xx responses are marked failed and skipped.
-   */
+*/
   async flush(): Promise<void> {
     if (_flushing || isEffectivelyOffline() || !isAuthed()) return
     _flushing = true
@@ -299,7 +299,7 @@ export const mutationQueue = {
   /**
    * Return all pending/syncing mutations, optionally filtered by tripId.
    * Used by the UI to show per-item pending indicators.
-   */
+*/
   async pending(tripId?: number): Promise<QueuedMutation[]> {
     if (tripId !== undefined) {
       return offlineDb.mutationQueue
@@ -314,7 +314,7 @@ export const mutationQueue = {
       .toArray()
   },
 
-  /** Count pending mutations (for banner badge). */
+  /** Count pending mutations (for banner badge).*/
   async pendingCount(): Promise<number> {
     return offlineDb.mutationQueue
       .where('status')
@@ -323,7 +323,7 @@ export const mutationQueue = {
   },
 
   /** Count permanently-failed mutations (surfaced separately so the user knows
-   *  changes were dropped — they are NOT folded into pendingCount). */
+   *  changes were dropped — they are NOT folded into pendingCount).*/
   async failedCount(): Promise<number> {
     return offlineDb.mutationQueue
       .where('status')
@@ -331,7 +331,7 @@ export const mutationQueue = {
       .count()
   },
 
-  /** Count unresolved sync conflicts (offline edits the server rejected as stale). */
+  /** Count unresolved sync conflicts (offline edits the server rejected as stale).*/
   async conflictCount(): Promise<number> {
     return offlineDb.mutationQueue
       .where('status')
@@ -339,7 +339,7 @@ export const mutationQueue = {
       .count()
   },
 
-  /** All unresolved conflicts, newest first, optionally scoped to one trip. */
+  /** All unresolved conflicts, newest first, optionally scoped to one trip.*/
   async conflicts(tripId?: number): Promise<QueuedMutation[]> {
     const all = await offlineDb.mutationQueue.where('status').equals('conflict').toArray()
     const scoped = tripId === undefined ? all : all.filter(m => m.tripId === tripId)
@@ -349,7 +349,7 @@ export const mutationQueue = {
   /**
    * Resolve a conflict by keeping the local (offline) edit: re-queue it without
    * the base token so the next flush overwrites the server unconditionally.
-   */
+*/
   async resolveKeepMine(id: string): Promise<void> {
     const m = await offlineDb.mutationQueue.get(id)
     if (!m || m.status !== 'conflict') return
@@ -362,7 +362,7 @@ export const mutationQueue = {
   /**
    * Resolve a conflict by keeping the server's version: adopt it into the local
    * cache and drop the queued write.
-   */
+*/
   async resolveKeepServer(id: string): Promise<void> {
     const m = await offlineDb.mutationQueue.get(id)
     if (!m || m.status !== 'conflict') return
@@ -370,7 +370,7 @@ export const mutationQueue = {
     await offlineDb.mutationQueue.delete(id)
   },
 
-  /** Reset internal flushing flag and timestamp counters — useful in tests. */
+  /** Reset internal flushing flag and timestamp counters — useful in tests.*/
   _resetFlushing(): void {
     _flushing = false
     _lastTs = 0

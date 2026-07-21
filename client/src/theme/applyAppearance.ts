@@ -16,7 +16,7 @@ import { normalizeAppearance, type AppearanceConfig } from '@trek/shared'
  *
  * Keep the snapshot shape and the apply logic in sync with the pre-paint boot
  * script at client/public/theme-boot.js — that script mirrors this to kill FOUC.
- */
+*/
 
 export type DarkModeSetting = boolean | string // 'light' | 'dark' | 'auto' | boolean
 
@@ -24,9 +24,9 @@ export const APPEARANCE_SNAPSHOT_KEY = 'trek_appearance'
 
 export interface ApplyAppearanceInput {
   darkMode: DarkModeSetting
-  /** Raw appearance value from settings (may be partial/missing — normalized here). */
+  /** Raw appearance value from settings (may be partial/missing — normalized here).*/
   appearance?: unknown
-  /** Public /shared and /public pages force the neutral default look. */
+  /** Public /shared and /public pages force the neutral default look.*/
   isSharedPage?: boolean
 }
 
@@ -54,7 +54,7 @@ function resolveDark(darkMode: DarkModeSetting, isSharedPage: boolean): boolean 
 /**
  * Pick a legible text color (near-black or white) for a custom accent fill,
  * using WCAG relative luminance. Keeps user-picked accents readable.
- */
+*/
 function accentTextFor(hex: string): string {
   const c = hex.replace('#', '')
   const full = c.length === 3 ? c.split('').map((x) => x + x).join('') : c
@@ -75,17 +75,17 @@ function writeSnapshot(snap: AppearanceSnapshot): void {
   try {
     localStorage.setItem(APPEARANCE_SNAPSHOT_KEY, JSON.stringify(snap))
   } catch {
-    /* private mode / quota — non-fatal, we just lose the FOUC optimisation */
+    /* private mode / quota — non-fatal, we just lose the FOUC optimisation*/
   }
 }
 
 /** Clear the per-device snapshot (call on logout so the next user on a shared
- *  browser doesn't get a flash of the previous user's theme). */
+ *  browser doesn't get a flash of the previous user's theme).*/
 export function clearAppearanceSnapshot(): void {
   try {
     localStorage.removeItem(APPEARANCE_SNAPSHOT_KEY)
   } catch {
-    /* non-fatal */
+    /* non-fatal*/
   }
 }
 

@@ -320,7 +320,7 @@ const DEFAULT_OLLAMA_URL = 'http://localhost:11434/v1'
 
 /** Curated models the local extractor is tuned for, pullable via Ollama. The router drives
  *  one model per document via Ollama's grammar-constrained `format`; "thinking" is disabled
- *  automatically, so the Qwen3 family works without any tuning. A host only needs one. */
+ *  automatically, so the Qwen3 family works without any tuning. A host only needs one.*/
 const RECOMMENDED_MODELS: { id: string; label: string; note: string; recommended: boolean; vision: boolean }[] = [
   { id: 'qwen3:8b', label: 'Qwen3 — 8B', note: 'Recommended · best extraction quality & speed on CPU (thinking auto-disabled) · Apache-2.0', recommended: true, vision: false },
 ]
@@ -330,7 +330,7 @@ const RECOMMENDED_MODELS: { id: string; label: string; note: string; recommended
  * overrides per-user config (see server llmConfig.ts). The API key is masked on
  * read; an unchanged mask is treated as a no-op by the server. For the local
  * provider, it also lists installed Ollama models and can pull NuExtract models.
- */
+*/
 function LlmParsingConfig({ addon }: { addon: Addon }) {
   const toast = useToast()
   const cfg = (addon.config ?? {}) as Record<string, unknown>

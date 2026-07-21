@@ -20,7 +20,7 @@ interface Props {
  * (bringer) sets the tier — Common / Personal / Shared with specific people — via
  * a dropdown; everyone else can pledge to co-bring a Common item ("I can bring
  * that too") or clone it onto their own list.
- */
+*/
 export default function PackingShareControl({ item, tripMembers, currentUserId, onSetSharing, onClone, onJoin, onLeave }: Props) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)

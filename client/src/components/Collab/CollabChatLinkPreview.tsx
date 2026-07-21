@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { collabApi } from '../../api/client'
 
-/* ── Link Preview ── */
+/* ── Link Preview ──*/
 const previewCache = {}
 
 interface LinkPreviewProps {

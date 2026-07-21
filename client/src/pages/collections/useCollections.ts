@@ -22,7 +22,7 @@ import type { CollectionLabelUpdateRequest } from '@trek/shared'
  * (incl. collections:deleted clearing the active list) and keeps the route param
  * (/collections/:id) in sync with the active list. CollectionsPage stays a pure
  * wiring container around the rail + toolbar + view JSX.
- */
+*/
 export function useCollections() {
   const { t, language } = useTranslation()
   const navigate = useNavigate()

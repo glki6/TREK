@@ -66,7 +66,7 @@ interface RouteSegment {
 interface Props {
   places: Place[]
   dayPlaces?: Place[]
-  // Accepts per-day route ([number,number][][]), multi-day trip route ([number,number][][][]), or null (T7-1g)
+  // Accepts per-day route ([number,number][][]), multi-day trip route ([number,number][][][]), or null
   route?: ([number, number][][] | [number, number][][][]) | null
   routeSegments?: RouteSegment[]
   selectedPlaceId?: number | null
@@ -177,10 +177,10 @@ function createMarkerElement(place: Place & { category_color?: string; category_
 }
 
 /**
- * T7-1f: Create a solid day-colored circle marker with sequence number.
+ * Create a solid day-colored circle marker with sequence number.
  * Matches the Leaflet `createDayColorIcon` but returns an HTMLDivElement
  * for mapbox-gl/MapLibre markers.
- */
+*/
 function createDayColorMarkerElement(dayIndex: number, orderNumber: number, selected: boolean): HTMLDivElement {
   const size = selected ? 44 : 36
   const color = getDayColor(dayIndex)
@@ -207,7 +207,7 @@ function createDayColorMarkerElement(dayIndex: number, orderNumber: number, sele
 /**
  * Compute an SVG arc path from (cx,cy) radius r, startAngle to endAngle (radians).
  * Angles measured clockwise from 12 o'clock (-π/2 offset).
- */
+*/
 function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
   const startX = cx + r * Math.cos(startAngle)
   const startY = cy + r * Math.sin(startAngle)
@@ -221,7 +221,7 @@ function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAn
  * Multi-color accommodation marker for GL map: pie chart with equal wedges (one per distinct day),
  * white Home icon centred. Used when day colors ON, no specific day focused,
  * and the stay spans multiple days.
- */
+*/
 function createAccommodationMultiDayMarkerElement(dayIndices: number[], selected: boolean): HTMLDivElement {
   const size = selected ? 44 : 36
   const r = size / 2 - 1.5 // leave room for outer ring, stays inside container
@@ -260,9 +260,9 @@ function createAccommodationMultiDayMarkerElement(dayIndices: number[], selected
 }
 
 /**
- * T7-1g: Day-colored circle marker for accommodation places (GL version).
+ * Day-colored circle marker for accommodation places (GL version).
  * Same as createDayColorMarkerElement but shows a home icon instead of the sequence number.
- */
+*/
 function createAccommodationDayMarkerElement(dayIndex: number, selected: boolean): HTMLDivElement {
   const size = selected ? 44 : 36
   const color = getDayColor(dayIndex)
@@ -870,7 +870,7 @@ export function MapViewGL({
         const photoUrl = (pck && photoUrls[pck]) || place.image_url || null
         const selected = place.id === selectedPlaceId
 
-        // T7-1f: resolve day assignment for this place, then decide marker style.
+        // resolve day assignment for this place, then decide marker style.
         let dayInfoGL: { dayIndex: number; orderNumber: number } | null = null
         const rawPdm = placeDayMap[place.id]
         if (rawPdm) {
@@ -1010,7 +1010,7 @@ export function MapViewGL({
     }
   }, [pois, mapReady, glProvider])
 
-  // Normalize route data to segments with day indices (T7-1h regression fix).
+  // Normalize route data to segments with day indices.
   // Handles per-day routes ([seg][coords]), multi-day trip routes ([day][seg][coords]),
   // and ambiguous cases where shape detection fails.
   const normalizedGLSegments = useMemo<
@@ -1061,10 +1061,10 @@ export function MapViewGL({
     src.setData({ type: 'FeatureCollection', features })
   }, [normalizedGLSegments, mapReady])
 
-  // Update route line colors when day-colors toggle or selected day changes (T7-1e).
-  // T7-1g: for multi-day trip routes with Day Colors ON, use data-driven per-feature
+  // Update route line colors when day-colors toggle or selected day changes.
+  // for multi-day trip routes with Day Colors ON, use data-driven per-feature
   // coloring so each day's segments get its own palette color.
-  // T7-1h fix: use normalizedGLSegments instead of brittle shape detection.
+  // use normalizedGLSegments instead of brittle shape detection.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return

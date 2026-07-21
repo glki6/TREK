@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * dock a fixed-position panel over another column. Re-measures on the element's
  * own resize and on window resize (layout shifts); vertical scroll doesn't move
  * a viewport-fixed left/width so it isn't tracked.
- */
+*/
 export function useElementRect<T extends HTMLElement = HTMLElement>(): {
   ref: (el: T | null) => void
   rect: { left: number; width: number } | null

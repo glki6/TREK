@@ -50,7 +50,7 @@ function readThemeTokens(): Record<string, string> {
  * writes on <html>, so a plugin can honour the same accessibility/appearance choices
  * inside its own sandboxed document (it can't read the parent DOM). All booleans/enums
  * — nothing secret.
- */
+*/
 function readAppearance() {
   const el = document.documentElement
   return {
@@ -74,12 +74,12 @@ function readAppearance() {
  * (event.source === our iframe), never by a claimed id or by origin (which is
  * "null" for opaque frames). Data reads go through the host (app-origin, session
  * cookie) so the plugin never handles credentials.
- */
+*/
 
 interface PluginFrameProps {
   pluginId: string
   tripId?: string | null
-  /** The place in view — set for a place-detail slot so the plugin can scope to it. */
+  /** The place in view — set for a place-detail slot so the plugin can scope to it.*/
   placeId?: string | null
   className?: string
   title?: string

@@ -7,9 +7,9 @@ interface Props {
   active: Set<string>
   onToggle: (key: string) => void
   loadingKeys?: Set<string>
-  /** categories whose last fetch failed → show a retry affordance */
+  /** categories whose last fetch failed → show a retry affordance*/
   errorKeys?: Set<string>
-  /** true when the map moved since the last search → offer "search this area" */
+  /** true when the map moved since the last search → offer "search this area"*/
   moved?: boolean
   onSearchArea?: () => void
 }

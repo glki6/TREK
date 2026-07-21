@@ -126,7 +126,7 @@ export default function OAuthAuthorizePage(): React.ReactElement {
                     </p>
 
                     {validation?.scopeSelectable ? (
-                        /* DCR client — user selects which scopes to grant */
+                        /* DCR client — user selects which scopes to grant*/
                         <div className="space-y-3">
                           {Object.entries(scopesByGroup).map(([group, groupScopes]) => {
                             const allGroupSelected = groupScopes.every(s => selectedScopes.includes(s))
@@ -175,7 +175,7 @@ export default function OAuthAuthorizePage(): React.ReactElement {
                           })}
                         </div>
                     ) : (
-                        /* Settings-created client — scopes are fixed, show read-only */
+                        /* Settings-created client — scopes are fixed, show read-only*/
                         <div className="space-y-5">
                           {Object.entries(scopesByGroup).map(([group, groupScopes]) => (
                               <div key={group}>

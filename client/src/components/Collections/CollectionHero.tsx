@@ -13,12 +13,12 @@ function initials(name: string): string {
 interface CollectionHeroProps {
   eyebrow: string
   title: string
-  /** List colour — drives the gradient wash (or tints the cover image). */
+  /** List colour — drives the gradient wash (or tints the cover image).*/
   color: string
   coverImage?: string | null
   description?: string | null
   links?: CollectionLink[]
-  /** Accepted members (owner first) — shown as an avatar stack when shared. */
+  /** Accepted members (owner first) — shown as an avatar stack when shared.*/
   members: CollectionMember[]
   canShare: boolean
   isOwner: boolean
@@ -35,7 +35,7 @@ interface CollectionHeroProps {
  * the big list name, an optional description + link chips, and a Share action
  * top-right. Filtering lives in the toolbar above the places, not here.
  * Modelled on the dashboard hero-trip.
- */
+*/
 function linkHost(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }

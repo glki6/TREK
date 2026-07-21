@@ -6,9 +6,9 @@
  *   • The fixed hex values were verified against WCAG contrast thresholds.
  *   • Generated hues use 45 % lightness, which guarantees sufficient contrast
  *     across the full saturation range used here (60 %).
- */
+*/
 
-/** Wanderlog original palette — one color per day for days 1 through 8. */
+/** Wanderlog original palette — one color per day for days 1 through 8.*/
 export const WANDERLOG_COLORS = [
   "#46cdcf", // Day 1: teal
   "#7045af", // Day 2: purple
@@ -25,7 +25,7 @@ export const WANDERLOG_COLORS = [
  *
  * • Indices 0-7 → fixed Wanderlog hex value.
  * • Index >= 8  → HSL fallback with evenly-spaced hues wrapping at 360°.
- */
+*/
 export function getDayColor(dayIndex: number): string {
   if (dayIndex < WANDERLOG_COLORS.length) {
     return WANDERLOG_COLORS[dayIndex];

@@ -52,7 +52,7 @@ export function useCollabChat(tripId: any, currentUser: any) {
     isAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48
   }, [])
 
-  /* ── load messages ── */
+  /* ── load messages ──*/
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -67,7 +67,7 @@ export function useCollabChat(tripId: any, currentUser: any) {
     return () => { cancelled = true }
   }, [tripId, scrollToBottom])
 
-  /* ── load more ── */
+  /* ── load more ──*/
   const handleLoadMore = useCallback(async () => {
     if (loadingMore || messages.length === 0) return
     setLoadingMore(true)
@@ -85,7 +85,7 @@ export function useCollabChat(tripId: any, currentUser: any) {
     } catch {} finally { setLoadingMore(false) }
   }, [tripId, loadingMore, messages])
 
-  /* ── websocket ── */
+  /* ── websocket ──*/
   useEffect(() => {
     const handler = (event) => {
       if (event.type === 'collab:message:created' && String(event.tripId) === String(tripId)) {
@@ -104,7 +104,7 @@ export function useCollabChat(tripId: any, currentUser: any) {
     return () => removeListener(handler)
   }, [tripId, scrollToBottom])
 
-  /* ── auto-resize textarea ── */
+  /* ── auto-resize textarea ──*/
   const handleTextChange = useCallback((e) => {
     setText(e.target.value)
     const ta = textareaRef.current
@@ -116,7 +116,7 @@ export function useCollabChat(tripId: any, currentUser: any) {
     }
   }, [])
 
-  /* ── send ── */
+  /* ── send ──*/
   const handleSend = useCallback(async () => {
     const body = text.trim()
     if (!body || sending) return

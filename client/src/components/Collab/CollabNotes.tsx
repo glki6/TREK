@@ -30,7 +30,7 @@ interface CollabNotesProps {
  * Collab notes state: load + WebSocket sync, note CRUD (with file uploads),
  * category colors/renames and the view/edit/settings modal toggles. The shell
  * below renders the header, category pills, the note grid and the modals.
- */
+*/
 function useCollabNotes({ tripId, currentUser }: CollabNotesProps) {
   const { t } = useTranslation()
   const toast = useToast()
@@ -328,7 +328,7 @@ function CollabNotesGrid(S: NotesState) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
       {sortedNotes.length === 0 ? (
-        /* ── Empty state ── */
+        /* ── Empty state ──*/
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           padding: '48px 20px', textAlign: 'center', height: '100%',
@@ -342,7 +342,7 @@ function CollabNotesGrid(S: NotesState) {
           </div>
         </div>
       ) : (
-        /* ── Notes grid — 2 columns ── */
+        /* ── Notes grid — 2 columns ──*/
         <div style={{
           display: 'grid',
           gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(2, 1fr)',

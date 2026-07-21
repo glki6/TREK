@@ -30,7 +30,7 @@ interface AppConfig {
  * handling, the app-config probe (with cache fallback) and the language
  * detection chain. LoginPage is a pure wiring container that renders what this
  * returns. Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useLogin() {
   const { t } = useTranslation()
   const [mode, setMode] = useState<'login' | 'register'>('login')

@@ -4,7 +4,7 @@
  * effect in useAtlas augments it at runtime, and both the hook (visited-country
  * colouring) and the page's SidebarContent read it — they must share one
  * reference, so it lives here rather than inside either consumer.
- */
+*/
 
 export interface AtlasCountry {
   code: string

@@ -149,12 +149,12 @@ interface TransportModalProps {
   // Pre-fill a brand-new transport booking from a parsed import item (review-
   // before-save); like `reservation` for the form but stays in create mode.
   prefill?: BookingReviewDraft | null
-  /** Data for the Automated (public transit) mode's quick picks. */
+  /** Data for the Automated (public transit) mode's quick picks.*/
   places?: Place[]
   accommodations?: Accommodation[]
-  /** Open directly in the Automated public-transit mode (day-header tram button, "change route"). */
+  /** Open directly in the Automated public-transit mode (day-header tram button, "change route").*/
   initialAutomated?: boolean
-  /** Pre-seed the transit search — used by "change route" on an existing journey. */
+  /** Pre-seed the transit search — used by "change route" on an existing journey.*/
   transitPrefill?: { from?: PickedPlace | null; to?: PickedPlace | null } | null
 }
 
@@ -621,7 +621,7 @@ export function TransportModal({ isOpen, onClose, onSave, reservation, days, sel
       )}
 
       {automated ? (
-        /* ── Automated: public transit search (#1065) ── */
+        /* ── Automated: public transit search (#1065) ──*/
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {/* search header: what this is + the day it plans for */}
           <div className="bg-surface-tertiary" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 14, flexWrap: 'wrap' }}>
@@ -680,7 +680,7 @@ export function TransportModal({ isOpen, onClose, onSave, reservation, days, sel
         </div>
 
         {form.type === 'flight' ? (
-          /* ── Flight route: ordered airports (origin · stops · destination) ── */
+          /* ── Flight route: ordered airports (origin · stops · destination) ──*/
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <label className={labelClass}>{t('reservations.layover.route')}</label>
             {waypoints.map((wp, i) => {
@@ -766,7 +766,7 @@ export function TransportModal({ isOpen, onClose, onSave, reservation, days, sel
             })}
           </div>
         ) : form.type === 'train' ? (
-          /* ── Train route: ordered stations (origin · stops · destination) ── */
+          /* ── Train route: ordered stations (origin · stops · destination) ──*/
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <label className={labelClass}>{t('reservations.layover.route')}</label>
             {trainWaypoints.map((wp, i) => {

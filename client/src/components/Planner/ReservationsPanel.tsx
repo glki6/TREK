@@ -62,7 +62,7 @@ function buildAssignmentLookup(days, assignments) {
   return map
 }
 
-/* ── Shared field label/value styles ── */
+/* ── Shared field label/value styles ──*/
 const fieldLabelClass = 'text-[10px] font-semibold uppercase tracking-[0.08em] text-content-faint mb-[5px]'
 const fieldValueClass = 'text-[13px] font-medium text-content px-[10px] py-[8px] bg-surface-tertiary rounded-[10px]'
 
@@ -497,7 +497,7 @@ function Section({ title, count, children, defaultOpen = true, accent, storageKe
 /**
  * A transit journey's own card (#1065) — leg chips + journey stats instead of
  * the generic booking layout. Clicking anywhere opens the journey view.
- */
+*/
 function TransitJourneyCard({ r, days, onOpen, onDelete, canEdit }: {
   r: Reservation
   days: Day[]

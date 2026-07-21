@@ -7,7 +7,7 @@ import { useTranslation } from '../../i18n'
  * Register data hook — owns the form state, the client-side validation and the
  * register → redirect flow. RegisterPage is a pure wiring container. Behaviour
  * is identical to the previous in-component logic.
- */
+*/
 export function useRegister() {
   const { t } = useTranslation()
   const { register } = useAuthStore()

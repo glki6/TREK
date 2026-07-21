@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion*/
 interface DragDataPayload { placeId?: string; assignmentId?: string; noteId?: string; reservationId?: string; fromDayId?: string; phase?: 'single' | 'start' | 'middle' | 'end' }
 declare global { interface Window { __dragData: DragDataPayload | null } }
 
@@ -86,27 +86,27 @@ interface DayPlanSidebarProps {
   lastActionLabel?: string | null
   onUndo?: () => void
   onRouteRefresh?: () => void
-  /** Called when trip-level route is calculated; sets multi-segment route grouped by day (T7-1g) */
+  /** Called when trip-level route is calculated; sets multi-segment route grouped by day*/
   onTripRouteSet?: (route: [number, number][][][] | null) => void
   onAddTransport?: (dayId: number) => void
-  /** Opens the public-transit route search for a day (#1065). */
+  /** Opens the public-transit route search for a day (#1065).*/
   onPlanTransit?: (dayId: number) => void
-  /** Opens the journey view for a saved transit entry (#1065). */
+  /** Opens the journey view for a saved transit entry (#1065).*/
   onOpenTransit?: (reservation: Reservation) => void
   onEditTransport?: (reservation: Reservation) => void
   onEditReservation?: (reservation: Reservation) => void
   onAddBookingToAssignment?: (dayId: number, assignmentId: number) => void
   initialScrollTop?: number
   onScrollTopChange?: (top: number) => void
-  /** Mobile: show the route tools footer (Route toggle / Optimize / travel profile) on expanded days, since selecting a day closes the sheet */
+  /** Mobile: show the route tools footer (Route toggle / Optimize / travel profile) on expanded days, since selecting a day closes the sheet*/
   showRouteToolsWhenExpanded?: boolean
   /** Mobile: drag & drop reorder is disabled (touch-scroll hijack, #1432); the
-   *  grip handle is hidden and the arrow reorder buttons take over instead. */
+   *  grip handle is hidden and the arrow reorder buttons take over instead.*/
   isMobile?: boolean
-  /** T7-1c: maps each placeId → array of {dayIndex, orderNumber} for day-color indicators (multi-day support) */
+  /** maps each placeId → array of {dayIndex, orderNumber} for day-color indicators (multi-day support)*/
   placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
   useDayColors?: boolean
-  /** Zero-based index of the currently selected day — used to resolve multi-day places */
+  /** Zero-based index of the currently selected day — used to resolve multi-day places*/
   selectedDayIndex?: number | null
 }
 
@@ -115,7 +115,7 @@ interface DayPlanSidebarProps {
  * optimisation, day notes, and the drag-and-drop reorder/move machinery across
  * days (places, transports, notes). Returns everything the timeline view renders
  * from, keeping DayPlanSidebar a thin shell over one large day list.
- */
+*/
 function useDayPlanSidebar(props: DayPlanSidebarProps) {
   const {
   tripId,
@@ -308,7 +308,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       scrollContainerRef.current.scrollTop = initialScrollTop
     }
   }, [])
-  const initedTransportIds = useRef(new Set<number>()) // Speichert Drag-Daten als Backup (dataTransfer geht bei Re-Render verloren)
+const initedTransportIds = useRef(new Set<number>()) // Speichert Drag-Daten als Backup (dataTransfer geht bei Re-Render verloren)
   // Remember which assignment we last auto-scrolled into view so we don't
   // keep yanking the user back whenever they scroll away while the same
   // place stays selected.
@@ -1281,7 +1281,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     // Separate fixed (stay at their index) and movable assignments. A place is
     // fixed if it's locked OR has a set time — timed places are anchored by their
     // time, so the optimizer must not reshuffle them.
-    const locked = new Map() // index -> assignment
+const locked = new Map() // index -> assignment
     const unlocked = []
     da.forEach((a, i) => {
       if (lockedIds.has(a.id) || a.place?.place_time) locked.set(i, a)
@@ -1825,7 +1825,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                   const wLat = loc?.place?.lat ?? geoLat
                   const wLng = loc?.place?.lng ?? geoLng
                   const hasWeather = !!(day.date && anyGeoPlace && wLat != null && wLng != null)
-                  // T7-1h: when day colors toggle is ON, use palette color for the badge background
+                  // when day colors toggle is ON, use palette color for the badge background
                   const badgeBg = useDayColors ? getDayColor(index) : (isSelected ? 'var(--accent)' : 'var(--bg-hover)')
                   const badgeColor = useDayColors ? '#fff' : (isSelected ? 'var(--accent-text)' : 'var(--text-muted)')
                   return (
@@ -2829,8 +2829,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               // Mobile: per-day Route = at most ONE active day. Toggle ON replaces; OFF clears.
                               setExpandedRouteDayIds(prev => {
                                 return prev.has(day.id)
-                                  ? new Set()            // toggle OFF → clear
-                                  : new Set([day.id])    // toggle ON → replace with this day only
+? new Set()            // toggle OFF → clear
+: new Set([day.id])    // toggle ON → replace with this day only
                               })
                               // Mutual exclusion: per-day ON → clear Route All (tripRouteShown)
                               if (tripRouteShown) setTripRouteShown(false)

@@ -506,7 +506,7 @@ export default function CostsPanel({ tripId, tripMembers = [] }: CostsPanelProps
         .costs-root .bg-surface-card { background: var(--c-surface) !important; }
         .costs-root .bg-surface-secondary, .costs-root .bg-surface-input { background: var(--c-surface2) !important; }
         .costs-root .border-edge { border-color: var(--c-line) !important; }
-        /* dark = neutral zinc + a touch of liquid glass, matching the dashboard */
+        /* dark = neutral zinc + a touch of liquid glass, matching the dashboard*/
         html.dark .costs-root .bg-surface-card {
           background: rgba(255,255,255,0.035) !important;
           border-color: rgba(255,255,255,0.08) !important;

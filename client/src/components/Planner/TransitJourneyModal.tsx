@@ -16,7 +16,7 @@ import type { Reservation } from '../../types'
  * around the stop-by-stop itinerary. The title renames inline right in the
  * header, notes get the full width with markdown support, and "Change route"
  * re-enters the transit search pre-seeded with this journey's route.
- */
+*/
 
 interface TransitLegMeta {
   mode?: string
@@ -34,7 +34,7 @@ interface TransitLegMeta {
 interface TransitJourneyModalProps {
   reservation: Reservation
   onClose: () => void
-  /** Partial field update — endpoints + itinerary stay untouched. */
+  /** Partial field update — endpoints + itinerary stay untouched.*/
   onSave: (fields: { title: string; notes: string | null }) => Promise<unknown>
   onDelete: () => Promise<unknown>
   onChangeRoute: () => void

@@ -14,7 +14,7 @@ import type { BookingImportPreviewItem } from '@trek/shared'
  * (and finished-but-unreviewed) tasks by id and the widget re-fetches their status
  * on mount. We deliberately persist neither the parsed `items` (re-fetched) nor the
  * transient review flags (so a reload never auto-reopens the review flow).
- */
+*/
 export interface BackgroundImportTask {
   id: string                 // server job id
   tripId: string
@@ -28,7 +28,7 @@ export interface BackgroundImportTask {
   reviewRequested?: boolean  // user clicked "review" — the trip page consumes it
   consumed?: boolean         // review has been handed to the trip page
   /** The uploaded files this parse ran on — kept in memory so the review can attach the
-   *  source document to each created booking. Not persisted (a File can't survive a reload). */
+   *  source document to each created booking. Not persisted (a File can't survive a reload).*/
   sourceFiles?: File[]
 }
 
@@ -46,7 +46,7 @@ interface BackgroundTasksState {
 export const useBackgroundTasksStore = create<BackgroundTasksState>()(
   persist(
     (set) => {
-      /** Update an existing task by id, or insert a fresh one (events can arrive before addTask). */
+      /** Update an existing task by id, or insert a fresh one (events can arrive before addTask).*/
       const upsert = (id: string, tripId: string, patch: Partial<BackgroundImportTask>) =>
         set((state) => {
           const idx = state.tasks.findIndex((t) => t.id === id)

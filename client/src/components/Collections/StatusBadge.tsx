@@ -5,11 +5,11 @@ import { STATUS_META, nextStatus } from '../../pages/collections/collectionsMode
 
 interface StatusBadgeProps {
   status: CollectionStatus
-  /** One-tap cycle: idea → want → visited → idea. Omit for a read-only badge. */
+  /** One-tap cycle: idea → want → visited → idea. Omit for a read-only badge.*/
   onChange?: (next: CollectionStatus) => void
   showLabel?: boolean
   size?: number
-  /** Dark-glass variant for a pill sitting over a photo cover / the hero. */
+  /** Dark-glass variant for a pill sitting over a photo cover / the hero.*/
   onCover?: boolean
   t: TranslationFn
 }
@@ -20,7 +20,7 @@ interface StatusBadgeProps {
  * static badge. Two skins: the default surface pill (list / inspector) and the
  * `onCover` dark-glass pill that stays legible on top of a photo cover. Styled
  * with utility classes only, so it works both inside and outside `.trek-dash`.
- */
+*/
 export default function StatusBadge({ status, onChange, showLabel = true, size = 13, onCover = false, t }: StatusBadgeProps): React.ReactElement {
   const meta = STATUS_META[status]
   const Icon = meta.icon

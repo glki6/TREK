@@ -1,7 +1,7 @@
 /**
  * Strip markdown formatting to get plain text for previews.
  * Handles: bold, italic, headings, links, images, blockquotes, code, lists, hr.
- */
+*/
 export function stripMarkdown(md: string): string {
   return md
     .replace(/^#{1,6}\s+/gm, '')           // headings

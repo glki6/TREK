@@ -10,7 +10,7 @@ import { useJoinTrip } from './join/useJoinTrip'
  * is no registration path from an invite link. Preview resolves the trip name;
  * Accept adds the current user as a member and opens the trip. An already-member
  * (or the owner) is simply taken straight to the trip.
- */
+*/
 export default function JoinTripPage() {
   const { t } = useTranslation()
   const { state, title, accept, goToDashboard } = useJoinTrip()

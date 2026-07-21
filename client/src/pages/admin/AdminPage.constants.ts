@@ -1,4 +1,4 @@
-/** Static label-key maps for the admin notification matrix. No React, no side effects. */
+/** Static label-key maps for the admin notification matrix. No React, no side effects.*/
 
 export const ADMIN_EVENT_LABEL_KEYS: Record<string, string> = {
   version_available: 'settings.notifyVersionAvailable',

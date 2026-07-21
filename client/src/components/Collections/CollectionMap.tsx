@@ -7,7 +7,7 @@ interface CollectionMapProps {
   places: CollectionPlace[]
   selectedPlaceId: number | null
   onOpenPlace: (id: number) => void
-  /** Clicking the map background clears the selection. */
+  /** Clicking the map background clears the selection.*/
   onDeselect?: () => void
   dark: boolean
 }
@@ -17,7 +17,7 @@ interface CollectionMapProps {
  * clustering). One of the three list views; clicking a marker selects the place.
  * The parent `.col-mapwrap` supplies the rounded, bordered box + height, so this
  * just fills it.
- */
+*/
 export default function CollectionMap({ places, selectedPlaceId, onOpenPlace, onDeselect, dark }: CollectionMapProps): React.ReactElement {
   const pts = mappablePlaces(places)
   const center: [number, number] = pts.length > 0

@@ -29,7 +29,7 @@ interface AuthState {
   /** The auth check (loadUser) failed for a non-401 reason while we were online —
    *  the server was unreachable or erroring. Surfaced by the UI so a backend/IdP
    *  outage doesn't render as a blank, error-free page that looks like lost data.
-   *  Transient, never persisted. #1283 */
+   *  Transient, never persisted. #1283*/
   authCheckFailed: boolean
   error: string | null
   demoMode: boolean
@@ -38,7 +38,7 @@ interface AuthState {
   appVersion: string
   hasMapsKey: boolean
   serverTimezone: string
-  /** Server policy: all users must enable MFA */
+  /** Server policy: all users must enable MFA*/
   appRequireMfa: boolean
   tripRemindersEnabled: boolean
   placesPhotosEnabled: boolean
@@ -49,7 +49,7 @@ interface AuthState {
   completeMfaLogin: (mfaToken: string, code: string, rememberMe?: boolean) => Promise<AuthResponse>
   register: (username: string, email: string, password: string, invite_token?: string) => Promise<AuthResponse>
   logout: () => Promise<void>
-  /** Pass `{ silent: true }` to refresh the user without toggling global isLoading (avoids unmounting protected routes). */
+  /** Pass `{ silent: true }` to refresh the user without toggling global isLoading (avoids unmounting protected routes).*/
   loadUser: (opts?: { silent?: boolean }) => Promise<void>
   updateMapsKey: (key: string | null) => Promise<void>
   updateApiKeys: (keys: Record<string, string | null>) => Promise<void>
@@ -76,7 +76,7 @@ let authSequence = 0
 /**
  * Mark the session authenticated and point the offline DB at this user's scoped
  * database before any background sync runs, so cached data never crosses users.
- */
+*/
 async function onAuthSuccess(userId: number): Promise<void> {
   setAuthed(true)
   try {

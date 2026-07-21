@@ -7,10 +7,10 @@ import type { TranslationFn } from '../../types'
 interface BulkAssignLabelModalProps {
   isOpen: boolean
   labels: CollectionLabel[]
-  /** Number of selected places the labels will be added to. */
+  /** Number of selected places the labels will be added to.*/
   count: number
   onAssign: (labelIds: number[]) => Promise<void> | void
-  /** Open the label manager to create labels first. */
+  /** Open the label manager to create labels first.*/
   onManage: () => void
   onClose: () => void
   t: TranslationFn
@@ -20,7 +20,7 @@ interface BulkAssignLabelModalProps {
  * Pick one or more of the list's labels to add to every selected place. Additive
  * — it never removes labels a place already has. When the list has no labels yet,
  * it points the user at the label manager instead.
- */
+*/
 export default function BulkAssignLabelModal({ isOpen, labels, count, onAssign, onManage, onClose, t }: BulkAssignLabelModalProps): React.ReactElement {
   const [picked, setPicked] = useState<number[]>([])
   const [busy, setBusy] = useState(false)

@@ -34,7 +34,7 @@ function ListRow({ list, active, onSelect }: { list: Collection; active: boolean
  * pseudo-list, owned lists (colour dot + count), a shared section, and an
  * incoming-invites block. Selecting a list makes it active; editing / deleting
  * happens from the Edit button in the hero of the active list.
- */
+*/
 export default function ListsRail(props: ListsRailProps): React.ReactElement {
   const {
     ownedLists, sharedLists, activeId, incomingInvites,

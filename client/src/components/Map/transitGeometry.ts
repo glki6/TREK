@@ -5,7 +5,7 @@ import type { Reservation } from '../../types'
  * each leg's shape as a Google-encoded polyline; we store it on
  * metadata.transit.legs[].geometry and decode it here so the map can draw the
  * actual rail/bus alignment instead of a straight line.
- */
+*/
 
 export interface TransitMapSegment {
   coords: [number, number][]
@@ -13,7 +13,7 @@ export interface TransitMapSegment {
   walk: boolean
 }
 
-/** Google polyline decoding with a configurable precision (MOTIS uses 6). */
+/** Google polyline decoding with a configurable precision (MOTIS uses 6).*/
 export function decodePolyline(encoded: string, precision = 6): [number, number][] {
   const factor = Math.pow(10, precision)
   const coords: [number, number][] = []
@@ -43,7 +43,7 @@ export function decodePolyline(encoded: string, precision = 6): [number, number]
 /**
  * The decoded per-leg segments of a transit reservation, or [] when it has no
  * stored geometry (pre-geometry entries fall back to the straight line).
- */
+*/
 export function getTransitMapSegments(res: Reservation): TransitMapSegment[] {
   if (res.type !== 'transit') return []
   let meta: any = res.metadata

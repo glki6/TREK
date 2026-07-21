@@ -18,7 +18,7 @@ interface ShareCollectionModalProps {
   collectionName: string
   isOwner: boolean
   members: CollectionMember[]
-  /** Called after the current (member) user successfully leaves the list. */
+  /** Called after the current (member) user successfully leaves the list.*/
   onAfterLeave: () => void
   t: TranslationFn
 }
@@ -44,7 +44,7 @@ function MemberAvatar({ member }: { member: CollectionMember }): React.ReactElem
  * GET /:id/available-users and cancel a pending invite. A non-owner MEMBER sees the
  * roster read-only plus a "Leave shared list" action (the server blocks the owner
  * from leaving). Incoming invites are accepted/declined from the lists rail, not here.
- */
+*/
 export default function ShareCollectionModal({
   isOpen,
   onClose,
@@ -246,7 +246,7 @@ export default function ShareCollectionModal({
         </div>
 
         {isOwner ? (
-          /* Owner: invite UI */
+          /* Owner: invite UI*/
           <div className="pt-1 border-t border-edge-secondary">
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-content-faint mt-4 mb-2">
               {t('collections.share.invite')}
@@ -286,7 +286,7 @@ export default function ShareCollectionModal({
             )}
           </div>
         ) : (
-          /* Member: read-only roster + leave */
+          /* Member: read-only roster + leave*/
           <div className="pt-1 border-t border-edge-secondary">
             <p className="text-[12px] text-content-muted mt-4 mb-3">{t('collections.share.memberHint')}</p>
             {confirmLeave ? (

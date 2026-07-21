@@ -221,7 +221,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
   const [disableClustering, setDisableClustering] = useState(false)
   const [useDayColors, setUseDayColors] = useState(false)
 
-  // Zero-based index of the currently selected day (for per-day route coloring, T7-1e).
+  // Zero-based index of the currently selected day (for per-day route coloring).
   // Derived from showDayDetail (day detail panel open) or selectedDayId as fallback.
   const selectedDayIndex = useMemo(() => {
     // Priority: detail panel > active per-day route day (mobile) > selected day
@@ -231,7 +231,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
     return idx >= 0 ? idx : null
   }, [days, showDayDetail?.id, activeRouteDayId, selectedDayId])
 
-  // T7-1g: set of place IDs linked to accommodations — used for map marker styling.
+  // set of place IDs linked to accommodations — used for map marker styling.
   const accommodationPlaceIds = useMemo(() => {
     const ids = new Set<number>()
     for (const acc of tripAccommodations) {
@@ -375,7 +375,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
               </div>
             )}
 
-            {/* Mobile: day colors toggle FAB — state only (T7-1b) */}
+            {/* Mobile: day colors toggle FAB — state only */}
             {isMobile && (
               <button
                 onClick={() => setUseDayColors(c => !c)}
@@ -465,7 +465,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
               </button>
             )}
 
-            {/* Desktop: Day colors toggle FAB (T7-1b) */}
+            {/* Desktop: Day colors toggle FAB */}
             {!isMobile && (
               <button
                 onClick={() => setUseDayColors(c => !c)}

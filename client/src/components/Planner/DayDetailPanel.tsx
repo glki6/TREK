@@ -60,7 +60,7 @@ interface DayDetailPanelProps {
   collapsed?: boolean
   onToggleCollapse?: () => void
   mobile?: boolean
-  /** Rename the day from here — the sidebar pencil moved to the transit search (#1065). */
+  /** Rename the day from here — the sidebar pencil moved to the transit search (#1065).*/
   onUpdateDayTitle?: (dayId: number, title: string) => void
 }
 

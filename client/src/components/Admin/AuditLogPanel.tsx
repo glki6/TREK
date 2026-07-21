@@ -58,7 +58,7 @@ export default function AuditLogPanel({ serverTimezone }: AuditLogPanelProps): R
       setTotal(data.total ?? 0)
       setOffset(nextOffset)
     } catch {
-      /* keep existing */
+      /* keep existing*/
     } finally {
       setLoading(false)
     }

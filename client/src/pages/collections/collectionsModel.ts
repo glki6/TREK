@@ -8,15 +8,15 @@ import type { StatusFilter } from '../../store/collectionStore'
  * Pure data shaping + presentation metadata for the Collections page. No React
  * state/effects live here — see atlas/atlasModel.ts for the same split. The
  * page hook (useCollections) and the view components share these helpers.
- */
+*/
 
 export interface StatusMeta {
   icon: LucideIcon
-  /** i18n key for the human label. */
+  /** i18n key for the human label.*/
   labelKey: string
-  /** CSS colour token / hex for the badge on a light/surface background. */
+  /** CSS colour token / hex for the badge on a light/surface background.*/
   color: string
-  /** Brighter variant for a pill sitting over a photo cover / the hero scrim. */
+  /** Brighter variant for a pill sitting over a photo cover / the hero scrim.*/
   coverColor: string
 }
 
@@ -26,16 +26,16 @@ export const STATUS_META: Record<CollectionStatus, StatusMeta> = {
   visited: { icon: CheckCircle2, labelKey: 'collections.status.visited', color: '#10b981', coverColor: '#6ee7b7' },
 }
 
-/** Stable order for the filter chips + the one-tap cycle. */
+/** Stable order for the filter chips + the one-tap cycle.*/
 export const STATUS_ORDER: CollectionStatus[] = [...COLLECTION_STATUSES]
 
-/** idea → want → visited → idea */
+/** idea → want → visited → idea*/
 export function nextStatus(status: CollectionStatus): CollectionStatus {
   const i = STATUS_ORDER.indexOf(status)
   return STATUS_ORDER[(i + 1) % STATUS_ORDER.length]
 }
 
-/** Sort places by explicit sort_order, falling back to created_at (newest first). */
+/** Sort places by explicit sort_order, falling back to created_at (newest first).*/
 export function sortPlaces(places: CollectionPlace[]): CollectionPlace[] {
   return [...places].sort((a, b) => {
     const so = (a.sort_order ?? 0) - (b.sort_order ?? 0)
@@ -47,7 +47,7 @@ export function sortPlaces(places: CollectionPlace[]): CollectionPlace[] {
 /** Apply the active status filter + free-text search (name/address/notes) +
  *  category + per-collection label filter. The label filter is OR semantics: a
  *  place matches if it carries ANY of the selected labels. This one function
- *  drives BOTH the list and the map, so every filter stays in lockstep. */
+ *  drives BOTH the list and the map, so every filter stays in lockstep.*/
 export function filterPlaces(
   places: CollectionPlace[],
   statusFilter: StatusFilter,
@@ -70,7 +70,7 @@ export function filterPlaces(
   })
 }
 
-/** Count places per status for the filter chips. */
+/** Count places per status for the filter chips.*/
 export function statusCounts(places: CollectionPlace[]): Record<StatusFilter, number> {
   const counts: Record<StatusFilter, number> = { all: 0, idea: 0, want: 0, visited: 0 }
   for (const p of places) { if (!p) continue; counts.all += 1; counts[p.status] += 1 }
@@ -79,7 +79,7 @@ export function statusCounts(places: CollectionPlace[]): Record<StatusFilter, nu
 
 export interface CategoryOption { id: number; name: string; color: string | null; icon: string | null; count: number }
 
-/** Distinct categories actually present across the given places, with counts. */
+/** Distinct categories actually present across the given places, with counts.*/
 export function presentCategories(places: CollectionPlace[]): CategoryOption[] {
   const byId = new Map<number, CategoryOption>()
   for (const p of places) {
@@ -95,7 +95,7 @@ export interface LabelOption { id: number; name: string; color: string | null; c
 
 /** The collection's labels in definition order, each with how many of the given
  *  places carry it. Zero-count labels are kept so the manager/filter still lists
- *  a freshly-created label. */
+ *  a freshly-created label.*/
 export function presentLabels(labels: CollectionLabel[], places: CollectionPlace[]): LabelOption[] {
   const counts = new Map<number, number>()
   for (const p of places) {
@@ -105,7 +105,7 @@ export function presentLabels(labels: CollectionLabel[], places: CollectionPlace
   return labels.map(l => ({ id: l.id, name: l.name, color: l.color ?? null, count: counts.get(l.id) ?? 0 }))
 }
 
-/** Only the places that can render on a map. */
+/** Only the places that can render on a map.*/
 export function mappablePlaces(places: CollectionPlace[]): CollectionPlace[] {
   return places.filter(p => p && typeof p.lat === 'number' && typeof p.lng === 'number')
 }
@@ -115,7 +115,7 @@ export function mappablePlaces(places: CollectionPlace[]): CollectionPlace[] {
  * href is absolute (a bare "booking.com" would otherwise resolve relative to the
  * SPA route and 404). Returns '' for blanks. The server further restricts to
  * http/https.
- */
+*/
 export function normalizeLinkUrl(url: string): string {
   const u = url.trim()
   if (!u) return ''

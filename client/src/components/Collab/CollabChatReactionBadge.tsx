@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom'
 import { TwemojiImg } from './CollabChatTwemojiImg'
 import type { ChatReaction } from './CollabChat.types'
 
-/* ── Reaction Badge with NOMAD tooltip ── */
+/* ── Reaction Badge with NOMAD tooltip ──*/
 interface ReactionBadgeProps {
   reaction: ChatReaction
   currentUserId: number

@@ -40,7 +40,7 @@ function renderApp(initialPath = '/') {
 /**
  * Seeds authStore with sensible defaults for a test, replacing loadUser with a
  * no-op spy so the MSW /api/auth/me response does not overwrite the seeded state.
- */
+*/
 function seedAuth(overrides: Record<string, unknown> = {}) {
   useAuthStore.setState({
     isLoading: false,

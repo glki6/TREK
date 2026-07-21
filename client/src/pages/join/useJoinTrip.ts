@@ -8,7 +8,7 @@ export type JoinTripState = 'loading' | 'ready' | 'joining' | 'invalid'
  * State + effects behind JoinTripPage (#1143): resolve the invite token to a
  * trip name, then accept it (add the current user as a member) and open the trip.
  * The page itself is a thin presentational shell over this hook.
- */
+*/
 export function useJoinTrip() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()

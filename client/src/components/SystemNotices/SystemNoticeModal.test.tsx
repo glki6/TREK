@@ -30,7 +30,7 @@ function makeNotice(overrides: Partial<SystemNoticeDTO> = {}): SystemNoticeDTO {
  * Advance fake timers past the grace delay (2× rAF fallback → each is a
  * setTimeout(0), then 500ms).  All three timers fire in sequence with
  * runAllTimers() — no need to advance exact milliseconds.
- */
+*/
 async function flushGraceDelay() {
   await act(async () => {
     vi.runAllTimers();

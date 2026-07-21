@@ -9,7 +9,7 @@ import type { Trip, Place, TripFile } from '../../types'
  * Files page data hook — owns the trip/places load, the file sync from the trip
  * store and the upload/delete handlers. FilesPage is a pure wiring container.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useFiles() {
   const { id } = useParams<{ id: string }>()
   const tripId = Number(id)

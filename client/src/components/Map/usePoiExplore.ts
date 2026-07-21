@@ -15,7 +15,7 @@ function isAbortError(err: unknown): boolean {
  * for the current viewport; panning/zooming does NOT auto-refetch — it just marks
  * the results stale (`moved`) so the pill can offer "search this area". This keeps
  * Overpass load (and visual churn) down.
- */
+*/
 export function usePoiExplore() {
   const [active, setActive] = useState<Set<string>>(() => new Set())
   const [byCat, setByCat] = useState<Record<string, Poi[]>>({})

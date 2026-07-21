@@ -5,7 +5,7 @@ import type { PackingState } from './usePackingListPanel'
  * One tab row: the three-tier view switch (Gemeinsam / Meine Liste, #858) on the
  * left, and the all/open/done filter on the right, separated by a vertical rule
  * and sharing the same height. Left-aligned with the list content.
- */
+*/
 export function PackingViewTabs(S: PackingState) {
   const { view, setView, filter, setFilter, t, items } = S
   const commonCount = items.filter(i => !i.is_private).length

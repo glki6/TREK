@@ -13,7 +13,7 @@ import type { FilterType, Member } from './todoListModel'
  * view state and the derived buckets (filtered list + counts) + handlers.
  * TodoListPanel stays a layout component that renders the sidebar, the rows
  * (TodoRow) and the detail/new panes from this state.
- */
+*/
 export function useTodoList(tripId: number, items: TodoItem[], addItemSignal: number) {
   const { addTodoItem, updateTodoItem, deleteTodoItem, toggleTodoItem, reorderTodoItems } = useTripStore()
   const trip = useTripStore((s) => s.trip)

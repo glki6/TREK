@@ -3,7 +3,7 @@ import { useAuthStore } from './authStore'
 
 export type PermissionLevel = 'admin' | 'trip_owner' | 'trip_member' | 'everybody'
 
-/** Minimal trip shape used by permission checks — accepts both Trip and DashboardTrip */
+/** Minimal trip shape used by permission checks — accepts both Trip and DashboardTrip*/
 type TripOwnerContext = { user_id?: unknown; owner_id?: unknown; is_owner?: unknown }
 
 interface PermissionsState {
@@ -19,7 +19,7 @@ export const usePermissionsStore = create<PermissionsState>((set) => ({
 /**
  * Hook that returns a permission checker bound to the current user.
  * Usage: const can = useCanDo(); can('trip_create') or can('file_upload', trip)
- */
+*/
 export function useCanDo() {
   const perms = usePermissionsStore((s: PermissionsState) => s.permissions)
   const user = useAuthStore((s) => s.user)

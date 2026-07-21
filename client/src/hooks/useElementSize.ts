@@ -6,7 +6,7 @@ import { useCallback, useRef, useState } from 'react'
  * whenever the ref is attached and disconnected when it detaches (React calls
  * the callback ref with null on unmount), so no cleanup effect is needed —
  * which keeps this usable straight from a page's data hook.
- */
+*/
 export function useElementSize<T extends HTMLElement = HTMLElement>(): {
   ref: (el: T | null) => void
   width: number

@@ -5,24 +5,24 @@ interface TransHtmlProps<T extends keyof JSX.IntrinsicElements = 'span'> {
   /**
    * Translation key whose template legitimately contains markup (e.g.
    * `'Turn <strong>{title}</strong> into a Journey'`).
-   */
+*/
   html: string
   /**
    * Values to interpolate into `{paramName}` placeholders. Every value is
    * HTML-escaped before substitution, so passing user-controlled data is safe.
-   */
+*/
   params?: Record<string, string | number>
   /**
    * Element to render. Defaults to `<span>`. Use the tag that fits the
    * surrounding flow — block, inline, list item, etc.
-   */
+*/
   as?: T
   className?: string
   /**
    * `id` is forwarded so the component can be the target of `aria-labelledby`
    * or `htmlFor`. Other ARIA attributes can be added if needed; we intentionally
    * keep the surface small to discourage overloading this with arbitrary props.
-   */
+*/
   id?: string
 }
 
@@ -41,7 +41,7 @@ interface TransHtmlProps<T extends keyof JSX.IntrinsicElements = 'span'> {
  *
  * Use this for any user-controlled value that lands in a markup template.
  * Plain text-only templates can continue to use `<>{t('key', params)}</>`.
- */
+*/
 export function TransHtml<T extends keyof JSX.IntrinsicElements = 'span'>({
   html,
   params,

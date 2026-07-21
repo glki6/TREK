@@ -34,7 +34,7 @@ L.Icon.Default.mergeOptions({
 /**
  * Create a round photo-circle marker.
  * Shows image_url if available, otherwise category icon in colored circle.
- */
+*/
 function escAttr(s) {
   if (!s) return ''
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -143,8 +143,8 @@ function createPoiIcon(category: string) {
 
 /**
  * Create a solid day-colored circle marker with the sequence number centred.
- * Used when the Day Colors toggle is active (T7-1f).
- */
+ * Used when the Day Colors toggle is active.
+*/
 function createDayColorIcon(dayIndex: number, orderNumber: number, isSelected: boolean): L.DivIcon {
   const size = isSelected ? 44 : 36
   const color = getDayColor(dayIndex)
@@ -163,7 +163,7 @@ function createDayColorIcon(dayIndex: number, orderNumber: number, isSelected: b
 /**
  * Compute an SVG arc path from (cx,cy) radius r, startAngle to endAngle (radians).
  * Angles measured clockwise from 12 o'clock (−π/2 offset).
- */
+*/
 function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
   const startX = cx + r * Math.cos(startAngle)
   const startY = cy + r * Math.sin(startAngle)
@@ -177,7 +177,7 @@ function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAn
  * Multi-color accommodation marker: pie chart with equal wedges (one per distinct day),
  * white Home icon centred. Used when day colors ON, no specific day focused,
  * and the stay spans multiple days.
- */
+*/
 function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boolean): L.DivIcon {
   const size = isSelected ? 44 : 36
   const r = size / 2 - 1.5 // leave room for outer ring, stays inside container
@@ -217,7 +217,7 @@ function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boole
 /**
  * Day-colored circle marker for accommodation places.
  * Same as createDayColorIcon but shows a home icon instead of the sequence number.
- */
+*/
 function createAccommodationDayIcon(dayIndex: number, isSelected: boolean): L.DivIcon {
   const size = isSelected ? 44 : 36
   const color = getDayColor(dayIndex)
@@ -528,13 +528,13 @@ interface MemoMarkerProps {
   onClickPlace: (id: number) => void
   onHover: (place: any, x: number, y: number) => void
   onHoverOut: () => void
-  /** Day Colors toggle (T7-1f). */
+  /** Day Colors toggle.*/
   useDayColors?: boolean
-  /** Resolved day assignment for this place (first or selected-day match). */
+  /** Resolved day assignment for this place (first or selected-day match).*/
   dayInfo?: { dayIndex: number; orderNumber: number } | null
-  /** All distinct dayIndices from placeDayMap — for multi-color pie. */
+  /** All distinct dayIndices from placeDayMap — for multi-color pie.*/
   accommodationDayIndices?: number[]
-  /** Set of place IDs that are linked to accommodations (T7-1g). */
+  /** Set of place IDs that are linked to accommodations.*/
   accommodationPlaceIds?: Set<number>
 }
 
@@ -542,10 +542,10 @@ const MemoMarker = memo(function MemoMarker({
   place, isSelected, orderNumbers, photoUrl, onClickPlace, onHover, onHoverOut,
   useDayColors = false, dayInfo, accommodationDayIndices, accommodationPlaceIds,
 }: MemoMarkerProps) {
-  // T7-1f: when Day Colors toggle is ON and the place has a day assignment,
+  // when Day Colors toggle is ON and the place has a day assignment,
   // render a solid coloured circle with the sequence number instead of the
   // photo / category icon.
-  // T7-1g: accommodation places show home icon without the sequence number.
+  // accommodation places show home icon without the sequence number.
   // Multi-day accommodations (overview, no focus): pie chart with equal wedges.
   const useDayIcon = useDayColors && !!dayInfo
   const isAccommodation = !!accommodationPlaceIds?.has(place.id)
@@ -708,7 +708,7 @@ export const MapView = memo(function MapView({
   const placeIds = useMemo(() => places.map(p => p.id).join(','), [places])
   // Normalize route data to a flat list of { segment: [coord..], dayIndex }.
   // Handles per-day routes ([seg][coords]), multi-day trip routes ([day][seg][coords]),
-  // and edge cases where shape detection is ambiguous (T7-1g regression fix).
+  // and edge cases where shape detection is ambiguous.
   const normalizedRouteSegments = useMemo<
     { segment: [number, number][]; dayIndex: number }[]
   >(() => {
@@ -759,7 +759,7 @@ export const MapView = memo(function MapView({
     return result
   }, [route])
 
-  // Flattened [lat,lng] points for bounds fitting (T7-1g regression fix).
+  // Flattened [lat,lng] points for bounds fitting.
   const routeCoords = useMemo<[number, number][]>
     (() => normalizedRouteSegments.flatMap(s => s.segment), [normalizedRouteSegments])
   useEffect(() => {
@@ -831,7 +831,7 @@ export const MapView = memo(function MapView({
     const photoUrl = (pck && photoUrls[pck]) || place.image_url || null
     const orderNumbers = dayOrderMap[place.id] ?? null
 
-    // T7-1f: resolve the day assignment for this place.
+    // resolve the day assignment for this place.
     // placeDayMap can hold a single {dayIndex,orderNumber} or an array (multi-day places).
     let dayInfo: { dayIndex: number; orderNumber: number } | null = null
     const raw = placeDayMap[place.id]
@@ -951,9 +951,9 @@ export const MapView = memo(function MapView({
       )}
 
       {/* Apple-Maps style: casing under core, rounded.
-         * T7-1e: per-day route color when Day Colors toggle ON + single day selected
-         * T7-1g: multi-color trip routes — each day's segments in its own palette color
-         * T7-1h fix: use normalizedRouteSegments to avoid shape detection crash
+         * per-day route color when Day Colors toggle ON + single day selected
+         * multi-color trip routes — each day's segments in its own palette color
+         * use normalizedRouteSegments to avoid shape detection crash
          */}
       {normalizedRouteSegments.length > 0 && normalizedRouteSegments.flatMap(
         ({ segment, dayIndex }, segIdx) => {

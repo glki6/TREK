@@ -32,7 +32,7 @@ import { resolvePoolAssignmentId } from './tripPlannerModel'
  * the map filters/derivations and the splash gate. TripPlannerPage stays a
  * wiring container that lays out the day/map/places panes and modals.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useTripPlanner() {
   const { id } = useParams<{ id: string }>()
   // The route param is a string; convert once here so every downstream component
@@ -852,11 +852,11 @@ export function useTripPlanner() {
 
   const selectedPlace = selectedPlaceId ? places.find(p => p.id === selectedPlaceId) : null
 
-  // ── T7-1c: Global place → {dayIndex, orderNumber} map (all days) ───────────
+  // ── Global place → {dayIndex, orderNumber} map (all days) ───────────
   // Maps each place to its first day-index and position within that day.
   // A place assigned on multiple days keeps the FIRST assignment's info;
   // this is sufficient for marker coloring and sidebar circle indicators.
-  // T7-1g: accommodation-only places (no day assignments) get entries from
+  // accommodation-only places (no day assignments) get entries from
   // their stay range [start_day_id, end_day_id] so they render home icons.
   const placeDayMap = useMemo<Record<string, Array<{ dayIndex: number; orderNumber: number }>>>(() => {
     if (days.length === 0) return {}
@@ -883,7 +883,7 @@ export function useTripPlanner() {
       })
     })
 
-    // 2. T7-1g: entries from accommodation stay ranges (covers places with no assignments)
+    // 2. entries from accommodation stay ranges (covers places with no assignments)
     if (tripAccommodations.length > 0) {
       for (const acc of tripAccommodations) {
         if (!acc.place_id) continue
@@ -931,8 +931,8 @@ export function useTripPlanner() {
   }, [activeRouteDayId, selectedDayId, assignments])
 
   // Auto-switch map tiles to dark theme when in dark mode (matches CollectionMap + Navbar pattern)
-  const LIGHT_TILE = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-  const DARK_TILE  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+const LIGHT_TILE = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+const DARK_TILE  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
   // dark_mode can be: boolean, 'light', 'dark', or 'auto' (system preference)
   const isDark = settings.dark_mode === true || settings.dark_mode === 'dark' ||

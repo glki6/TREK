@@ -7,7 +7,7 @@ import { authApi } from '../../api/client'
  * and the enumeration-safe submit. ForgotPasswordPage is a pure wiring
  * container that renders what this returns. Behaviour is identical to the
  * previous in-component logic.
- */
+*/
 export function useForgotPassword() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')

@@ -13,7 +13,7 @@ import { useBackgroundTasksStore, type BackgroundImportTask } from '../../store/
  * user's WebSocket for import:progress / import:done / import:error and reflects each
  * job; a finished job offers a "review" action that takes the user to the trip, where
  * the per-item review flow opens. Polls running jobs as a backstop for missed pushes.
- */
+*/
 export default function BackgroundTasksWidget() {
   const { t } = useTranslation()
   const navigate = useNavigate()
