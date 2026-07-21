@@ -205,15 +205,12 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // When per-day routes are turned off, also clear expanded day IDs to prevent stale
   // connector pills from showing for non-existent routes (#mobile-route-persist).
   const handleTogglePerDayRoute = () => {
-    // DEBUG: trace toggle OFF → stale pills (#4 Issue A)
-    console.log('[handleTogglePerDayRoute]', { routeShown, tripRouteShown, expandedRouteDayIds: [...expandedRouteDayIds] })
     if (!routeShown && tripRouteShown) {
       setTripRouteShown(false)
     }
     onToggleRoute?.()
     // When toggling per-day route OFF, clear day-level route state
     if (routeShown) {
-      console.log('[handleTogglePerDayRoute] clearing legs')
       setExpandedRouteDayIds(new Set())
       setRouteLegs({})
       setHotelLegs({})
@@ -561,19 +558,14 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // RouteCalculator's cache with the map. Runs for every day in routeDayIds — one
   // selected day on desktop, each Route-toggled day on mobile (#1374).
   useEffect(() => {
-    // DEBUG: trace legs effect (#4 Issue A - stale pills)
-    console.log('[legsEffect]', { routeDayKey, routeDayIdsLen: routeDayIds.length })
     if (legsAbortRef.current) legsAbortRef.current.abort()
     // When route is disabled AND no days are active, clear stale legs (#4 Issue A).
     // Preserve legs only when route is still enabled but temporarily no days match
     // (e.g., all collapsed on desktop), so they restore instantly on re-expand.
     if (routeDayIds.length === 0) {
       if (!routeShown && !tripRouteShown) {
-        console.log('[legsEffect] route disabled + no days → clearing stale legs')
         setRouteLegs({})
         setHotelLegs({})
-      } else {
-        console.log('[legsEffect] no days → preserving legs for instant restore')
       }
       return
     }
@@ -2825,7 +2817,14 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               // distances between places appear right here instead (#1374).
                               setExpandedRouteDayIds(prev => {
                                 const next = new Set(prev)
-                                next.has(day.id) ? next.delete(day.id) : next.add(day.id)
+                                const wasAdding = !next.has(day.id)
+                                if (wasAdding) {
+                                  next.add(day.id)
+                                  // Sync with parent's routeShown so map routes draw (#Issue B fix)
+                                  if (prev.size === 0 && onToggleRoute) onToggleRoute()
+                                } else {
+                                  next.delete(day.id)
+                                }
                                 return next
                               })
                             } else if (isSelected) { handleTogglePerDayRoute() }

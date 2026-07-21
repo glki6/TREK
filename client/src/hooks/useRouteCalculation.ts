@@ -32,7 +32,6 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
 
   const updateRouteForDay = useCallback(async (dayId: number | null) => {
     if (routeAbortRef.current) routeAbortRef.current.abort()
-    console.log('[RouteCalc] updateRouteForDay called', { dayId, enabled })
     // Route is manual: only compute when explicitly enabled (the "show route" toggle).
     if (!enabled) { setRoute(null); setRouteSegments([]); return }
     if (!dayId) return // Preserve existing route; just skip recalc
@@ -112,7 +111,6 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
       }
     }
     if (currentRun.length >= 2 && runHasPlace) runs.push(currentRun)
-    console.log('[RouteCalc] entries/runs built', { entriesLen: entries.length, runsLen: runs.length, daLen: da.length })
 
     // Bookend the route with the day's accommodation: a hotel → first-stop run and
     // a last-stop → hotel run, so the drawn line matches the sidebar's hotel legs.
@@ -169,14 +167,12 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
       runsWithHotel.map(r => r.map(p => [p.lat, p.lng] as [number, number]))
 
     if (runsWithHotel.length === 0) {
-      console.log('[RouteCalc] NO ROUTE: runsWithHotel empty', { entriesLen: entries.length, runsLen: runs.length, dayId })
       setRoute(null); setRouteSegments([]); return
     }
 
     // Draw straight lines immediately for snappiness, then upgrade to the real
     // OSRM road geometry.
     const sl = straightLines()
-    console.log('[RouteCalc] setting route', { segments: sl.length, firstSegLen: sl[0]?.length })
     setRoute(sl)
 
     const controller = new AbortController()
@@ -221,10 +217,8 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
   // Recalculate when assignments or transport positions for the SELECTED day change
   const selectedDayAssignments = selectedDayId ? tripStore.assignments?.[String(selectedDayId)] : null
   useEffect(() => {
-    // DEBUG: trace route clearing on mobile sidebar close (#4 Issue B)
-    if (!enabled) { console.log('[RouteCalc] DISABLED → clearing route', { enabled, selectedDayId }); setRoute(null); setRouteSegments([]); return }
-    if (!selectedDayId) { console.log('[RouteCalc] no selectedDayId → preserving route'); return } // Preserve route during transient null (sidebar collapse, place click)
-    console.log('[RouteCalc] recalculating for day', selectedDayId, { enabled, profile, assignmentsLen: selectedDayAssignments?.length })
+    if (!enabled) { setRoute(null); setRouteSegments([]); return }
+    if (!selectedDayId) { return } // Preserve route during transient null (sidebar collapse, place click)
     updateRouteForDay(selectedDayId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayId, selectedDayAssignments, transportSignature, enabled, profile, accommodations, optimizeFromAccommodation, distanceUnit])
