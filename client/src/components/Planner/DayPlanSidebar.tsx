@@ -191,6 +191,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       onTripRouteSet?.(null)
       setTripRouteInfo(null)
       setTripRouteLegs({})
+      setTripHotelLegs({})
+      setTripBridgeLegs({})
     }
   }, [tripRouteShown])
   // Mutual exclusion: turning on per-day route clears Route All, and vice versa
@@ -215,6 +217,15 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // Trip-level route legs keyed by day id then assignment id (same shape as routeLegs)
   // so connector pills can show drive times between stops when Route All is active — #1458.
   const [tripRouteLegs, setTripRouteLegs] = useState<Record<number, Record<number, RouteSegment>>>({})
+  // Trip-level hotel bookend legs (morning/evening) for each day — shown as connector pills
+  // when Route All is active, mirroring per-day hotelLegs.
+  const [tripHotelLegs, setTripHotelLegs] = useState<Record<number, { top?: { seg: RouteSegment; name: string }; bottom?: { seg: RouteSegment; name: string } }>>({})
+  // Trip-level inter-day bridge legs — drive from previous day's evening hotel to this
+  // day's morning hotel. Keyed by destination day id.
+  const [tripBridgeLegs, setTripBridgeLegs] = useState<Record<number, { seg: RouteSegment; name: string }>>({})
+  // Trip-level inter-day bridge legs — drive from previous day's evening hotel to this
+  // day's morning hotel. Keyed by destination day id.
+  const [tripBridgeLegs, setTripBridgeLegs] = useState<Record<number, { seg: RouteSegment; name: string }>>({})
   const optimizeFromAccommodation = useSettingsStore(s => s.settings.optimize_from_accommodation)
   // Recompute the hotel/route legs when the user flips km↔mi so the connector
   // distances refresh instead of showing stale cached text (#1300).
@@ -954,18 +965,10 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       const allDayRuns: { lat: number; lng: number }[][][] = []
       let prevEveningHotel: { lat: number; lng: number } | null = null
 
-      // === DEBUG MARKER v2 — if you don't see this, the rebuild didn't take ===
-      if (days.length > 0) {
-        console.group('[RouteAll DEBUG v2] trip', trip?.id || 'unknown', 'days:', days.length)
-      }
       for (const day of days) {
-        const debugDays = [3, 5, 6, 7, 8]
         // Snapshot prevEveningHotel at start of iteration so the inter-day bridge below
         // uses the PREVIOUS day's evening hotel, not today's (which gets updated mid-iteration)
         const prevDayEveningHotel = prevEveningHotel ? { ...prevEveningHotel } : null
-        if (debugDays.includes(day.day_number)) {
-          console.log(`[D${day.day_number}] start id=${day.id} | prevEveningHotel=`, prevEveningHotel)
-        }
 
         // Base place-to-place runs for this day
         let runs = collectRunsForDay(day.id)
@@ -974,20 +977,6 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         const bookends = optimizeFromAccommodation !== false
           ? getDayBookendHotels(day, days, accommodations)
           : null
-        if (debugDays.includes(day.day_number) && bookends) {
-          console.log(`[D${day.day_number}] bookends:`, {
-            morningName: bookends.morning?.name || bookends.morning?.place_name || 'null',
-            eveningName: bookends.evening?.name || bookends.evening?.place_name || 'null',
-            morningId: bookends.morning?.id,
-            eveningId: bookends.evening?.id,
-            morningLat: bookends.morning?.place_lat,
-            morningLng: bookends.morning?.place_lng,
-            eveningLat: bookends.evening?.place_lat,
-            eveningLng: bookends.evening?.place_lng,
-            morningIsSleptHere: bookends.morningIsSleptHere,
-            eveningIsOvernight: bookends.eveningIsOvernight,
-          })
-        }
         if (bookends && (bookends.morning || bookends.evening)) {
           // Collect first/last waypoints including transport endpoints (mirrors planDay)
           const merged = mergedItemsMap[day.id] || []
@@ -1034,24 +1023,12 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
             routeAllDrawEvening ? eveningPt : null,
           )
 
-          if (debugDays.includes(day.day_number)) {
-            console.log(`[D${day.day_number}] bookends result:`, {
-              drawMorning, drawEvening, isTransferDay, routeAllDrawEvening,
-              morningPt, eveningPt,
-              runsCount: runs.length,
-              segments: runs.map(s => ({ from: s[0], to: s[s.length - 1] })),
-            })
-          }
-
           // Track evening hotel for inter-day transfer detection
           // (always track the real check-in destination, even when we skip drawing it)
           if (bookends.evening?.place_lat != null) {
             prevEveningHotel = { lat: bookends.evening.place_lat, lng: bookends.evening.place_lng }
           } else {
             prevEveningHotel = null
-          }
-          if (debugDays.includes(day.day_number)) {
-            console.log(`[D${day.day_number}] AFTER update prevEveningHotel=`, prevEveningHotel)
           }
         } else if (runs.length > 0) {
           // No hotel bookends for this day — clear transfer tracking
@@ -1061,19 +1038,6 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         // Inter-day transfer: bridge the gap when previous evening hotel ≠ this morning hotel
         // Use prevDayEveningHotel (snapshot from loop start) so we compare against yesterday's
         // evening location, not today's which was already updated above.
-        if (debugDays.includes(day.day_number) && prevDayEveningHotel && bookends?.morning) {
-          const mLat = bookends.morning.place_lat ?? 0
-          const mLng = bookends.morning.place_lng ?? 0
-          console.log(`[D${day.day_number}] inter-day bridge:`, {
-            prevLat: prevDayEveningHotel.lat,
-            prevLng: prevDayEveningHotel.lng,
-            morningLat: mLat,
-            morningLng: mLng,
-            latDiff: Math.abs(prevDayEveningHotel.lat - mLat),
-            lngDiff: Math.abs(prevDayEveningHotel.lng - mLng),
-            willBridge: prevDayEveningHotel.lat !== mLat || prevDayEveningHotel.lng !== mLng,
-          })
-        }
         if (prevDayEveningHotel && bookends?.morning?.place_lat != null) {
           const mLat = bookends.morning.place_lat
           const mLng = bookends.morning.place_lng
@@ -1094,11 +1058,6 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         }
 
         if (runs.length > 0) {
-          if (debugDays.includes(day.day_number)) {
-            console.log(`[D${day.day_number}] FINAL segments (${runs.length}):`,
-              runs.map(s => `(${s[0].lat.toFixed(2)},${s[0].lng.toFixed(2)})→(${s[s.length-1].lat.toFixed(2)},${s[s.length-1].lng.toFixed(2)})`)
-            )
-          }
           allDayRuns.push(runs)
         }
       }
@@ -1114,33 +1073,114 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
 
       // Calculate per-day legs for sidebar connector pills (#1458).
       // calculateTripRoute already populated the route cache, so these are instant hits.
-      // Map each leg to its destination waypoint's assignment ID (same shape as routeLegs
-      // so the existing <RouteConnector> rendering works unchanged).
-      const tripLegsByDay: Record<number, Record<number, RouteSegment>> = {}
+      // Parallelize all OSRM calls since they're cached reads — no sequential waterfall needed.
+      const hotelName = (a: Accommodation) => (a as any).place_name || (a as any).reservation_title || ''
+
+      // Build a list of work items: place-to-place leg runs + hotel bookend queries + bridge queries
+      type LegWork = { dayIdx: number; kind: 'run'; runIdx: number } | { dayIdx: number; kind: 'hotel'; side: 'top' | 'bottom'; from: { lat: number; lng: number }; to: { lat: number; lng: number }; hotel: Accommodation } | { dayIdx: number; kind: 'bridge'; from: { lat: number; lng: number }; to: { lat: number; lng: number }; hotelName: string }
+      const workItems: LegWork[] = []
+
       for (let i = 0; i < days.length; i++) {
         const dayRuns = allDayRuns[i]
         if (!dayRuns || !dayRuns.length) continue
-        // Get runs WITH IDs, then filter to places-only so lengths match allDayRuns.
-        // Hotel/bridge waypoints (no assignment ID) are skipped — connector pills only
-        // render between actual places anyway (#1458).
         const runsWithIds = collectRunsForDayWithIds(days[i].id)
-        const legsMap: Record<number, RouteSegment> = {}
+        // Place-to-place leg runs (indexed to match allDayRuns[j])
         for (let j = 0; j < dayRuns.length && j < runsWithIds.length; j++) {
-          // Strip non-place waypoints from runsWithIds to match allDayRuns[j] length
-          const filteredRun = runsWithIds[j].map(w => ({ lat: w.lat, lng: w.lng }))
-          try {
-            const r = await calculateRouteWithLegs(filteredRun as any, { profile: routeProfile })
-            // Each leg connects run[k] → run[k+1]; key by destination waypoint's ID
-            for (let k = 0; k < r.legs.length && k + 1 < runsWithIds[j].length; k++) {
-              legsMap[runsWithIds[j][k + 1].id] = r.legs[k]
-            }
-          } catch {}
+          workItems.push({ dayIdx: i, kind: 'run', runIdx: j })
         }
-        tripLegsByDay[days[i].id] = legsMap
       }
-      setTripRouteLegs(tripLegsByDay)
 
-      console.groupEnd() // [RouteAll DEBUG v2]
+      // Hotel bookend queries: extract from allDayRuns (first/last runs after withHotelBookends)
+      for (let i = 0; i < days.length; i++) {
+        const dayRuns = allDayRuns[i]
+        if (!dayRuns || !dayRuns.length) continue
+        const bookends = optimizeFromAccommodation !== false
+          ? getDayBookendHotels(days[i], days, accommodations)
+          : null
+        if (!bookends) continue
+        // Collect first/last waypoints (mirrors handleCalculateTripRoute above)
+        const merged = mergedItemsMap[days[i].id] || []
+        const wayPts: { lat: number; lng: number }[] = []
+        for (const it of merged) {
+          if (it.type === 'place' && it.data.place?.lat && it.data.place?.lng)
+            wayPts.push({ lat: it.data.place.lat, lng: it.data.place.lng })
+          else if (it.type === 'transport') {
+            const { from, to } = getTransportRouteEndpoints(it.data, days[i].id)
+            if (from) wayPts.push({ lat: from.lat, lng: from.lng })
+            if (to) wayPts.push({ lat: to.lat, lng: to.lng })
+          }
+        }
+        const firstWay = wayPts[0] ?? null
+        const lastWay = wayPts[wayPts.length - 1] ?? null
+        // Morning hotel leg
+        if (bookends.morning?.place_lat != null && firstWay) {
+          workItems.push({ dayIdx: i, kind: 'hotel', side: 'top',
+            from: { lat: bookends.morning.place_lat, lng: bookends.morning.place_lng },
+            to: firstWay, hotel: bookends.morning })
+        }
+        // Evening hotel leg
+        if (bookends.evening?.place_lat != null && lastWay) {
+          workItems.push({ dayIdx: i, kind: 'hotel', side: 'bottom',
+            from: lastWay,
+            to: { lat: bookends.evening.place_lat, lng: bookends.evening.place_lng },
+            hotel: bookends.evening })
+        }
+      }
+
+      // Bridge leg queries: between consecutive days where evening hotel ≠ morning hotel
+      for (let i = 1; i < days.length; i++) {
+        const prevBookends = optimizeFromAccommodation !== false
+          ? getDayBookendHotels(days[i - 1], days, accommodations)
+          : null
+        const curBookends = optimizeFromAccommodation !== false
+          ? getDayBookendHotels(days[i], days, accommodations)
+          : null
+        if (!prevBookends?.evening?.place_lat || !curBookends?.morning?.place_lat) continue
+        // Skip on transfer days (bridge already covered by day route)
+        const isTransfer = curBookends.evening?.place_lat != null &&
+          (curBookends.morning.place_lat !== curBookends.evening.place_lat ||
+           curBookends.morning.place_lng !== curBookends.evening.place_lng)
+        if (isTransfer) continue
+        const latDiff = Math.abs(prevBookends.evening.place_lat - curBookends.morning.place_lat)
+        const lngDiff = Math.abs(prevBookends.evening.place_lng - curBookends.morning.place_lng)
+        if (latDiff <= 1e-6 && lngDiff <= 1e-6) continue
+        workItems.push({ dayIdx: i, kind: 'bridge',
+          from: { lat: prevBookends.evening.place_lat, lng: prevBookends.evening.place_lng },
+          to: { lat: curBookends.morning.place_lat, lng: curBookends.morning.place_lng },
+          hotelName: hotelName(curBookends.morning) })
+      }
+
+      // Execute all OSRM queries in parallel (cached reads)
+      const tripLegsByDay: Record<number, Record<number, RouteSegment>> = {}
+      const tripHotelByDay: Record<number, { top?: { seg: RouteSegment; name: string }; bottom?: { seg: RouteSegment; name: string } }> = {}
+      const tripBridgeByDay: Record<number, { seg: RouteSegment; name: string }> = {}
+
+      await Promise.allSettled(workItems.map(async (item) => {
+        try {
+          if (item.kind === 'run') {
+            const dayRuns = allDayRuns[item.dayIdx]
+            const runsWithIds = collectRunsForDayWithIds(days[item.dayIdx].id)
+            if (!dayRuns || item.runIdx >= dayRuns.length || item.runIdx >= runsWithIds.length) return
+            const filteredRun = runsWithIds[item.runIdx].map(w => ({ lat: w.lat, lng: w.lng }))
+            const r = await calculateRouteWithLegs(filteredRun as any, { profile: routeProfile })
+            const legsMap: Record<number, RouteSegment> = tripLegsByDay[days[item.dayIdx].id] ??= {}
+            for (let k = 0; k < r.legs.length && k + 1 < runsWithIds[item.runIdx].length; k++) {
+              legsMap[runsWithIds[item.runIdx][k + 1].id] = r.legs[k]
+            }
+          } else if (item.kind === 'hotel') {
+            const r = await calculateRouteWithLegs([item.from, item.to], { profile: routeProfile })
+            const hotelMap: any = tripHotelByDay[days[item.dayIdx].id] ??= {}
+            hotelMap[item.side] = { seg: r.legs[0], name: hotelName(item.hotel) }
+          } else if (item.kind === 'bridge') {
+            const r = await calculateRouteWithLegs([item.from, item.to], { profile: routeProfile })
+            tripBridgeByDay[days[item.dayIdx].id] = { seg: r.legs[0], name: item.hotelName }
+          }
+        } catch {}
+      }))
+
+      setTripRouteLegs(tripLegsByDay)
+      setTripHotelLegs(tripHotelByDay)
+      setTripBridgeLegs(tripBridgeByDay)
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
         toast.error(t('dayplan.toast.routeError'))
@@ -1378,6 +1418,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     handleCalculateTripRoute,
     routeLegs,
     tripRouteLegs,
+    tripHotelLegs,
+    tripBridgeLegs,
     setRouteLegs,
     hotelLegs,
     setHotelLegs,
@@ -1555,6 +1597,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     routeLegs,
     setRouteLegs,
     tripRouteLegs,
+    tripHotelLegs,
+    tripBridgeLegs,
     hotelLegs,
     setHotelLegs,
     legsAbortRef,
@@ -1932,9 +1976,23 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                       handleMergedDrop(day.id, 'note', Number(noteId), lastItem.type, lastItem.data.id, true)
                   }}
                 >
-                  {/* Suppress hotel connectors when Route All is active (no trip-level hotel leg data) */}
-                  {!tripRouteShown && hotelLegs[day.id]?.top && (
-                    <HotelRouteConnector seg={hotelLegs[day.id]!.top!.seg} name={hotelLegs[day.id]!.top!.name} profile={routeProfile} placement="top" />
+                  {/* Hotel connector: per-day legs when Route All off, trip-level legs when active */}
+                  {((!tripRouteShown && hotelLegs[day.id]?.top) || (tripRouteShown && tripHotelLegs[day.id]?.top)) && (
+                    <HotelRouteConnector
+                      seg={(tripRouteShown ? tripHotelLegs : hotelLegs)[day.id]!.top!.seg}
+                      name={(tripRouteShown ? tripHotelLegs : hotelLegs)[day.id]!.top!.name}
+                      profile={routeProfile}
+                      placement="top"
+                    />
+                  )}
+                  {/* Inter-day bridge leg: drive from previous day's evening hotel to this morning hotel */}
+                  {tripRouteShown && tripBridgeLegs[day.id] && (
+                    <HotelRouteConnector
+                      seg={tripBridgeLegs[day.id].seg}
+                      name={tripBridgeLegs[day.id].name}
+                      profile={routeProfile}
+                      placement="top"
+                    />
                   )}
                   {merged.length === 0 && !dayNoteUi ? (
                     <div
@@ -2650,9 +2708,14 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                       )
                     })
                   )}
-                  {/* Suppress hotel connectors when Route All is active */}
-                  {!tripRouteShown && hotelLegs[day.id]?.bottom && (
-                    <HotelRouteConnector seg={hotelLegs[day.id]!.bottom!.seg} name={hotelLegs[day.id]!.bottom!.name} profile={routeProfile} placement="bottom" />
+                  {/* Hotel connector: per-day legs when Route All off, trip-level legs when active */}
+                  {((!tripRouteShown && hotelLegs[day.id]?.bottom) || (tripRouteShown && tripHotelLegs[day.id]?.bottom)) && (
+                    <HotelRouteConnector
+                      seg={(tripRouteShown ? tripHotelLegs : hotelLegs)[day.id]!.bottom!.seg}
+                      name={(tripRouteShown ? tripHotelLegs : hotelLegs)[day.id]!.bottom!.name}
+                      profile={routeProfile}
+                      placement="bottom"
+                    />
                   )}
                   {/* Drop-Zone am Listenende — immer vorhanden als Drop-Target */}
                   <div
