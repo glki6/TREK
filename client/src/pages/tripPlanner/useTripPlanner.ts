@@ -203,6 +203,9 @@ export function useTripPlanner() {
   // (driving/walking) is per-session and selects which travel time the connectors show.
   const [routeShown, setRouteShown] = useState(false)
   const [routeProfile, setRouteProfile] = useState<'driving' | 'walking'>('driving')
+  // Mobile: track which days have per-day Route toggled on (synced from DayPlanSidebar via callback).
+  // Enables useRouteCalculation when any mobile route day is active (#Issue B fix v3).
+  const [mobileRouteDays, setMobileRouteDays] = useState<Set<number>>(() => new Set())
   const [fitKey, setFitKey] = useState<number>(0)
   const [fitAllKey, setFitAllKey] = useState<number>(0)
   const initialFitTripId = useRef<number | null>(null)
@@ -331,11 +334,11 @@ export function useTripPlanner() {
     })
   }, [places, mapCategoryFilter, mapPlacesFilter, assignments, expandedDayIds])
 
-  const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, selectedDayId, routeShown, routeProfile, tripAccommodations)
+  // On mobile, enable route calc when per-day Route toggled (mobileRouteDays.size > 0) OR globally shown.
+  const routeEnabled = routeShown || mobileRouteDays.size > 0
+  const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, selectedDayId, routeEnabled, routeProfile, tripAccommodations)
 
   const handleSelectDay = useCallback((dayId: number | null, skipFit?: boolean) => {
-    // DEBUG: trace mobile sidebar close → route clearing (#4 Issue B)
-    console.log('[handleSelectDay]', { dayId, prevSelectedDayId: selectedDayId, changed: dayId !== selectedDayId, routeShown })
     const changed = dayId !== selectedDayId
     tripActions.setSelectedDay(dayId)
     if (changed && !skipFit) setFitKey(k => k + 1)
@@ -914,7 +917,7 @@ export function useTripPlanner() {
     transportModalDayId, setTransportModalDayId,
     transportModalAutomated, setTransportModalAutomated, transitPrefill, setTransitPrefill, transitJourney, setTransitJourney,
     reservationPrefill, transportPrefill, importReviewActive, startImportReview, advanceImportReview,
-    routeShown, setRouteShown, routeProfile, setRouteProfile, fitKey, setFitKey, fitAllKey, setFitAllKey,
+    routeShown, setRouteShown, mobileRouteDays, setMobileRouteDays, routeProfile, setRouteProfile, fitKey, setFitKey, fitAllKey, setFitAllKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
     deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
     visibleConnections, setVisibleConnections, toggleConnection, mapTransportDetail, setMapTransportDetail,

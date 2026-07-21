@@ -80,6 +80,7 @@ interface DayPlanSidebarProps {
   onAddPlace?: () => void
   onAddPlaceToDay?: (placeId: number, dayId: number) => void
   onExpandedDaysChange?: (expandedDayIds: Set<number>) => void
+  onExpandedRouteDaysChange?: (expandedRouteDayIds: Set<number>) => void
   pushUndo?: (label: string, undoFn: () => Promise<void> | void) => void
   canUndo?: boolean
   lastActionLabel?: string | null
@@ -137,6 +138,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   onToggleRoute,
   onSetRouteProfile,
   onExpandedDaysChange,
+  onExpandedRouteDaysChange,
   pushUndo,
   canUndo = false,
   lastActionLabel = null,
@@ -245,6 +247,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     if (!routeDaysRestored.current) { routeDaysRestored.current = true; return }
     try { localStorage.setItem(`route-days-${tripId}`, JSON.stringify([...expandedRouteDayIds])) } catch {}
   }, [expandedRouteDayIds, tripId])
+  // Sync expandedRouteDayIds to parent so useRouteCalculation can enable routes on mobile (#Issue B fix v3).
+  useEffect(() => { onExpandedRouteDaysChange?.(expandedRouteDayIds) }, [expandedRouteDayIds])
   // Trip-level route legs keyed by day id then assignment id (same shape as routeLegs)
   // so connector pills can show drive times between stops when Route All is active — #1458.
   const [tripRouteLegs, setTripRouteLegs] = useState<Record<number, Record<number, RouteSegment>>>({})
@@ -1408,6 +1412,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     onToggleRoute,
     onSetRouteProfile,
     onExpandedDaysChange,
+    onExpandedRouteDaysChange,
     pushUndo,
     canUndo,
     lastActionLabel,
@@ -1586,6 +1591,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     onToggleRoute,
     onSetRouteProfile,
     onExpandedDaysChange,
+    onExpandedRouteDaysChange,
     pushUndo,
     canUndo,
     lastActionLabel,
@@ -2815,22 +2821,11 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               // Mobile: toggle this day's inline leg distances in place.
                               // Selecting the day would close the sheet, so we don't — the
                               // distances between places appear right here instead (#1374).
-                              const wasAddingToEmpty = !expandedRouteDayIds.has(day.id) && expandedRouteDayIds.size === 0
-                              const wasRemovingLast = expandedRouteDayIds.has(day.id) && expandedRouteDayIds.size === 1
                               setExpandedRouteDayIds(prev => {
                                 const next = new Set(prev)
-                                if (wasAddingToEmpty || (!expandedRouteDayIds.has(day.id))) {
-                                  next.add(day.id)
-                                } else {
-                                  next.delete(day.id)
-                                }
+                                next.has(day.id) ? next.delete(day.id) : next.add(day.id)
                                 return next
                               })
-                              // Sync parent's routeShown AFTER setState (avoids React batching stale state).
-                              // Only toggle if needed — onToggleRoute is a flip, not set-true.
-                              if (wasAddingToEmpty && !routeShown && onToggleRoute) {
-                                requestAnimationFrame(() => onToggleRoute())
-                              }
                             } else if (isSelected) { handleTogglePerDayRoute() }
                             // Desktop: the route is computed for the globally selected day,
                             // so tapping Route on another day first points the selection here.
