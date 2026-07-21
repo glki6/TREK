@@ -920,8 +920,11 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       }
       for (const day of days) {
         const debugDays = [5, 6, 7, 8]
+        // Snapshot prevEveningHotel at start of iteration so the inter-day bridge below
+        // uses the PREVIOUS day's evening hotel, not today's (which gets updated mid-iteration)
+        const prevDayEveningHotel = prevEveningHotel ? { ...prevEveningHotel } : null
         if (debugDays.includes(day.day_number)) {
-          console.log(`[D${day.day_number}] start id=${day.id}`)
+          console.log(`[D${day.day_number}] start id=${day.id} | prevEveningHotel=`, prevEveningHotel)
         }
 
         // Base place-to-place runs for this day
@@ -1005,33 +1008,38 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
           } else {
             prevEveningHotel = null
           }
+          if (debugDays.includes(day.day_number)) {
+            console.log(`[D${day.day_number}] AFTER update prevEveningHotel=`, prevEveningHotel)
+          }
         } else if (runs.length > 0) {
           // No hotel bookends for this day — clear transfer tracking
           prevEveningHotel = null
         }
 
         // Inter-day transfer: bridge the gap when previous evening hotel ≠ this morning hotel
-        if (debugDays.includes(day.day_number) && prevEveningHotel && bookends?.morning) {
+        // Use prevDayEveningHotel (snapshot from loop start) so we compare against yesterday's
+        // evening location, not today's which was already updated above.
+        if (debugDays.includes(day.day_number) && prevDayEveningHotel && bookends?.morning) {
           const mLat = bookends.morning.place_lat ?? 0
           const mLng = bookends.morning.place_lng ?? 0
           console.log(`[D${day.day_number}] inter-day bridge:`, {
-            prevLat: prevEveningHotel.lat,
-            prevLng: prevEveningHotel.lng,
+            prevLat: prevDayEveningHotel.lat,
+            prevLng: prevDayEveningHotel.lng,
             morningLat: mLat,
             morningLng: mLng,
-            latDiff: Math.abs(prevEveningHotel.lat - mLat),
-            lngDiff: Math.abs(prevEveningHotel.lng - mLng),
-            willBridge: prevEveningHotel.lat !== mLat || prevEveningHotel.lng !== mLng,
+            latDiff: Math.abs(prevDayEveningHotel.lat - mLat),
+            lngDiff: Math.abs(prevDayEveningHotel.lng - mLng),
+            willBridge: prevDayEveningHotel.lat !== mLat || prevDayEveningHotel.lng !== mLng,
           })
         }
-        if (prevEveningHotel && bookends?.morning?.place_lat != null) {
+        if (prevDayEveningHotel && bookends?.morning?.place_lat != null) {
           const mLat = bookends.morning.place_lat
           const mLng = bookends.morning.place_lng
           // Use epsilon comparison to avoid phantom bridges from floating-point drift
-          const latDiff = Math.abs(prevEveningHotel.lat - mLat)
-          const lngDiff = Math.abs(prevEveningHotel.lng - mLng)
+          const latDiff = Math.abs(prevDayEveningHotel.lat - mLat)
+          const lngDiff = Math.abs(prevDayEveningHotel.lng - mLng)
           if (latDiff > 1e-6 || lngDiff > 1e-6) {
-            runs.unshift([prevEveningHotel, { lat: mLat, lng: mLng }])
+            runs.unshift([prevDayEveningHotel, { lat: mLat, lng: mLng }])
           }
         }
 
