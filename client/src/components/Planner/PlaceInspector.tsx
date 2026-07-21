@@ -22,7 +22,7 @@ import type { Place, Category, Day, Assignment, Reservation, TripFile, Assignmen
 import type { CollectionStatus } from '@trek/shared'
 import { splitReservationDateTime, formatTime } from '../../utils/formatters'
 import { formatDistance, formatElevation } from '../../utils/units'
-import { getGoogleMapsUrlForPlace } from './placeGoogleMaps'
+import { getGoogleMapsUrlForPlace, openMapsFallback } from './placeGoogleMaps'
 import { getOpenStreetMapUrlForPlace } from './placeOpenStreetMap'
 
 const detailsCache = new Map()
@@ -426,11 +426,11 @@ export default function PlaceInspector({
               label={<span className="hidden sm:inline">{savedInCollection ? t('inspector.savedToCollection') : t('inspector.saveToCollection')}</span>} />
           )}
           {googleMapsUrl && (
-            <ActionButton onClick={() => window.open(googleMapsUrl, '_blank')} variant="ghost" icon={<Navigation size={13} />}
+            <ActionButton onClick={() => openMapsFallback(googleMapsUrl)} variant="ghost" icon={<Navigation size={13} />}
               label={<span className="hidden sm:inline">{t('inspector.google')}</span>} />
           )}
           {openStreetMapUrl && (
-            <ActionButton onClick={() => window.open(openStreetMapUrl, '_blank')} variant="ghost" icon={<MapIcon size={13} />}
+            <ActionButton onClick={() => openMapsFallback(openStreetMapUrl)} variant="ghost" icon={<MapIcon size={13} />}
               label={<span className="hidden sm:inline">{t('inspector.openStreetMap')}</span>} />
           )}
           {(place.website || googleDetails?.website) && (
