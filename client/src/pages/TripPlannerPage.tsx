@@ -34,7 +34,7 @@ import PluginFrame from '../components/Plugins/PluginFrame'
 import TripWarningsBanner from '../components/Planner/TripWarningsBanner'
 import Navbar from '../components/Layout/Navbar'
 import { useToast } from '../components/shared/Toast'
-import { Map, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train, Grid3x3, Maximize2 } from 'lucide-react'
+import { Map, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train, Grid3x3, Maximize2, Palette } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { addonsApi, accommodationsApi, authApi, tripsApi, assignmentsApi, mapsApi } from '../api/client'
 import { accommodationRepo } from '../repo/accommodationRepo'
@@ -218,6 +218,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
   const [glMap, setGlMap] = useState<CompassMap | null>(null)
   const poiPillEnabled = useSettingsStore(s => s.settings.map_poi_pill_enabled) !== false
   const [disableClustering, setDisableClustering] = useState(false)
+  const [useDayColors, setUseDayColors] = useState(false)
 
   // Costs expense editor opened from a booking modal (save-then-open). Lives at the
   // page level so it has tripMembers / base currency / current user available.
@@ -350,6 +351,36 @@ export default function TripPlannerPage(): React.ReactElement | null {
               </div>
             )}
 
+            {/* Mobile: day colors toggle FAB — state only (T7-1b) */}
+            {isMobile && (
+              <button
+                onClick={() => setUseDayColors(c => !c)}
+                style={{
+                  position: 'absolute',
+                  bottom: showDayDetail && !selectedPlace
+                    ? 'calc(var(--bottom-nav-h, 84px) + 20px + var(--day-panel-h, 0px) + 156px)'
+                    : 'calc(var(--bottom-nav-h, 84px) + 156px)',
+                  right: 12,
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: useDayColors ? '#3b82f6' : 'var(--bg-card, white)',
+                  color: useDayColors ? 'white' : 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                title={useDayColors ? 'Disable day colors' : 'Enable day colors'}
+              >
+                <Palette size={20} />
+              </button>
+            )}
+
             {/* Mobile: cluster toggle FAB above Fit All button */}
             {isMobile && (
               <button
@@ -407,6 +438,34 @@ export default function TripPlannerPage(): React.ReactElement | null {
                 title="Fit All Places"
               >
                 <Maximize2 size={20} />
+              </button>
+            )}
+
+            {/* Desktop: Day colors toggle FAB (T7-1b) */}
+            {!isMobile && (
+              <button
+                onClick={() => setUseDayColors(c => !c)}
+                style={{
+                  position: 'absolute',
+                  bottom: 156,
+                  right: rightCollapsed ? 12 : (rightWidth + 12),
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: useDayColors ? '#3b82f6' : 'var(--bg-card, white)',
+                  color: useDayColors ? 'white' : 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s, right 0.25s ease',
+                }}
+                title={useDayColors ? 'Disable day colors' : 'Enable day colors'}
+              >
+                <Palette size={20} />
               </button>
             )}
 
