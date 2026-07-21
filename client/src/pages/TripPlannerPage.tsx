@@ -342,33 +342,11 @@ export default function TripPlannerPage(): React.ReactElement | null {
             />
 
             {(poiPillEnabled || glMap) && (
-              <div className="flex" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 25, pointerEvents: 'none', alignItems: 'flex-start', gap: 8 }}>
+              <div className="hidden md:flex" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 25, pointerEvents: 'none', alignItems: 'flex-start', gap: 8 }}>
                 {poiPillEnabled && (
                   <PoiCategoryPill active={poi.active} onToggle={poi.toggle} loadingKeys={poi.loadingKeys} errorKeys={poi.errorKeys} moved={poi.moved} onSearchArea={poi.searchArea} />
                 )}
                 {glMap && <MapCompassPill map={glMap} />}
-                <button
-                  className="hidden md:block"
-                  onClick={() => setDisableClustering(c => !c)}
-                  style={{
-                    pointerEvents: 'auto',
-                    padding: '6px 12px',
-                    borderRadius: 20,
-                    border: 'none',
-                    background: disableClustering ? 'var(--accent)' : 'rgba(255,255,255,0.7)',
-                    color: disableClustering ? '#fff' : 'var(--text-primary)',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    transition: 'background 0.15s',
-                  }}
-                  title={disableClustering ? 'Re-enable marker clustering' : 'Disable marker clustering'}
-                >
-                  {disableClustering ? 'Cluster OFF' : 'Cluster ON'}
-                </button>
               </div>
             )}
 
@@ -430,6 +408,60 @@ export default function TripPlannerPage(): React.ReactElement | null {
               >
                 <Maximize2 size={20} />
               </button>
+            )}
+
+            {/* Desktop: Cluster toggle + Fit All FAB buttons — dynamic positioning relative to right sidebar */}
+            {!isMobile && (
+              <>
+                <button
+                  onClick={() => setDisableClustering(c => !c)}
+                  style={{
+                    position: 'absolute',
+                    bottom: 108,
+                    right: rightCollapsed ? 12 : (rightWidth + 12),
+                    zIndex: 1000,
+                    width: 42,
+                    height: 42,
+                    borderRadius: '50%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: disableClustering ? '#3b82f6' : 'var(--bg-card, white)',
+                    color: disableClustering ? 'white' : 'var(--text-muted, #6b7280)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s, color 0.2s, right 0.25s ease',
+                  }}
+                  title={disableClustering ? 'Re-enable marker clustering' : 'Disable marker clustering'}
+                >
+                  <Grid3x3 size={20} />
+                </button>
+                <button
+                  onClick={() => setFitAllKey(k => k + 1)}
+                  style={{
+                    position: 'absolute',
+                    bottom: 60,
+                    right: rightCollapsed ? 12 : (rightWidth + 12),
+                    zIndex: 1000,
+                    width: 42,
+                    height: 42,
+                    borderRadius: '50%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: 'var(--bg-card, white)',
+                    color: 'var(--text-muted, #6b7280)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s, color 0.2s, right 0.25s ease',
+                  }}
+                  title="Fit All Places"
+                >
+                  <Maximize2 size={20} />
+                </button>
+              </>
             )}
 
             <div className="hidden md:block" style={{ position: 'absolute', left: 10, top: 10, bottom: 10, zIndex: 20 }}>
