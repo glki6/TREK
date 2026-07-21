@@ -613,8 +613,8 @@ describe('PlaceInspector', () => {
     render(<PlaceInspector {...defaultProps} />);
     // place has lat/lng so Google Maps button should appear with Navigation icon
     const allButtons = screen.getAllByRole('button');
-    // Find button containing "Google Maps" text
-    const mapsBtn = allButtons.find(btn => btn.textContent?.includes('Google Maps'));
+    // Find button containing "Navigate" text
+    const mapsBtn = allButtons.find(btn => btn.textContent?.includes('Navigate'));
     expect(mapsBtn).toBeTruthy();
   });
 
@@ -628,7 +628,7 @@ describe('PlaceInspector', () => {
       lng: -80.5542617,
       google_ftid: '0x882bf179e806d471:0x8591dde29c821a93',
     })} />);
-    const mapsBtn = screen.getAllByRole('button').find(btn => btn.textContent?.includes('Google Maps'))!;
+    const mapsBtn = screen.getAllByRole('button').find(btn => btn.textContent?.includes('Navigate'))!;
     await user.click(mapsBtn);
     expect(openSpy).toHaveBeenCalledWith(mapsUrl, '_blank');
     openSpy.mockRestore();
