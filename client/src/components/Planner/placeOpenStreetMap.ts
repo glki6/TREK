@@ -15,7 +15,7 @@ export function getOpenStreetMapUrlForPlace(place: PlaceLike | null | undefined)
   if (place.lat != null && place.lng != null) {
     return {
       native: `comgooglemaps://?q=${encodeURIComponent(place.name)}`,
-      https: `https://www.google.com/maps?q=${place.lat},${place.lng}(${encodeURIComponent(place.name)})&z=15`,
+      https: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}`,
     }
   }
   return null

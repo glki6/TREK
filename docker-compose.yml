@@ -1,6 +1,6 @@
 services:
   app:
-    image: mauriceboe/trek:dev
+    image: trek-offline-nav:latest
     container_name: trek
     read_only: true
     security_opt:
