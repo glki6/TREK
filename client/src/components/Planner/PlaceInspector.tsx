@@ -430,7 +430,14 @@ export default function PlaceInspector({
               label={<span className="hidden sm:inline">{t('inspector.google')}</span>} />
           )}
           {openStreetMapUrl && (
-            <ActionButton onClick={() => openMapsFallback(openStreetMapUrl)} variant="ghost" icon={<MapIcon size={13} />}
+            <ActionButton onClick={() => {
+              // If both URLs are the same HTTPS URL, open directly (bypass deep-link fallback)
+              if (openStreetMapUrl.native === openStreetMapUrl.https) {
+                window.open(openStreetMapUrl.https, '_blank')
+              } else {
+                openMapsFallback(openStreetMapUrl)
+              }
+            }} variant="ghost" icon={<MapIcon size={13} />}
               label={<span className="hidden sm:inline">{t('inspector.openStreetMap')}</span>} />
           )}
           {(place.website || googleDetails?.website) && (
