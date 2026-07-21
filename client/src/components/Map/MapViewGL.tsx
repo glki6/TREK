@@ -94,6 +94,7 @@ interface Props {
   onMapReady?: (map: any | null) => void
   useDayColors?: boolean
   selectedDayIndex?: number | null
+  placeDayMap?: Record<string, { dayIndex: number; orderNumber: number } | Array<{ dayIndex: number; orderNumber: number }> | null>
 }
 
 function createMarkerElement(place: Place & { category_color?: string; category_icon?: string }, photoUrl: string | null, orderNumbers: number[] | null, selected: boolean): HTMLDivElement {
@@ -173,6 +174,34 @@ function createMarkerElement(place: Place & { category_color?: string; category_
   return wrap
 }
 
+/**
+ * T7-1f: Create a solid day-colored circle marker with sequence number.
+ * Matches the Leaflet `createDayColorIcon` but returns an HTMLDivElement
+ * for mapbox-gl/MapLibre markers.
+ */
+function createDayColorMarkerElement(dayIndex: number, orderNumber: number, selected: boolean): HTMLDivElement {
+  const size = selected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = selected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const outer = size + (selected ? 3 : 2.5) * 2
+  const el = document.createElement('div')
+  el.style.cssText = `width:${outer}px;height:${outer}px;cursor:pointer;`
+  el.innerHTML = `
+    <div style="
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:${selected ? 3 : 2.5}px solid white;
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
+      font-size:${selected ? 20 : 16}px;font-weight:800;color:white;
+      font-family:var(--font-system);line-height:1;
+      box-sizing:content-box;
+    ">${orderNumber}</div>
+  `
+  return el
+}
+
 // Small coloured pin for an OSM "explore" POI (matches the pill category colour).
 function createPoiMarkerElement(category: string): HTMLDivElement {
   const cat = POI_CATEGORY_BY_KEY[category]
@@ -214,6 +243,7 @@ export function MapViewGL({
   onMapReady,
   useDayColors = false,
   selectedDayIndex = null,
+  placeDayMap = {},
 }: Props) {
 
   // Per-day route color: use day palette when toggle ON + a day is selected;
@@ -755,7 +785,23 @@ export function MapViewGL({
         const pck = place.google_place_id || place.osm_id || `${place.lat},${place.lng}`
         const photoUrl = (pck && photoUrls[pck]) || place.image_url || null
         const selected = place.id === selectedPlaceId
-        const el = createMarkerElement(place as Place & { category_color?: string; category_icon?: string }, photoUrl, orderNumbers, selected)
+
+        // T7-1f: resolve day assignment for this place, then decide marker style.
+        let dayInfoGL: { dayIndex: number; orderNumber: number } | null = null
+        const rawPdm = placeDayMap[place.id]
+        if (rawPdm) {
+          if (Array.isArray(rawPdm)) {
+            dayInfoGL = selectedDayIndex !== null
+              ? (rawPdm.find((a: any) => a.dayIndex === selectedDayIndex) ?? rawPdm[0]) || null
+              : rawPdm[0] || null
+          } else {
+            dayInfoGL = rawPdm as { dayIndex: number; orderNumber: number }
+          }
+        }
+        const useDayIconGL = useDayColors && !!dayInfoGL
+        const el = useDayIconGL
+          ? createDayColorMarkerElement(dayInfoGL.dayIndex, dayInfoGL.orderNumber, selected)
+          : createMarkerElement(place as Place & { category_color?: string; category_icon?: string }, photoUrl, orderNumbers, selected)
         el.addEventListener('click', (ev) => {
           ev.stopPropagation()
           // Clear the card right away — the flyTo that follows moves the marker

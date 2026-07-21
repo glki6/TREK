@@ -141,6 +141,25 @@ function createPoiIcon(category: string) {
   return icon
 }
 
+/**
+ * Create a solid day-colored circle marker with the sequence number centred.
+ * Used when the Day Colors toggle is active (T7-1f).
+ */
+function createDayColorIcon(dayIndex: number, orderNumber: number, isSelected: boolean): L.DivIcon {
+  const size = isSelected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = isSelected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  return L.divIcon({
+    className: "",
+    html: `<div style="\n      width:${size}px;height:${size}px;border-radius:50%;\n      background:${color};border:${isSelected ? 3 : 2.5}px solid white;\n      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;\n      cursor:pointer;font-size:${isSelected ? 20 : 16}px;font-weight:800;color:white;\n      font-family:var(--font-system);line-height:1;\n    ">${orderNumber}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    tooltipAnchor: [size / 2 + 6, 0],
+  })
+}
+
 // Clears the hover tooltip the moment the camera starts moving and suppresses
 // re-showing it until the move ends: after a click-recenter the marker slides
 // away under a stationary cursor, so the browser never fires mouseout — and
@@ -430,12 +449,23 @@ interface MemoMarkerProps {
   onClickPlace: (id: number) => void
   onHover: (place: any, x: number, y: number) => void
   onHoverOut: () => void
+  /** Day Colors toggle (T7-1f). */
+  useDayColors?: boolean
+  /** { dayIndex, orderNumber } from placeDayMap — set when place has a day assignment. */
+  dayInfo?: { dayIndex: number; orderNumber: number } | null
 }
 
 const MemoMarker = memo(function MemoMarker({
   place, isSelected, orderNumbers, photoUrl, onClickPlace, onHover, onHoverOut,
+  useDayColors = false, dayInfo,
 }: MemoMarkerProps) {
-  const icon = createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
+  // T7-1f: when Day Colors toggle is ON and the place has a day assignment,
+  // render a solid coloured circle with the sequence number instead of the
+  // photo / category icon.
+  const useDayIcon = useDayColors && !!dayInfo
+  const icon = useDayIcon
+    ? createDayColorIcon(dayInfo.dayIndex, dayInfo.orderNumber, isSelected)
+    : createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
   return (
     <Marker
       position={[place.lat, place.lng]}
@@ -650,6 +680,23 @@ export const MapView = memo(function MapView({
     const pck = place.google_place_id || place.osm_id || `${place.lat},${place.lng}`
     const photoUrl = (pck && photoUrls[pck]) || place.image_url || null
     const orderNumbers = dayOrderMap[place.id] ?? null
+
+    // T7-1f: resolve the day assignment for this place.
+    // placeDayMap can hold a single {dayIndex,orderNumber} or an array (multi-day places).
+    let dayInfo: { dayIndex: number; orderNumber: number } | null = null
+    const raw = placeDayMap[place.id]
+    if (raw) {
+      if (Array.isArray(raw)) {
+        // When a specific day is selected, use that assignment;
+        // otherwise fall back to the earliest (first in array).
+        dayInfo = selectedDayIndex !== null
+          ? (raw.find((a: any) => a.dayIndex === selectedDayIndex) ?? raw[0]) || null
+          : raw[0] || null
+      } else {
+        dayInfo = raw as { dayIndex: number; orderNumber: number }
+      }
+    }
+
     return (
       <MemoMarker
         key={place.id}
@@ -660,9 +707,12 @@ export const MapView = memo(function MapView({
         onClickPlace={handleMarkerClick}
         onHover={handleMarkerHover}
         onHoverOut={handleMarkerHoverOut}
+        useDayColors={useDayColors}
+        dayInfo={dayInfo}
       />
     )
-  }), [places, selectedPlaceId, dayOrderMap, photoUrls, handleMarkerClick, handleMarkerHover, handleMarkerHoverOut])
+  }), [places, selectedPlaceId, dayOrderMap, photoUrls, handleMarkerClick,
+       handleMarkerHover, handleMarkerHoverOut, placeDayMap, useDayColors, selectedDayIndex])
 
   const gpxPolylines = useMemo(() => places.flatMap(place => {
     if (!place.route_geometry) return []
