@@ -62,5 +62,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Behåll positionen under ruttoptimeringen',
   'planner.dayDetails': 'Information om dagen',
   'planner.dayN': 'Dag {n}',
+  'planner.exportAllStops': 'Exportera alla stopp',
 };
 export default planner;

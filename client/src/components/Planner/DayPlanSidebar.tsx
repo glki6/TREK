@@ -1392,6 +1392,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
         setTripRouteShown={setTripRouteShown}
         tripRouteInfo={tripRouteInfo}
         handleCalculateTripRoute={handleCalculateTripRoute}
+        accommodations={accommodations}
       />
 
       {/* Tagesliste */}

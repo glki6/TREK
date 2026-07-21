@@ -63,5 +63,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Pertahankan posisi saat mengoptimalkan rute',
   'planner.dayDetails': 'Detail hari',
   'planner.dayN': 'Hari {n}',
+  'planner.exportAllStops': 'Ekspor semua titik',
 };
 export default planner;

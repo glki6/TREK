@@ -62,5 +62,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Manter posição durante a otimização da rota',
   'planner.dayDetails': 'Detalhes do dia',
   'planner.dayN': 'Dia {n}',
+  'planner.exportAllStops': 'Exportar todas as paragens',
 };
 export default planner;

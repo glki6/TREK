@@ -62,5 +62,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Rota optimizasyonunda konumu koru',
   'planner.dayDetails': 'Gün ayrıntıları',
   'planner.dayN': '{n}. gün',
+  'planner.exportAllStops': 'Tüm durakları dışa aktar',
 };
 export default planner;

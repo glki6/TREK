@@ -62,5 +62,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Pozíció megtartása útvonal-optimalizálás során',
   'planner.dayDetails': 'Nap részletei',
   'planner.dayN': '{n}. nap',
+  'planner.exportAllStops': 'Minden megálló exportálása',
 };
 export default planner;

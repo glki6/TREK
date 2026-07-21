@@ -63,5 +63,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Διατήρηση θέσης κατά τη βελτιστοποίηση διαδρομής',
   'planner.dayDetails': 'Λεπτομέρειες ημέρας',
   'planner.dayN': 'Ημέρα {n}',
+  'planner.exportAllStops': 'Εξαγωγή όλων των στάσεων',
 };
 export default planner;

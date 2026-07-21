@@ -62,5 +62,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'الحفاظ على الموضع أثناء تحسين المسار',
   'planner.dayDetails': 'تفاصيل اليوم',
   'planner.dayN': 'اليوم {n}',
+  'planner.exportAllStops': 'تصدير جميع المحطات',
 };
 export default planner;

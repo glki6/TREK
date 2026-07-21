@@ -62,5 +62,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': '最適化中も位置を保持',
   'planner.dayDetails': '日詳細',
   'planner.dayN': '{n}日目',
+  'planner.exportAllStops': '全停車地点をエクスポート',
 };
 export default planner;
