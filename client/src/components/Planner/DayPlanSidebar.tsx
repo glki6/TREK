@@ -190,6 +190,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     if (!tripRouteShown) {
       onTripRouteSet?.(null)
       setTripRouteInfo(null)
+      setTripRouteLegs({})
     }
   }, [tripRouteShown])
   // Mutual exclusion: turning on per-day route clears Route All, and vice versa
@@ -211,6 +212,9 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // the expanded day, so seeing distances doesn't require selecting the day (which
   // closes the mobile sheet) — #1374.
   const [expandedRouteDayIds, setExpandedRouteDayIds] = useState<Set<number>>(new Set())
+  // Trip-level route legs keyed by day id then assignment id (same shape as routeLegs)
+  // so connector pills can show drive times between stops when Route All is active — #1458.
+  const [tripRouteLegs, setTripRouteLegs] = useState<Record<number, Record<number, RouteSegment>>>({})
   const optimizeFromAccommodation = useSettingsStore(s => s.settings.optimize_from_accommodation)
   // Recompute the hotel/route legs when the user flips km↔mi so the connector
   // distances refresh instead of showing stale cached text (#1300).
@@ -465,6 +469,35 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     }
     if (cur.length >= 2 && curHasPlace) runs.push(cur)
     return runs.map(run => run.map(p => ({ lat: p.lat, lng: p.lng })))
+  }
+
+  // Variant that preserves assignment IDs per waypoint — needed to map RouteSegments
+  // back to individual stops when Route All expands every day with drive times (#1458).
+  const collectRunsForDayWithIds = (dayId: number): { id: number; lat: number; lng: number }[][] => {
+    const merged = mergedItemsMap[dayId] || []
+    const runs: { id: number; lat: number; lng: number }[][] = []
+    let cur: { id: number; lat: number; lng: number }[] = []
+    let curHasPlace = false
+    for (const it of merged) {
+      if (it.type === 'place' && it.data.place?.lat && it.data.place?.lng) {
+        cur.push({ id: it.data.id, lat: it.data.place.lat, lng: it.data.place.lng })
+        curHasPlace = true
+      } else if (it.type === 'transport') {
+        const r = it.data
+        const { from, to } = getTransportRouteEndpoints(r, dayId)
+        if (from || to) {
+          if (from) cur.push({ id: r.id, lat: from.lat, lng: from.lng })
+          if (cur.length >= 2 && curHasPlace) runs.push(cur)
+          cur = []
+          curHasPlace = false
+          if (to) cur.push({ id: r.id, lat: to.lat, lng: to.lng })
+        } else if (cur.length > 0) {
+          cur[cur.length - 1] = { ...cur[cur.length - 1], id: r.id }
+        }
+      }
+    }
+    if (cur.length >= 2 && curHasPlace) runs.push(cur)
+    return runs
   }
 
   // Days whose inline route legs should be computed & shown. Desktop: the selected
@@ -1078,6 +1111,35 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       })
       // Pass multi-segment coordinates directly to map (bypasses per-day callback wrapping)
       onTripRouteSet?.(result.coordinates)
+
+      // Calculate per-day legs for sidebar connector pills (#1458).
+      // calculateTripRoute already populated the route cache, so these are instant hits.
+      // Map each leg to its destination waypoint's assignment ID (same shape as routeLegs
+      // so the existing <RouteConnector> rendering works unchanged).
+      const tripLegsByDay: Record<number, Record<number, RouteSegment>> = {}
+      for (let i = 0; i < days.length; i++) {
+        const dayRuns = allDayRuns[i]
+        if (!dayRuns || !dayRuns.length) continue
+        // Get runs WITH IDs, then filter to places-only so lengths match allDayRuns.
+        // Hotel/bridge waypoints (no assignment ID) are skipped — connector pills only
+        // render between actual places anyway (#1458).
+        const runsWithIds = collectRunsForDayWithIds(days[i].id)
+        const legsMap: Record<number, RouteSegment> = {}
+        for (let j = 0; j < dayRuns.length && j < runsWithIds.length; j++) {
+          // Strip non-place waypoints from runsWithIds to match allDayRuns[j] length
+          const filteredRun = runsWithIds[j].map(w => ({ lat: w.lat, lng: w.lng }))
+          try {
+            const r = await calculateRouteWithLegs(filteredRun as any, { profile: routeProfile })
+            // Each leg connects run[k] → run[k+1]; key by destination waypoint's ID
+            for (let k = 0; k < r.legs.length && k + 1 < runsWithIds[j].length; k++) {
+              legsMap[runsWithIds[j][k + 1].id] = r.legs[k]
+            }
+          } catch {}
+        }
+        tripLegsByDay[days[i].id] = legsMap
+      }
+      setTripRouteLegs(tripLegsByDay)
+
       console.groupEnd() // [RouteAll DEBUG v2]
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -1315,6 +1377,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     tripRouteInfo,
     handleCalculateTripRoute,
     routeLegs,
+    tripRouteLegs,
     setRouteLegs,
     hotelLegs,
     setHotelLegs,
@@ -1491,6 +1554,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     handleCalculateTripRoute,
     routeLegs,
     setRouteLegs,
+    tripRouteLegs,
     hotelLegs,
     setHotelLegs,
     legsAbortRef,
@@ -1868,7 +1932,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                       handleMergedDrop(day.id, 'note', Number(noteId), lastItem.type, lastItem.data.id, true)
                   }}
                 >
-                  {hotelLegs[day.id]?.top && (
+                  {/* Suppress hotel connectors when Route All is active (no trip-level hotel leg data) */}
+                  {!tripRouteShown && hotelLegs[day.id]?.top && (
                     <HotelRouteConnector seg={hotelLegs[day.id]!.top!.seg} name={hotelLegs[day.id]!.top!.name} profile={routeProfile} placement="top" />
                   )}
                   {merged.length === 0 && !dayNoteUi ? (
@@ -2241,7 +2306,11 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               </button>
                             )}
                           </div>
-                          {routeLegs[day.id]?.[assignment.id] && <RouteConnector seg={routeLegs[day.id]![assignment.id]} profile={routeProfile} />}
+                          {/* Show connector pills from trip-level route when Route All is active, else per-day */}
+                          {(() => {
+                            const leg = (tripRouteShown ? tripRouteLegs : routeLegs)[day.id]?.[assignment.id]
+                            return leg && <RouteConnector seg={leg} profile={routeProfile} />
+                          })()}
                           </React.Fragment>
                         )
                       }
@@ -2469,7 +2538,11 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               <TransitItineraryInline legs={transitMeta.legs} t={t} />
                             </div>
                           )}
-                          {routeLegs[day.id]?.[res.id] && <RouteConnector seg={routeLegs[day.id]![res.id]} profile={routeProfile} />}
+                          {/* Show connector pills from trip-level route when Route All is active */}
+                          {(() => {
+                            const leg = (tripRouteShown ? tripRouteLegs : routeLegs)[day.id]?.[res.id]
+                            return leg && <RouteConnector seg={leg} profile={routeProfile} />
+                          })()}
                           </React.Fragment>
                         )
                       }
@@ -2577,7 +2650,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                       )
                     })
                   )}
-                  {hotelLegs[day.id]?.bottom && (
+                  {/* Suppress hotel connectors when Route All is active */}
+                  {!tripRouteShown && hotelLegs[day.id]?.bottom && (
                     <HotelRouteConnector seg={hotelLegs[day.id]!.bottom!.seg} name={hotelLegs[day.id]!.bottom!.name} profile={routeProfile} placement="bottom" />
                   )}
                   {/* Drop-Zone am Listenende — immer vorhanden als Drop-Target */}
