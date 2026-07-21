@@ -161,6 +161,59 @@ function createDayColorIcon(dayIndex: number, orderNumber: number, isSelected: b
 }
 
 /**
+ * Compute an SVG arc path from (cx,cy) radius r, startAngle to endAngle (radians).
+ * Angles measured clockwise from 12 o'clock (−π/2 offset).
+ */
+function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const startX = cx + r * Math.cos(startAngle)
+  const startY = cy + r * Math.sin(startAngle)
+  const endX = cx + r * Math.cos(endAngle)
+  const endY = cy + r * Math.sin(endAngle)
+  const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0
+  return `M ${cx} ${cy} L ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY} Z`
+}
+
+/**
+ * Multi-color accommodation marker: pie chart with equal wedges (one per distinct day),
+ * white Home icon centred. Used when day colors ON, no specific day focused,
+ * and the stay spans multiple days.
+ */
+function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boolean): L.DivIcon {
+  const size = isSelected ? 44 : 36
+  const r = (size / 2) - (isSelected ? 5.5 : 5)
+  const cx = size / 2
+  const cy = size / 2
+  const shadow = isSelected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+
+  // Deduplicate and sort day indices; build equal pie wedges clockwise from 12 o'clock.
+  const uniqueDays = Array.from(new Set(dayIndices)).sort((a, b) => a - b)
+  const wedgeAngle = (2 * Math.PI) / uniqueDays.length
+  let wedges = ''
+  for (let i = 0; i < uniqueDays.length; i++) {
+    const startAngle = i * wedgeAngle - Math.PI / 2
+    const endAngle = (i + 1) * wedgeAngle - Math.PI / 2
+    const color = getDayColor(uniqueDays[i])
+    wedges += `<path d="${svgArcPath(cx, cy, r, startAngle, endAngle)}" fill="${color}" stroke="#fff" stroke-width="0.5"/>`
+  }
+
+  const homeSvg = categoryIconSvg('Home', isSelected ? 22 : 18)
+  return L.divIcon({
+    className: "",
+    html: `<div style="\
+      width:${size}px;height:${size}px;border-radius:50%;
+      border:${isSelected ? 3 : 2.5}px solid white;
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
+      cursor:pointer;line-height:1;overflow:hidden;background:#111827;\
+    "><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}</svg>${homeSvg}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    tooltipAnchor: [size / 2 + 6, 0],
+  })
+}
+
+/**
  * Day-colored circle marker for accommodation places.
  * Same as createDayColorIcon but shows a home icon instead of the sequence number.
  */
@@ -476,27 +529,38 @@ interface MemoMarkerProps {
   onHoverOut: () => void
   /** Day Colors toggle (T7-1f). */
   useDayColors?: boolean
-  /** Array of { dayIndex, orderNumber } from placeDayMap — multi-day support. */
+  /** Resolved day assignment for this place (first or selected-day match). */
   dayInfo?: { dayIndex: number; orderNumber: number } | null
+  /** All distinct dayIndices from placeDayMap — for multi-color pie. */
+  accommodationDayIndices?: number[]
   /** Set of place IDs that are linked to accommodations (T7-1g). */
   accommodationPlaceIds?: Set<number>
 }
 
 const MemoMarker = memo(function MemoMarker({
   place, isSelected, orderNumbers, photoUrl, onClickPlace, onHover, onHoverOut,
-  useDayColors = false, dayInfo, accommodationPlaceIds,
+  useDayColors = false, dayInfo, accommodationDayIndices, accommodationPlaceIds,
 }: MemoMarkerProps) {
   // T7-1f: when Day Colors toggle is ON and the place has a day assignment,
   // render a solid coloured circle with the sequence number instead of the
   // photo / category icon.
   // T7-1g: accommodation places show home icon without the sequence number.
+  // Multi-day accommodations (overview, no focus): pie chart with equal wedges.
   const useDayIcon = useDayColors && !!dayInfo
   const isAccommodation = !!accommodationPlaceIds?.has(place.id)
-  const icon = useDayIcon
-    ? (isAccommodation
+  let icon: L.DivIcon
+  if (useDayIcon) {
+    if (isAccommodation && accommodationDayIndices && accommodationDayIndices.length >= 2) {
+      // Multi-day stay, overview mode → pie chart home marker
+      icon = createAccommodationMultiDayIcon(accommodationDayIndices, isSelected)
+    } else {
+      icon = isAccommodation
         ? createAccommodationDayIcon(dayInfo.dayIndex, isSelected)
-        : createDayColorIcon(dayInfo.dayIndex, dayInfo.orderNumber, isSelected))
-    : createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
+        : createDayColorIcon(dayInfo.dayIndex, dayInfo.orderNumber, isSelected)
+    }
+  } else {
+    icon = createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
+  }
   return (
     <Marker
       position={[place.lat, place.lng]}
@@ -782,6 +846,11 @@ export const MapView = memo(function MapView({
       }
     }
 
+    // Multi-day accommodation pie chart: extract distinct day indices.
+    const accommodationDayIndices = (!accommodationPlaceIds?.has(place.id) || !raw || !Array.isArray(raw))
+      ? undefined
+      : Array.from(new Set((raw as any[]).map((a: any) => a.dayIndex))).sort((a, b) => a - b)
+
     return (
       <MemoMarker
         key={place.id}
@@ -794,6 +863,7 @@ export const MapView = memo(function MapView({
         onHoverOut={handleMarkerHoverOut}
         useDayColors={useDayColors}
         dayInfo={dayInfo}
+        accommodationDayIndices={accommodationDayIndices}
         accommodationPlaceIds={accommodationPlaceIds}
       />
     )

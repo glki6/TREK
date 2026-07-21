@@ -205,6 +205,61 @@ function createDayColorMarkerElement(dayIndex: number, orderNumber: number, sele
 }
 
 /**
+ * Compute an SVG arc path from (cx,cy) radius r, startAngle to endAngle (radians).
+ * Angles measured clockwise from 12 o'clock (-π/2 offset).
+ */
+function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const startX = cx + r * Math.cos(startAngle)
+  const startY = cy + r * Math.sin(startAngle)
+  const endX = cx + r * Math.cos(endAngle)
+  const endY = cy + r * Math.sin(endAngle)
+  const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0
+  return `M ${cx} ${cy} L ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY} Z`
+}
+
+/**
+ * Multi-color accommodation marker for GL map: pie chart with equal wedges (one per distinct day),
+ * white Home icon centred. Used when day colors ON, no specific day focused,
+ * and the stay spans multiple days.
+ */
+function createAccommodationMultiDayMarkerElement(dayIndices: number[], selected: boolean): HTMLDivElement {
+  const size = selected ? 44 : 36
+  const r = (size / 2) - (selected ? 5.5 : 5)
+  const cx = size / 2
+  const cy = size / 2
+  const shadow = selected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const outer = size + (selected ? 3 : 2.5) * 2
+
+  const uniqueDays = Array.from(new Set(dayIndices)).sort((a, b) => a - b)
+  const wedgeAngle = (2 * Math.PI) / uniqueDays.length
+  let wedges = ''
+  for (let i = 0; i < uniqueDays.length; i++) {
+    const startAngle = i * wedgeAngle - Math.PI / 2
+    const endAngle = (i + 1) * wedgeAngle - Math.PI / 2
+    const color = getDayColor(uniqueDays[i])
+    wedges += `<path d="${svgArcPath(cx, cy, r, startAngle, endAngle)}" fill="${color}" stroke="#fff" stroke-width="0.5"/>`
+  }
+
+  const HomeIcon = CATEGORY_ICON_MAP['Home']
+  const homeSvg = HomeIcon ? renderToStaticMarkup(createElement(HomeIcon, { size: selected ? 22 : 18, color: 'white', strokeWidth: 2.5 })) : ''
+
+  const el = document.createElement('div')
+  el.style.cssText = `width:${outer}px;height:${outer}px;cursor:pointer;`
+  el.innerHTML = `
+    <div style="
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:${size}px;height:${size}px;border-radius:50%;
+      border:${selected ? 3 : 2.5}px solid white;
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
+      line-height:1;overflow:hidden;background:#111827;
+    "><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}</svg>${homeSvg}</div>
+  `
+  return el
+}
+
+/**
  * T7-1g: Day-colored circle marker for accommodation places (GL version).
  * Same as createDayColorMarkerElement but shows a home icon instead of the sequence number.
  */
@@ -829,11 +884,23 @@ export function MapViewGL({
         }
         const useDayIconGL = useDayColors && !!dayInfoGL
         const isAccommodation = !!accommodationPlaceIds?.has(place.id)
-        const el = useDayIconGL
-          ? (isAccommodation
+        // Multi-day accommodation pie chart: extract distinct day indices.
+        const accomDayIndicesGL = (!isAccommodation || !Array.isArray(rawPdm))
+          ? undefined
+          : Array.from(new Set((rawPdm as any[]).map((a: any) => a.dayIndex))).sort((a, b) => a - b)
+        let el: HTMLDivElement
+        if (useDayIconGL) {
+          if (isAccommodation && accomDayIndicesGL && accomDayIndicesGL.length >= 2) {
+            // Multi-day stay, overview mode → pie chart home marker
+            el = createAccommodationMultiDayMarkerElement(accomDayIndicesGL, selected)
+          } else {
+            el = isAccommodation
               ? createAccommodationDayMarkerElement(dayInfoGL.dayIndex, selected)
-              : createDayColorMarkerElement(dayInfoGL.dayIndex, dayInfoGL.orderNumber, selected))
-          : createMarkerElement(place as Place & { category_color?: string; category_icon?: string }, photoUrl, orderNumbers, selected)
+              : createDayColorMarkerElement(dayInfoGL.dayIndex, dayInfoGL.orderNumber, selected)
+          }
+        } else {
+          el = createMarkerElement(place as Place & { category_color?: string; category_icon?: string }, photoUrl, orderNumbers, selected)
+        }
         el.addEventListener('click', (ev) => {
           ev.stopPropagation()
           // Clear the card right away — the flyTo that follows moves the marker
