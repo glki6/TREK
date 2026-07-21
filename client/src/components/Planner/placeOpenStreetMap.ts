@@ -18,11 +18,11 @@ export function getOpenStreetMapUrlForPlace(place: PlaceLike | null | undefined)
   if (!place) return null
 
   // Priority 1: Use google_place_id → actual place page with reviews/details
+  // Note: comgooglemaps:// doesn't reliably handle place_id queries on mobile,
+  // so we use the HTTPS URL for both (it opens Google Maps properly everywhere).
   if (place.google_place_id) {
-    return {
-      native: `comgooglemaps://?place_id=${place.google_place_id}`,
-      https: `https://www.google.com/maps/place/?q=place_id:${place.google_place_id}`,
-    }
+    const url = `https://www.google.com/maps/place/?q=place_id:${place.google_place_id}`;
+    return { native: url, https: url }
   }
 
   // Fallback: coordinate-based search (for unenriched places / future trips)
