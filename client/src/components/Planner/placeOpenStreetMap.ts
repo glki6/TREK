@@ -5,16 +5,17 @@ type PlaceLike = Pick<Place | AssignmentPlace, 'name' | 'lat' | 'lng'>
 
 /**
  * Build an OpenStreetMap URL pair (native comgooglemaps:// + HTTPS fallback).
- * Uses `center=` (not `query=`) so the native Maps app centres on the
- * coordinates instead of treating them as a search string.
+ * Uses `q=` so the native Maps app searches for the place name and opens
+ * the actual place, rather than just centering the map on coordinates.
  * Replaced Apple Maps (maps://) per workboard card T3-5.
+ * Updated to use place name per workboard card T3-8.
  */
 export function getOpenStreetMapUrlForPlace(place: PlaceLike | null | undefined): MapsUrlPair | null {
   if (!place) return null
   if (place.lat != null && place.lng != null) {
     return {
-      native: `comgooglemaps://?center=${place.lat},${place.lng}&zoom=15`,
-      https: `https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lng}&zoom=15`,
+      native: `comgooglemaps://?q=${encodeURIComponent(place.name)}`,
+      https: `https://www.google.com/maps?q=${place.lat},${place.lng}(${encodeURIComponent(place.name)})&z=15`,
     }
   }
   return null
