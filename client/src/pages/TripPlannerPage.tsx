@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import ReactDOM from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTripStore } from '../store/tripStore'
@@ -220,6 +220,15 @@ export default function TripPlannerPage(): React.ReactElement | null {
   const [disableClustering, setDisableClustering] = useState(false)
   const [useDayColors, setUseDayColors] = useState(false)
 
+  // Zero-based index of the currently selected day (for per-day route coloring, T7-1e).
+  // Derived from showDayDetail (day detail panel open) or selectedDayId as fallback.
+  const selectedDayIndex = useMemo(() => {
+    const targetId = showDayDetail?.id ?? selectedDayId
+    if (!targetId) return null
+    const idx = days.findIndex(d => d.id === targetId)
+    return idx >= 0 ? idx : null
+  }, [days, showDayDetail?.id, selectedDayId])
+
   // Costs expense editor opened from a booking modal (save-then-open). Lives at the
   // page level so it has tripMembers / base currency / current user available.
   const meId = useAuthStore(s => s.user?.id ?? -1)
@@ -342,6 +351,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
               onMapReady={setGlMap}
               placeDayMap={placeDayMap}
               useDayColors={useDayColors}
+              selectedDayIndex={selectedDayIndex}
             />
 
             {(poiPillEnabled || glMap) && (

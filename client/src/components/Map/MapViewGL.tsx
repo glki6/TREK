@@ -15,6 +15,7 @@ import { useTransportRoutes } from '../../hooks/useTransportRoutes'
 import { MAPBOX_DEFAULT_STYLE, styleForActiveProvider, basemapLanguage, type GlMapProvider } from './glProviders'
 import LocationButton from './LocationButton'
 import { useGeolocation } from '../../hooks/useGeolocation'
+import { getDayColor } from '../../utils/dayColors'
 import type { Place, Reservation } from '../../types'
 import { POI_CATEGORY_BY_KEY, type Poi } from './poiCategories'
 import { buildPoiPopupHtml } from './placePopup'
@@ -91,6 +92,8 @@ interface Props {
   glProvider?: GlMapProvider
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onMapReady?: (map: any | null) => void
+  useDayColors?: boolean
+  selectedDayIndex?: number | null
 }
 
 function createMarkerElement(place: Place & { category_color?: string; category_icon?: string }, photoUrl: string | null, orderNumbers: number[] | null, selected: boolean): HTMLDivElement {
@@ -209,7 +212,18 @@ export function MapViewGL({
   onViewportChange,
   glProvider = 'mapbox-gl',
   onMapReady,
+  useDayColors = false,
+  selectedDayIndex = null,
 }: Props) {
+
+  // Per-day route color: use day palette when toggle ON + a day is selected;
+  // otherwise fall back to the standard Apple blue (zero visual regression).
+  const routeColor = useMemo(() => {
+    if (useDayColors && selectedDayIndex !== null && selectedDayIndex >= 0) {
+      return getDayColor(selectedDayIndex)
+    }
+    return '#0a84ff'
+  }, [useDayColors, selectedDayIndex])
   const rawMapboxStyle = useSettingsStore(s => s.settings.mapbox_style || MAPBOX_DEFAULT_STYLE)
   const rawMaplibreStyle = useSettingsStore(s => s.settings.maplibre_style || '')
   const mapboxToken = useSettingsStore(s => s.settings.mapbox_access_token || '')
@@ -864,6 +878,17 @@ export function MapViewGL({
     }))
     src.setData({ type: 'FeatureCollection', features })
   }, [route, mapReady])
+
+  // Update route line colors when day-colors toggle or selected day changes (T7-1e).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    try {
+      map.setPaintProperty('trip-route-casing', 'line-color', routeColor)
+      map.setPaintProperty('trip-route-casing', 'line-opacity', 0.75)
+      map.setPaintProperty('trip-route-line', 'line-color', routeColor)
+    } catch { /* layer may not exist yet */ }
+  }, [routeColor, mapReady])
 
   // Travel times now live in the day sidebar (per-segment connectors), not on the map.
 

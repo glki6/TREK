@@ -10,6 +10,7 @@ import { mapsApi } from '../../api/client'
 import { getCategoryIcon, CATEGORY_ICON_MAP } from '../shared/categoryIcons'
 import ReservationOverlay from './ReservationOverlay'
 import { useTransportRoutes } from '../../hooks/useTransportRoutes'
+import { getDayColor } from '../../utils/dayColors'
 import type { Reservation } from '../../types'
 import { POI_CATEGORY_BY_KEY, type Poi } from './poiCategories'
 
@@ -482,7 +483,21 @@ export const MapView = memo(function MapView({
   onViewportChange,
   placeDayMap = {},
   useDayColors = false,
+  selectedDayIndex = null,
 }: any) {
+
+  // Per-day route color: use day palette when toggle ON + a day is selected;
+  // otherwise fall back to the standard Apple blue (zero visual regression).
+  const routeColor = useMemo(() => {
+    if (useDayColors && selectedDayIndex !== null && selectedDayIndex >= 0) {
+      return getDayColor(selectedDayIndex)
+    }
+    return '#0a84ff'
+  }, [useDayColors, selectedDayIndex])
+
+  // Casing color: same hue at reduced opacity for the wider underlay line.
+  const casingOpacity = 0.75
+
   const poiMarkers = useMemo(() => (pois as Poi[]).map((poi: Poi) => (
     <Marker
       key={`poi-${poi.osm_id}`}
@@ -727,17 +742,17 @@ export const MapView = memo(function MapView({
         </MarkerClusterGroup>
       )}
 
-      {/* Apple-Maps style: darker-blue casing under a bright-blue core, rounded. */}
+      {/* Apple-Maps style: casing under core, rounded. Color respects day-colors toggle (T7-1e). */}
       {route && route.length > 0 && route.flatMap((seg, i) => seg.length > 1 ? [
         <Polyline
           key={`${i}-casing`}
           positions={seg}
-          pathOptions={{ color: '#0a5cc2', weight: 8, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
+          pathOptions={{ color: routeColor, weight: 8, opacity: casingOpacity, lineCap: 'round', lineJoin: 'round' }}
         />,
         <Polyline
           key={`${i}-core`}
           positions={seg}
-          pathOptions={{ color: '#0a84ff', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
+          pathOptions={{ color: routeColor, weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
         />,
       ] : [])}
 
