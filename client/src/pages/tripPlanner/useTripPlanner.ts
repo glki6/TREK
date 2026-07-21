@@ -334,6 +334,8 @@ export function useTripPlanner() {
   const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, selectedDayId, routeShown, routeProfile, tripAccommodations)
 
   const handleSelectDay = useCallback((dayId: number | null, skipFit?: boolean) => {
+    // DEBUG: trace mobile sidebar close → route clearing (#4 Issue B)
+    console.log('[handleSelectDay]', { dayId, prevSelectedDayId: selectedDayId, changed: dayId !== selectedDayId, routeShown })
     const changed = dayId !== selectedDayId
     tripActions.setSelectedDay(dayId)
     if (changed && !skipFit) setFitKey(k => k + 1)

@@ -205,12 +205,15 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // When per-day routes are turned off, also clear expanded day IDs to prevent stale
   // connector pills from showing for non-existent routes (#mobile-route-persist).
   const handleTogglePerDayRoute = () => {
+    // DEBUG: trace toggle OFF → stale pills (#4 Issue A)
+    console.log('[handleTogglePerDayRoute]', { routeShown, tripRouteShown, expandedRouteDayIds: [...expandedRouteDayIds] })
     if (!routeShown && tripRouteShown) {
       setTripRouteShown(false)
     }
     onToggleRoute?.()
     // When toggling per-day route OFF, clear day-level route state
     if (routeShown) {
+      console.log('[handleTogglePerDayRoute] clearing legs')
       setExpandedRouteDayIds(new Set())
       setRouteLegs({})
       setHotelLegs({})
@@ -558,12 +561,22 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   // RouteCalculator's cache with the map. Runs for every day in routeDayIds — one
   // selected day on desktop, each Route-toggled day on mobile (#1374).
   useEffect(() => {
+    // DEBUG: trace legs effect (#4 Issue A - stale pills)
+    console.log('[legsEffect]', { routeDayKey, routeDayIdsLen: routeDayIds.length })
     if (legsAbortRef.current) legsAbortRef.current.abort()
-    // When no days are active for routing (all collapsed, route toggle off),
-    // preserve existing legs so they restore instantly on re-expand.
-    // Stale legs are cleared when the route is explicitly toggled off or
-    // when new legs are computed for the active set below.
-    if (routeDayIds.length === 0) return
+    // When route is disabled AND no days are active, clear stale legs (#4 Issue A).
+    // Preserve legs only when route is still enabled but temporarily no days match
+    // (e.g., all collapsed on desktop), so they restore instantly on re-expand.
+    if (routeDayIds.length === 0) {
+      if (!routeShown && !tripRouteShown) {
+        console.log('[legsEffect] route disabled + no days → clearing stale legs')
+        setRouteLegs({})
+        setHotelLegs({})
+      } else {
+        console.log('[legsEffect] no days → preserving legs for instant restore')
+      }
+      return
+    }
 
     const hotelName = (a: Accommodation) => (a as any).place_name || (a as any).reservation_title || ''
 

@@ -214,8 +214,10 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
   // Recalculate when assignments or transport positions for the SELECTED day change
   const selectedDayAssignments = selectedDayId ? tripStore.assignments?.[String(selectedDayId)] : null
   useEffect(() => {
-    if (!enabled) { setRoute(null); setRouteSegments([]); return }
-    if (!selectedDayId) return // Preserve route during transient null (sidebar collapse, place click)
+    // DEBUG: trace route clearing on mobile sidebar close (#4 Issue B)
+    if (!enabled) { console.log('[RouteCalc] DISABLED → clearing route', { enabled, selectedDayId }); setRoute(null); setRouteSegments([]); return }
+    if (!selectedDayId) { console.log('[RouteCalc] no selectedDayId → preserving route'); return } // Preserve route during transient null (sidebar collapse, place click)
+    console.log('[RouteCalc] recalculating for day', selectedDayId, { enabled, profile, assignmentsLen: selectedDayAssignments?.length })
     updateRouteForDay(selectedDayId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayId, selectedDayAssignments, transportSignature, enabled, profile, accommodations, optimizeFromAccommodation, distanceUnit])
