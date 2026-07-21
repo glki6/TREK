@@ -121,8 +121,8 @@ export default function Navbar({ tripTitle, tripId, onBack, showBack, onShare }:
         )}
 
         <Link to="/dashboard" className="flex items-center transition-colors flex-shrink-0">
-          <img src={dark ? '/icons/icon-white.svg' : '/icons/icon-dark.svg'} alt="TREK" className="sm:hidden" style={{ height: 22, width: 22 }} />
-          <img src={dark ? '/logo-light.svg' : '/logo-dark.svg'} alt="TREK" className="hidden sm:block" style={{ height: 28 }} />
+          <img src="/icons/icon-dark.svg" alt="TREK" className="sm:hidden dark:invert" style={{ height: 22, width: 22 }} />
+          <img src="/logo-dark.svg" alt="TREK" className="hidden sm:block dark:invert" style={{ height: 28 }} />
         </Link>
 
         {tripTitle && (
