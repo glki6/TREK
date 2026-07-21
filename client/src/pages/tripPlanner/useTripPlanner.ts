@@ -336,7 +336,18 @@ export function useTripPlanner() {
 
   // On mobile, enable route calc when per-day Route toggled (mobileRouteDays.size > 0) OR globally shown.
   const routeEnabled = routeShown || mobileRouteDays.size > 0
-  const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, selectedDayId, routeEnabled, routeProfile, tripAccommodations)
+  // Mobile: selectedDayId can be null/stale when the user only expands + toggles Route without selecting a day.
+  // Derive a target day from mobileRouteDays so useRouteCalculation has something to calculate (#Issue B).
+  const routeTargetDayId = useMemo<number | null>(() => {
+    if (mobileRouteDays.size > 0) {
+      // Prefer selectedDayId if it's one of the routed days; otherwise pick the first routed day.
+      return selectedDayId && mobileRouteDays.has(selectedDayId)
+        ? selectedDayId
+        : Array.from(mobileRouteDays.values())[0] ?? null
+    }
+    return selectedDayId
+  }, [selectedDayId, mobileRouteDays])
+  const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, routeTargetDayId, routeEnabled, routeProfile, tripAccommodations)
 
   const handleSelectDay = useCallback((dayId: number | null, skipFit?: boolean) => {
     const changed = dayId !== selectedDayId
