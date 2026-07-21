@@ -919,7 +919,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
         console.group('[RouteAll DEBUG v2] trip', trip?.id || 'unknown', 'days:', days.length)
       }
       for (const day of days) {
-        const debugDays = [5, 6, 7, 8]
+        const debugDays = [3, 5, 6, 7, 8]
         // Snapshot prevEveningHotel at start of iteration so the inter-day bridge below
         // uses the PREVIOUS day's evening hotel, not today's (which gets updated mid-iteration)
         const prevDayEveningHotel = prevEveningHotel ? { ...prevEveningHotel } : null
