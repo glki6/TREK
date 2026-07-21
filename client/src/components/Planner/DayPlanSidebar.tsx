@@ -1224,6 +1224,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   const anyGeoPlace = anyGeoAssignment || (places || []).find(p => p.lat && p.lng)
 
   return {
+    handleTogglePerDayRoute,
     tripId,
     trip,
     days,
@@ -1398,6 +1399,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
   const optimizeFromAccommodation = useSettingsStore(s => s.settings.optimize_from_accommodation)
   const collectionsEnabled = useAddonStore(s => s.isEnabled('collections'))
   const {
+    handleTogglePerDayRoute,
     tripId,
     trip,
     days,
