@@ -2815,18 +2815,22 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               // Mobile: toggle this day's inline leg distances in place.
                               // Selecting the day would close the sheet, so we don't — the
                               // distances between places appear right here instead (#1374).
+                              const wasAddingToEmpty = !expandedRouteDayIds.has(day.id) && expandedRouteDayIds.size === 0
+                              const wasRemovingLast = expandedRouteDayIds.has(day.id) && expandedRouteDayIds.size === 1
                               setExpandedRouteDayIds(prev => {
                                 const next = new Set(prev)
-                                const wasAdding = !next.has(day.id)
-                                if (wasAdding) {
+                                if (wasAddingToEmpty || (!expandedRouteDayIds.has(day.id))) {
                                   next.add(day.id)
-                                  // Sync with parent's routeShown so map routes draw (#Issue B fix)
-                                  if (prev.size === 0 && onToggleRoute) onToggleRoute()
                                 } else {
                                   next.delete(day.id)
                                 }
                                 return next
                               })
+                              // Sync parent's routeShown AFTER setState (avoids React batching stale state).
+                              // Only toggle if needed — onToggleRoute is a flip, not set-true.
+                              if (wasAddingToEmpty && !routeShown && onToggleRoute) {
+                                requestAnimationFrame(() => onToggleRoute())
+                              }
                             } else if (isSelected) { handleTogglePerDayRoute() }
                             // Desktop: the route is computed for the globally selected day,
                             // so tapping Route on another day first points the selection here.
