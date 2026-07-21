@@ -23,7 +23,7 @@ import { useAddonStore } from '../../store/addonStore'
 import { useSaveToCollectionStore } from '../../store/saveToCollectionStore'
 import { placeToSaveTarget } from '../Collections/saveTarget'
 import { useTranslation } from '../../i18n'
-import { isDayInAccommodationRange, getAccommodationAnchors, getDayBookendHotels, isArrivalDay } from '../../utils/dayOrder'
+import { isDayInAccommodationRange, getAccommodationAnchors, getDayBookendHotels, isArrivalDay, isDepartureDay } from '../../utils/dayOrder'
 import {
   TRANSPORT_TYPES, parseTimeToMinutes, getSpanPhase, getDisplayTimeForDay, getTransportRouteEndpoints,
   getTransportForDay as _getTransportForDay, getMergedItems as _getMergedItems,
@@ -542,8 +542,10 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       const firstWay = wayPts[0]
       const lastWay = wayPts[wayPts.length - 1]
       const isArrival = isArrivalDay(day, days, accommodations)
+      const isDeparture = isDepartureDay(day, days, accommodations)
       const wantTop = !!(startHotel && firstWay && (bookends?.morningIsSleptHere || (!isArrival && firstWay.isPlace)))
-      const wantBottom = !!(endHotel && lastWay && (lastWay.isPlace || bookends?.eveningIsOvernight))
+      // On departure days: suppress return leg unless you have actual places to visit that evening
+      const wantBottom = !!(endHotel && lastWay && (!isDeparture || lastWay.isPlace) && (lastWay.isPlace || bookends?.eveningIsOvernight))
       return { runs, startHotel, endHotel, firstWay, lastWay, wantTop, wantBottom }
     }
 

@@ -3,7 +3,7 @@ import { useTripStore } from '../store/tripStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { calculateRouteWithLegs, withHotelBookends } from '../components/Map/RouteCalculator'
 import { getTransportRouteEndpoints } from '../utils/dayMerge'
-import { getDayBookendHotels, isArrivalDay } from '../utils/dayOrder'
+import { getDayBookendHotels, isArrivalDay, isDepartureDay } from '../utils/dayOrder'
 import type { TripStoreState } from '../store/tripStore'
 import type { RouteSegment, RouteResult, Accommodation } from '../types'
 
@@ -139,8 +139,10 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
     // fallback (you didn't sleep there), and the evening return leg shouldn't draw when
     // your last activity is a transport departure (#1321, mirrored from DayPlanSidebar fix).
     const isArrival = day ? isArrivalDay(day, allDays, accommodations) : false
+    const isDeparture = day ? isDepartureDay(day, allDays, accommodations) : false
     const drawMorning = (!isArrival || !!bookends?.morningIsSleptHere) && (firstStop?.kind === 'place' || !!bookends?.morningIsSleptHere)
-    const drawEvening = (!isArrival || lastStop?.kind === 'place') && (lastStop?.kind === 'place' || !!bookends?.eveningIsOvernight)
+    // On departure days: suppress return leg unless last activity is an actual place to visit
+    const drawEvening = (!isDeparture || lastStop?.kind === 'place') && (lastStop?.kind === 'place' || !!bookends?.eveningIsOvernight)
     const runsWithHotel = withHotelBookends(
       runs,
       flatPts[0],
@@ -154,7 +156,7 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
     // Draw the hotel → hotel transfer directly. Gated on both bookends being real
     // (drawMorning/drawEvening already exclude the #1321 arrival fallback) and the two
     // hotels being distinct, so an ordinary same-hotel rest day still draws nothing.
-    if (!isArrival && runsWithHotel.length === 0 && drawMorning && drawEvening) {
+    if (!isArrival && !isDeparture && runsWithHotel.length === 0 && drawMorning && drawEvening) {
       const m = hotelPt(bookends?.morning)
       const e = hotelPt(bookends?.evening)
       if (m && e && (m.lat !== e.lat || m.lng !== e.lng)) runsWithHotel.push([m, e])

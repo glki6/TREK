@@ -649,11 +649,17 @@ export const MapView = memo(function MapView({
       }
     }
     // Depth-2 fallback (per-day route)
-    return (route as [number, number][][]).flatMap(seg =>
+    const result = (route as [number, number][][]).flatMap(seg =>
       Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
         ? [{ segment: seg as [number, number][], dayIndex: 0 }]
         : []
     )
+    // Single-day routes have all segments at dayIndex 0; remap to the actual selected day
+    // so per-day route lines use the correct color (Issue #2)
+    if (result.length > 0 && result.every(s => s.dayIndex === 0) && selectedDayIndex !== null && selectedDayIndex >= 0) {
+      result.forEach(s => { s.dayIndex = selectedDayIndex })
+    }
+    return result
   }, [route])
 
   // Flattened [lat,lng] points for bounds fitting (T7-1g regression fix).
