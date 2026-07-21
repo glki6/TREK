@@ -1161,8 +1161,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
             const filteredRun = runsWithIds[item.runIdx].map(w => ({ lat: w.lat, lng: w.lng }))
             const r = await calculateRouteWithLegs(filteredRun as any, { profile: routeProfile })
             const legsMap: Record<number, RouteSegment> = tripLegsByDay[days[item.dayIdx].id] ??= {}
-            for (let k = 0; k < r.legs.length && k + 1 < runsWithIds[item.runIdx].length; k++) {
-              legsMap[runsWithIds[item.runIdx][k + 1].id] = r.legs[k]
+            for (let k = 0; k < r.legs.length && k < runsWithIds[item.runIdx].length; k++) {
+              legsMap[runsWithIds[item.runIdx][k].id] = r.legs[k]
             }
           } else if (item.kind === 'hotel') {
             const r = await calculateRouteWithLegs([item.from, item.to], { profile: routeProfile })
