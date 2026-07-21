@@ -340,7 +340,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
             />
 
             {(poiPillEnabled || glMap) && (
-              <div className="hidden md:flex" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 25, pointerEvents: 'none', alignItems: 'flex-start', gap: 8 }}>
+              <div className="flex" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 25, pointerEvents: 'none', alignItems: 'flex-start', gap: 8 }}>
                 {poiPillEnabled && (
                   <PoiCategoryPill active={poi.active} onToggle={poi.toggle} loadingKeys={poi.loadingKeys} errorKeys={poi.errorKeys} moved={poi.moved} onSearchArea={poi.searchArea} />
                 )}
@@ -369,13 +369,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
               </div>
             )}
 
-            {/* Mobile: the compass/reset-orientation control lives centre-top on its own
-                (the desktop cluster above is hidden below md), between the edge Plan/Places tabs. */}
-            {glMap && (
-              <div className="flex md:hidden" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 25, pointerEvents: 'none' }}>
-                <MapCompassPill map={glMap} />
-              </div>
-            )}
+            {/* Mobile: compass + cluster toggle now in shared center-top container above */}
 
             <div className="hidden md:block" style={{ position: 'absolute', left: 10, top: 10, bottom: 10, zIndex: 20 }}>
               <button onClick={() => setLeftCollapsed(c => !c)}
