@@ -199,7 +199,9 @@ function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boole
     wedges += `<path d="${svgArcPath(cx, cy, r, startAngle, endAngle)}" fill="${color}" stroke="#fff" stroke-width="0.5"/>`
   }
 
-  const homeSvg = categoryIconSvg('Home', isSelected ? 22 : 18)
+  // filled Home icon for pie marker (stroke-only outline looks thin on colored wedges)
+  const HomeFilled = CATEGORY_ICON_MAP['Home']
+  const homeSvg = HomeFilled ? renderToStaticMarkup(createElement(HomeFilled, { size: isSelected ? 22 : 18, color: 'white', strokeWidth: 2.5, fill: 'white' })) : ''
   return L.divIcon({
     className: "",
     html: `<div style="\
