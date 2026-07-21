@@ -4,15 +4,13 @@ import { getOpenStreetMapUrlForPlace } from './placeOpenStreetMap'
 const base = { name: 'Eiffel Tower', lat: 48.8584, lng: 2.2945 } as any
 
 describe('getOpenStreetMapUrlForPlace', () => {
-  it('FE-PLACE-OSM-T314-001: returns place_id URLs when google_place_id is present (T3-14)', () => {
+  it('FE-PLACE-OSM-T314-001: returns HTTPS URLs for place_id (native scheme unreliable on mobile) (T3-14)', () => {
     const pair = getOpenStreetMapUrlForPlace({
       ...base,
       google_place_id: 'ChIjFhWFFG6AhUQRKz9fR8MjQ',
     })
-    expect(pair).toEqual({
-      native: 'comgooglemaps://?place_id=ChIjFhWFFG6AhUQRKz9fR8MjQ',
-      https: 'https://www.google.com/maps/place/?q=place_id:ChIjFhWFFG6AhUQRKz9fR8MjQ',
-    })
+    const httpsUrl = 'https://www.google.com/maps/place/?q=place_id:ChIjFhWFFG6AhUQRKz9fR8MjQ'
+    expect(pair).toEqual({ native: httpsUrl, https: httpsUrl })
   })
 
   it('FE-PLACE-OSM-T314-002: prefers google_place_id over coordinates (T3-14)', () => {
@@ -21,7 +19,7 @@ describe('getOpenStreetMapUrlForPlace', () => {
       lat: 51.1, lng: -1.1,
       google_place_id: 'ChIJabcdef123',
     })
-    expect(pair!.native).toContain('place_id=ChIJabcdef123')
+    expect(pair!.native).toContain('place_id:ChIJabcdef123')
     expect(pair!.https).toContain('place_id:ChIJabcdef123')
     expect(pair!.native).not.toContain('51.1')
   })
