@@ -8,6 +8,7 @@ import { ChevronDown, ChevronRight, ChevronUp, Navigation, RotateCcw, ExternalLi
 import { assignmentsApi, reservationsApi } from '../../api/client'
 import { calculateRoute, calculateRouteWithLegs, calculateTripRoute, optimizeRoute, generateGoogleMapsUrl } from '../Map/RouteCalculator'
 import PlaceAvatar from '../shared/PlaceAvatar'
+import { getDayColor } from '../../utils/dayColors'
 import ConfirmDialog from '../shared/ConfirmDialog'
 import { useContextMenu, ContextMenu } from '../shared/ContextMenu'
 import Markdown from 'react-markdown'
@@ -150,6 +151,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   onScrollTopChange,
   showRouteToolsWhenExpanded = false,
   isMobile = false,
+  placeDayMap,
+  useDayColors,
   } = props
   const toast = useToast()
   const { t, language, locale } = useTranslation()
@@ -1218,6 +1221,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     anyGeoPlace,
     expandedRouteDayIds,
     setExpandedRouteDayIds,
+    placeDayMap,
+    useDayColors,
   }
 }
 
@@ -1389,6 +1394,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     anyGeoPlace,
     expandedRouteDayIds,
     setExpandedRouteDayIds,
+    placeDayMap,
+    useDayColors,
   } = S
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', fontFamily: "var(--font-system)" }}>
@@ -1867,7 +1874,22 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               onMouseLeave={() => setLockHoverId(null)}
                               style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
                             >
-                              <PlaceAvatar place={place} category={cat} size={28} />
+                              {(() => {
+                                const dayInfo = placeDayMap?.[String(place.id)]
+                                if (useDayColors && dayInfo) {
+                                  return (
+                                    <div style={{
+                                      width: 28, height: 28, borderRadius: '50%',
+                                      background: getDayColor(dayInfo.dayIndex),
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      color: 'white', fontWeight: 800, fontSize: '14px', flexShrink: 0,
+                                    }}>
+                                      {dayInfo.orderNumber}
+                                    </div>
+                                  )
+                                }
+                                return <PlaceAvatar place={place} category={cat} size={28} />
+                              })()}
                               {/* Hover/locked overlay */}
                               {(lockHoverId === assignment.id || lockedIds.has(assignment.id)) && (
                                 <div style={{
