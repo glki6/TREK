@@ -224,13 +224,14 @@ function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAn
  */
 function createAccommodationMultiDayMarkerElement(dayIndices: number[], selected: boolean): HTMLDivElement {
   const size = selected ? 44 : 36
-  const r = size / 2
+  const r = size / 2 - 1.5 // leave room for outer ring, stays inside container
   const cx = size / 2
   const cy = size / 2
   const shadow = selected
     ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
     : '0 2px 8px rgba(0,0,0,0.22)'
   const outer = size + (selected ? 3 : 2.5) * 2
+  const ringSw = selected ? 3 : 2.5
 
   const uniqueDays = Array.from(new Set(dayIndices)).sort((a, b) => a - b)
   const wedgeAngle = (2 * Math.PI) / uniqueDays.length
@@ -250,11 +251,9 @@ function createAccommodationMultiDayMarkerElement(dayIndices: number[], selected
   el.innerHTML = `
     <div style="
       position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-      width:${size}px;height:${size}px;border-radius:50%;
-      border:${selected ? 3 : 2.5}px solid white;
-      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
-      line-height:1;overflow:hidden;
-    "><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}</svg>${homeSvg}</div>
+      position:relative;width:${size}px;height:${size}px;border-radius:50%;
+      box-shadow:${shadow};overflow:hidden;
+    "><svg style="position:absolute;inset:0;display:block" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}<circle cx="${cx}" cy="${cy}" r="${r + ringSw / 2}" fill="none" stroke="#fff" stroke-width="${ringSw}"/></svg><div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none">${homeSvg}</div></div>
   `
   return el
 }

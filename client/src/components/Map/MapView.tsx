@@ -180,12 +180,13 @@ function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAn
  */
 function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boolean): L.DivIcon {
   const size = isSelected ? 44 : 36
-  const r = size / 2
+  const r = size / 2 - 1.5 // leave room for outer ring, stays inside container
   const cx = size / 2
   const cy = size / 2
   const shadow = isSelected
     ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
     : '0 2px 8px rgba(0,0,0,0.22)'
+  const ringSw = isSelected ? 3 : 2.5
 
   // Deduplicate and sort day indices; build equal pie wedges clockwise from 12 o'clock.
   const uniqueDays = Array.from(new Set(dayIndices)).sort((a, b) => a - b)
@@ -202,11 +203,9 @@ function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boole
   return L.divIcon({
     className: "",
     html: `<div style="\
-      width:${size}px;height:${size}px;border-radius:50%;
-      border:${isSelected ? 3 : 2.5}px solid white;
-      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
-      cursor:pointer;line-height:1;overflow:hidden;\
-    "><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}</svg>${homeSvg}</div>`,
+      position:relative;width:${size}px;height:${size}px;border-radius:50%;
+      box-shadow:${shadow};cursor:pointer;overflow:hidden;\
+    "><svg style="position:absolute;inset:0;display:block" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}<circle cx="${cx}" cy="${cy}" r="${r + ringSw / 2}" fill="none" stroke="#fff" stroke-width="${ringSw}"/></svg><div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none">${homeSvg}</div></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     tooltipAnchor: [size / 2 + 6, 0],
