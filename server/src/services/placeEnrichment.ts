@@ -1,6 +1,6 @@
 import { db, getPlaceWithTags } from '../db/database';
 import { broadcast } from '../websocket';
-import { getMapsKey, searchPlaces, getPlacePhoto } from './mapsService';
+import { UA, getMapsKey, searchPlaces, getPlacePhoto } from './mapsService';
 
 /**
  * Background enrichment for list-imported places (#886).
@@ -96,12 +96,62 @@ async function enrichOne(tripId: string, userId: number, place: EnrichablePlace,
   if (place.google_place_id) return;
   if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
 
-  const { places: results } = await searchPlaces(userId, place.name, lang, {
-    lat: place.lat,
-    lng: place.lng,
+  const target = { lat: place.lat, lng: place.lng };
+
+  // ── Primary search: name-based with location bias ───────────────────────
+  let {
+    places: results,
+  } = await searchPlaces(userId, place.name, lang, {
+    lat: target.lat,
+    lng: target.lng,
     radius: SEARCH_BIAS_RADIUS_METERS,
   });
-  const match = pickEnrichmentMatch(results, { lat: place.lat, lng: place.lng });
+  let match = pickEnrichmentMatch(results, target);
+
+  // ── Fallback chain (only when primary search yields no match) ───────────
+  if (!match) {
+    // FALLBACK 1 — Search without location bias (wider net)
+    const wideResults = await searchPlaces(userId, place.name, lang);
+    match = pickEnrichmentMatch(wideResults.places, target, 5000);
+  }
+
+  if (!match && place.address) {
+    // FALLBACK 2 — Address-based search
+    const addrResults = await searchPlaces(userId, place.address, lang);
+    match = pickEnrichmentMatch(addrResults.places, target);
+  }
+
+  if (!match) {
+    // FALLBACK 3 — Nominatim reverse geocode → then Google search by that name
+    try {
+      const nominatimRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${target.lat}&lon=${target.lng}&format=json`,
+        { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) },
+      );
+      if (nominatimRes.ok) {
+        const nominatimData = (await nominatimRes.json()) as {
+          name?: string;
+          address?: Record<string, string>;
+        };
+        const nominatimName =
+          nominatimData.name ??
+          nominatimData.address?.tourism ??
+          nominatimData.address?.amenity ??
+          nominatimData.address?.attraction;
+        if (nominatimName) {
+          const nomResults = await searchPlaces(userId, nominatimName, lang, {
+            lat: target.lat,
+            lng: target.lng,
+            radius: SEARCH_BIAS_RADIUS_METERS,
+          });
+          match = pickEnrichmentMatch(nomResults.places, target);
+        }
+      }
+    } catch {
+      /* Nominatim fallback failed — keep going with no match */
+    }
+  }
+
   if (!match) return;
 
   const gpid = str(match.google_place_id);
