@@ -282,6 +282,32 @@ function BoundsController({ places, routeCoords, fitKey, paddingOpts, hasDayDeta
   return null
 }
 
+// ── Fit All Controller ──
+// Zooms map to show ALL trip places (not just selected day)
+function FitAllController({ allPlaces, fitAllKey, paddingOpts }: {
+  allPlaces: Place[]
+  fitAllKey: number
+  paddingOpts: L.FitBoundsOptions
+}) {
+  const map = useMap()
+  const prevFitAllKey = useRef(-1)
+
+  useEffect(() => {
+    if (fitAllKey === prevFitAllKey.current) return
+    prevFitAllKey.current = fitAllKey
+    const coords = allPlaces.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng] as [number, number])
+    if (coords.length === 0) return
+    try {
+      const bounds = L.latLngBounds(coords)
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { ...paddingOpts, maxZoom: 16, animate: true })
+      }
+    } catch {}
+  }, [fitAllKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null
+}
+
 interface MapClickHandlerProps {
   onClick: ((e: L.LeafletMouseEvent) => void) | null
 }
@@ -438,6 +464,8 @@ export const MapView = memo(function MapView({
   zoom = 10,
   tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
   fitKey = 0,
+  allPlaces = [],
+  fitAllKey = 0,
   dayOrderMap = {},
   leftWidth = 0,
   rightWidth = 0,
@@ -672,6 +700,7 @@ export const MapView = memo(function MapView({
 
       <MapController center={center} zoom={zoom} />
       <BoundsController places={dayPlaces.length > 0 ? dayPlaces : places} routeCoords={dayPlaces.length > 0 ? routeCoords : []} fitKey={fitKey} paddingOpts={paddingOpts} hasDayDetail={hasDayDetail} />
+      <FitAllController allPlaces={allPlaces} fitAllKey={fitAllKey} paddingOpts={paddingOpts} />
       <SelectionController places={places} selectedPlaceId={selectedPlaceId} dayPlaces={dayPlaces} paddingOpts={paddingOpts} />
       <MapClickHandler onClick={onMapClick} />
       <MapContextMenuHandler onContextMenu={onMapContextMenu} />

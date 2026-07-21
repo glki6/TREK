@@ -34,7 +34,7 @@ import PluginFrame from '../components/Plugins/PluginFrame'
 import TripWarningsBanner from '../components/Planner/TripWarningsBanner'
 import Navbar from '../components/Layout/Navbar'
 import { useToast } from '../components/shared/Toast'
-import { Map, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train } from 'lucide-react'
+import { Map, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train, Grid3x3, Maximize2 } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { addonsApi, accommodationsApi, authApi, tripsApi, assignmentsApi, mapsApi } from '../api/client'
 import { accommodationRepo } from '../repo/accommodationRepo'
@@ -199,7 +199,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
     transportModalDayId, setTransportModalDayId,
     transportModalAutomated, setTransportModalAutomated, transitPrefill, setTransitPrefill, transitJourney, setTransitJourney,
     reservationPrefill, transportPrefill, importReviewActive, advanceImportReview,
-    routeShown, setRouteShown, routeProfile, setRouteProfile, fitKey, setFitKey,
+    routeShown, setRouteShown, routeProfile, setRouteProfile, fitKey, setFitKey, fitAllKey, setFitAllKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
     deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
     visibleConnections, setVisibleConnections, toggleConnection, mapTransportDetail, setMapTransportDetail,
@@ -320,6 +320,8 @@ export default function TripPlannerPage(): React.ReactElement | null {
               zoom={defaultZoom}
               tileUrl={mapTileUrl}
               fitKey={fitKey}
+              allPlaces={places.filter(p => p.lat && p.lng)}
+              fitAllKey={fitAllKey}
               dayOrderMap={dayOrderMap}
               leftWidth={leftCollapsed ? 0 : leftWidth}
               rightWidth={rightCollapsed ? 0 : rightWidth}
@@ -346,6 +348,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
                 )}
                 {glMap && <MapCompassPill map={glMap} />}
                 <button
+                  className="hidden md:block"
                   onClick={() => setDisableClustering(c => !c)}
                   style={{
                     pointerEvents: 'auto',
@@ -369,7 +372,65 @@ export default function TripPlannerPage(): React.ReactElement | null {
               </div>
             )}
 
-            {/* Mobile: compass + cluster toggle now in shared center-top container above */}
+            {/* Mobile: cluster toggle FAB above Fit All button */}
+            {isMobile && (
+              <button
+                onClick={() => setDisableClustering(c => !c)}
+                style={{
+                  position: 'absolute',
+                  bottom: showDayDetail && !selectedPlace
+                    ? 'calc(var(--bottom-nav-h, 84px) + 20px + var(--day-panel-h, 0px) + 108px)'
+                    : 'calc(var(--bottom-nav-h, 84px) + 108px)',
+                  right: 12,
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: disableClustering ? '#3b82f6' : 'var(--bg-card, white)',
+                  color: disableClustering ? 'white' : 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                title={disableClustering ? 'Re-enable marker clustering' : 'Disable marker clustering'}
+              >
+                <Grid3x3 size={20} />
+              </button>
+            )}
+
+            {/* Mobile: Fit All FAB — zooms map to show all trip places */}
+            {isMobile && (
+              <button
+                onClick={() => setFitAllKey(k => k + 1)}
+                style={{
+                  position: 'absolute',
+                  bottom: showDayDetail && !selectedPlace
+                    ? 'calc(var(--bottom-nav-h, 84px) + 20px + var(--day-panel-h, 0px) + 60px)'
+                    : 'calc(var(--bottom-nav-h, 84px) + 60px)',
+                  right: 12,
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: 'var(--bg-card, white)',
+                  color: 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                title="Fit All Places"
+              >
+                <Maximize2 size={20} />
+              </button>
+            )}
 
             <div className="hidden md:block" style={{ position: 'absolute', left: 10, top: 10, bottom: 10, zIndex: 20 }}>
               <button onClick={() => setLeftCollapsed(c => !c)}

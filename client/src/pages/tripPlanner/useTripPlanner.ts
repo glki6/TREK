@@ -204,6 +204,7 @@ export function useTripPlanner() {
   const [routeShown, setRouteShown] = useState(false)
   const [routeProfile, setRouteProfile] = useState<'driving' | 'walking'>('driving')
   const [fitKey, setFitKey] = useState<number>(0)
+  const [fitAllKey, setFitAllKey] = useState<number>(0)
   const initialFitTripId = useRef<number | null>(null)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<'left' | 'right' | null>(null)
   const mobilePlanScrollTopRef = useRef<number>(0)
@@ -885,7 +886,7 @@ export function useTripPlanner() {
     transportModalDayId, setTransportModalDayId,
     transportModalAutomated, setTransportModalAutomated, transitPrefill, setTransitPrefill, transitJourney, setTransitJourney,
     reservationPrefill, transportPrefill, importReviewActive, startImportReview, advanceImportReview,
-    routeShown, setRouteShown, routeProfile, setRouteProfile, fitKey, setFitKey,
+    routeShown, setRouteShown, routeProfile, setRouteProfile, fitKey, setFitKey, fitAllKey, setFitAllKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
     deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
     visibleConnections, setVisibleConnections, toggleConnection, mapTransportDetail, setMapTransportDetail,
