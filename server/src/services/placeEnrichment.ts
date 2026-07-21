@@ -40,6 +40,16 @@ const SEARCH_BIAS_RADIUS_METERS = 2000;
 /** Concurrent enrichment lookups — small, to stay friendly to the Maps quota. */
 const ENRICH_CONCURRENCY = 3;
 
+/** Keywords that indicate a natural/geographic feature (larger extent → wider tolerance). */
+const NATURAL_FEATURE_KEYWORDS = [
+  "lake","glacier","falls","waterfall","canyon","peak","mountain",
+  "river","cliff","bridge","viewpoint","trail","pass","plateau",
+];
+function isNaturalFeature(name: string): boolean {
+  const lower = name.toLowerCase();
+  return NATURAL_FEATURE_KEYWORDS.some(kw => lower.includes(kw));
+}
+
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6371000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -53,16 +63,19 @@ function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng:
 
 /**
  * Pick the search result that is the same place as the import: it must be a
- * Google result (have a google_place_id) with coordinates within
- * MATCH_RADIUS_METERS of the imported point. Returns the closest such hit, or
- * null when nothing is close enough — in which case the place is left as
- * imported rather than risking a wrong-place overwrite (common-name / romanized
+ * Google result (have a google_place_id) with coordinates within MATCH_RADIUS_METERS
+ * of the imported point. When `exactNameQuery` is provided and a candidate name
+ * matches exactly (case-insensitive), the distance check is skipped — this handles
+ * natural features where Wanderlog viewpoints and POI centres can be kilometres apart.
+ * Returns the closest such hit, or null when nothing is close enough — in which case
+ * the place is left as imported rather than risking a wrong-place overwrite (common-name / romanized
  * lists). Exported for unit testing.
  */
 export function pickEnrichmentMatch(
   candidates: Record<string, unknown>[],
   target: { lat: number; lng: number },
   maxMeters: number = MATCH_RADIUS_METERS,
+  exactNameQuery?: string,
 ): Record<string, unknown> | null {
   let best: { c: Record<string, unknown>; dist: number } | null = null;
   for (const c of candidates || []) {
@@ -71,6 +84,15 @@ export function pickEnrichmentMatch(
     const lng = c.lng;
     if (typeof gpid !== 'string' || !gpid) continue;
     if (typeof lat !== 'number' || typeof lng !== 'number') continue;
+
+    // Exact name match: skip distance check entirely for natural features
+    if (exactNameQuery) {
+      const candidateName = typeof c.name === 'string' ? c.name : '';
+      if (candidateName.toLowerCase() === exactNameQuery.toLowerCase()) {
+        return c;
+      }
+    }
+
     const dist = haversineMeters(target, { lat, lng });
     if (dist > maxMeters) continue;
     if (!best || dist < best.dist) best = { c, dist };
@@ -99,20 +121,22 @@ async function enrichOne(tripId: string, userId: number, place: EnrichablePlace,
   const target = { lat: place.lat, lng: place.lng };
 
   // ── Primary search: name-based with location bias ───────────────────────
+  const primaryRadius = isNaturalFeature(place.name) ? SEARCH_BIAS_RADIUS_METERS : MATCH_RADIUS_METERS;
   let {
     places: results,
   } = await searchPlaces(userId, place.name, lang, {
     lat: target.lat,
     lng: target.lng,
-    radius: SEARCH_BIAS_RADIUS_METERS,
+    radius: primaryRadius,
   });
-  let match = pickEnrichmentMatch(results, target);
+  let match = pickEnrichmentMatch(results, target, primaryRadius, place.name);
 
   // ── Fallback chain (only when primary search yields no match) ───────────
   if (!match) {
     // FALLBACK 1 — Search without location bias (wider net)
     const wideResults = await searchPlaces(userId, place.name, lang);
-    match = pickEnrichmentMatch(wideResults.places, target, 5000);
+    const effectiveRadius = isNaturalFeature(place.name) ? SEARCH_BIAS_RADIUS_METERS : MATCH_RADIUS_METERS;
+    match = pickEnrichmentMatch(wideResults.places, target, effectiveRadius, place.name);
   }
 
   if (!match && place.address) {
