@@ -9,7 +9,7 @@ import { useTranslation } from '../../i18n'
  * client-side validation and the submit (incl. the MFA step-up branch).
  * ResetPasswordPage is a pure wiring container. Behaviour is identical to the
  * previous in-component logic.
- */
+*/
 export function useResetPassword() {
   const { t } = useTranslation()
   const navigate = useNavigate()

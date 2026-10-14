@@ -55,7 +55,7 @@ import { probeNow } from '../sync/connectivity'
  * production (and on any mismatch) the data passes through untouched, so adding
  * validation can never break a working call. This is the typed-request helper
  * the FE adopts per domain as each backend module lands on @trek/shared.
- */
+*/
 const API_DEV = Boolean((import.meta as { env?: { DEV?: boolean } }).env?.DEV)
 export function parseInDev<S extends z.ZodTypeAny>(schema: S, data: unknown, label: string): z.infer<S> {
   if (API_DEV) {
@@ -73,7 +73,7 @@ export function parseInDev<S extends z.ZodTypeAny>(schema: S, data: unknown, lab
  * for endpoints whose existing consumers rely on the loose `r.data` type — it
  * adds the development contract-drift warning without retyping the public
  * surface (so it can never break a consumer that worked before).
- */
+*/
 function checkInDev<T>(schema: z.ZodTypeAny, data: T, label: string): T {
   if (API_DEV) {
     const result = schema.safeParse(data)
@@ -290,7 +290,7 @@ export interface PasskeyCredential {
 }
 
 export const oauthApi = {
-  /** Validate OAuth authorize params — called by consent page on load */
+  /** Validate OAuth authorize params — called by consent page on load*/
   validate: (params: {
     response_type: string
     client_id: string
@@ -302,7 +302,7 @@ export const oauthApi = {
     resource?: string
   }) => apiClient.get('/oauth/authorize/validate', { params }).then(r => r.data),
 
-  /** Submit user consent (approve or deny) */
+  /** Submit user consent (approve or deny)*/
   authorize: (body: {
     client_id: string
     redirect_uri: string
@@ -476,7 +476,7 @@ export const adminApi = {
   // Local LLM (Ollama) management for the AI-parsing addon.
   llmLocalModels: (baseUrl: string): Promise<{ models: { name: string; size: number }[] }> =>
     apiClient.get('/admin/llm/local/models', { params: { baseUrl } }).then(r => r.data),
-  /** Pull a model, streaming Ollama's NDJSON progress to `onProgress`. */
+  /** Pull a model, streaming Ollama's NDJSON progress to `onProgress`.*/
   llmLocalPull: async (
     baseUrl: string,
     model: string,

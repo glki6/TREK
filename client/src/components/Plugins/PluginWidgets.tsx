@@ -10,7 +10,7 @@ import type { ActivePlugin } from '../../store/pluginStore'
  * title) so plugins sit alongside them seamlessly, and the body auto-sizes to the
  * height the widget reports over trek:resize — no fixed height that would clip a
  * taller widget's controls.
- */
+*/
 export default function PluginWidgets({ plugins, tripId = null }: { plugins: ActivePlugin[]; tripId?: string | null }) {
   if (plugins.length === 0) return null
   return (

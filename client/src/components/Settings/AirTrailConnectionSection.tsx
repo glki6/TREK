@@ -11,7 +11,7 @@ import ToggleSwitch from './ToggleSwitch'
  * AirTrail instance (URL + Bearer API key). Mirrors the photo-provider (Immich)
  * connection layout: stacked fields, a toggle, then Save / Test-connection with
  * a status badge. The key is stored encrypted and never prefilled.
- */
+*/
 export default function AirTrailConnectionSection(): React.ReactElement {
   const { t } = useTranslation()
   const toast = useToast()

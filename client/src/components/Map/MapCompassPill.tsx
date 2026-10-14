@@ -14,7 +14,7 @@ export interface CompassMap {
  * the camera back to north + flat on click. Rendered next to the POI "explore" pill
  * (GL only) and built as the SAME frosted shell (padding 4 around a 34px button)
  * so its height and transparency match the POI pill exactly.
- */
+*/
 export function MapCompassPill({ map }: { map: CompassMap }) {
   const [bearing, setBearing] = useState(() => map.getBearing())
 

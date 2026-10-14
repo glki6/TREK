@@ -6,9 +6,9 @@ import type { TranslationFn } from '../../types'
 
 interface MoveToListModalProps {
   mode: 'move' | 'copy'
-  /** Candidate target lists (owned, excluding the current one). */
+  /** Candidate target lists (owned, excluding the current one).*/
   lists: Collection[]
-  /** Number of selected places. */
+  /** Number of selected places.*/
   count: number
   onPick: (targetId: number) => Promise<void> | void
   onClose: () => void
@@ -19,7 +19,7 @@ interface MoveToListModalProps {
  * Target-list picker for moving or duplicating the selected places into another
  * of the user's lists. `mode` only changes the wording + the trailing icon; the
  * action itself is the parent's onPick.
- */
+*/
 export default function MoveToListModal({ mode, lists, count, onPick, onClose, t }: MoveToListModalProps): React.ReactElement {
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState<number | null>(null)

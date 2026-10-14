@@ -14,7 +14,7 @@ const ReactMarkdown = React.lazy(() =>
   import('react-markdown').then(m => ({ default: m.default }))
 );
 
-/** Safe rAF shim — falls back to setTimeout(0) in environments without rAF (e.g. jsdom). */
+/** Safe rAF shim — falls back to setTimeout(0) in environments without rAF (e.g. jsdom).*/
 function scheduleFrame(cb: () => void): () => void {
   if (typeof requestAnimationFrame !== 'undefined') {
     const id = requestAnimationFrame(cb);
@@ -350,7 +350,7 @@ function NoticeContent({ notice, title, body, ctaLabel, secondaryCtaLabel, title
  * motion detection, body-scroll lock, keyboard (ESC + arrows) and the page-slide
  * animation refs. Exposes dismiss/CTA/pager handlers + the touch-drag refs used
  * by the mobile bottom sheet. The two layout components below render from it.
- */
+*/
 function useSystemNoticeModal(notices: SystemNoticeDTO[]) {
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(false);

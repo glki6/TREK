@@ -14,10 +14,10 @@ import type {
   CollectionLabelUpdateRequest,
 } from '@trek/shared'
 
-/** A pending invitation the current user has received (derived server-side). */
+/** A pending invitation the current user has received (derived server-side).*/
 export type IncomingCollectionInvite = CollectionListResponse['incomingInvites'][number]
 
-/** Sentinel id for the client-side "All saved" union pseudo-list. */
+/** Sentinel id for the client-side "All saved" union pseudo-list.*/
 export const ALL_SAVED = 'all' as const
 export type ActiveCollectionId = number | typeof ALL_SAVED | null
 

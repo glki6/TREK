@@ -9,7 +9,7 @@ import { useExchangeRates } from '../../hooks/useExchangeRates'
  * SharedTripPage is a pure wiring container; the post-load derivations
  * (sortedDays, map places, …) stay in the page next to the JSX that uses them.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useSharedTrip() {
   const { token } = useParams<{ token: string }>()
   // The shared payload is an open-ended snapshot (trip, days, assignments, …),

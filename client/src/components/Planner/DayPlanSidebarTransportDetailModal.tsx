@@ -13,7 +13,7 @@ interface DayPlanSidebarTransportDetailModalProps {
   transportDetail: Reservation | null
   setTransportDetail: (v: Reservation | null) => void
   onNavigateToFiles?: () => void
-  /** Opens the edit form for this reservation (shown as a footer action). */
+  /** Opens the edit form for this reservation (shown as a footer action).*/
   onEdit?: (res: Reservation) => void
   t: (key: string, params?: Record<string, any>) => string
   locale: string

@@ -8,7 +8,7 @@ import 'plyr/dist/plyr.css'
  * the source carries the correct video MIME from the server. The Plyr instance is
  * created once per mounted source and destroyed on unmount, so navigating away in
  * the lightbox stops playback.
- */
+*/
 export default function VideoPlayer({
   src,
   poster,

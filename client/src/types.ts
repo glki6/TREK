@@ -59,9 +59,9 @@ export interface User {
   avatar_url: string | null
   maps_api_key: string | null
   created_at: string
-  /** Present after load; true when TOTP MFA is enabled for password login */
+  /** Present after load; true when TOTP MFA is enabled for password login*/
   mfa_enabled?: boolean
-  /** True when a password change is required before the user can continue */
+  /** True when a password change is required before the user can continue*/
   must_change_password?: boolean
 }
 
@@ -98,7 +98,7 @@ export interface TripFile {
   reservation_title?: string
   linked_reservation_ids?: (number | null)[]
   linked_place_ids?: (number | null)[]
-  /** Served download path — always present on list/create/update responses (formatFile). */
+  /** Served download path — always present on list/create/update responses (formatFile).*/
   url: string
 }
 
@@ -137,7 +137,7 @@ export interface Settings {
   llm_base_url?: string
   llm_multimodal?: boolean
   llm_api_key?: string
-  /** Per-user appearance/customization config (theming, transparency, typography, dashboard widgets). */
+  /** Per-user appearance/customization config (theming, transparency, typography, dashboard widgets).*/
   appearance?: AppearanceConfig
 }
 
@@ -229,7 +229,7 @@ export interface AppConfig {
   has_maps_key?: boolean
   allowed_file_types?: string
   timezone?: string
-  /** When true, users without MFA cannot use the app until they enable it */
+  /** When true, users without MFA cannot use the app until they enable it*/
   require_mfa?: boolean
   // Granular auth toggles
   password_login?: boolean
@@ -326,7 +326,7 @@ export interface ApiError {
   message: string
 }
 
-/** Safely extract an error message from an unknown catch value */
+/** Safely extract an error message from an unknown catch value*/
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (typeof err === 'object' && err !== null && 'response' in err) {
     const apiErr = err as ApiError

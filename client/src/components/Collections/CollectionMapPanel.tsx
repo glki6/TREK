@@ -10,12 +10,12 @@ interface CollectionMapPanelProps {
   onSelect: (id: number) => void
   onDeselect: () => void
   dark: boolean
-  /** Render the floating map controls (desktop). Mobile drives view from the toolbar. */
+  /** Render the floating map controls (desktop). Mobile drives view from the toolbar.*/
   overlay: boolean
-  /** 'list' = split (map can be expanded); 'map' = full (list collapsed). */
+  /** 'list' = split (map can be expanded); 'map' = full (list collapsed).*/
   view: 'list' | 'map'
   onToggleView: () => void
-  /** Show a "+" to add a place to the current list (real lists only). */
+  /** Show a "+" to add a place to the current list (real lists only).*/
   canAddPlace: boolean
   onAddPlace: () => void
   search: string
@@ -27,7 +27,7 @@ interface CollectionMapPanelProps {
  * The map surface for the collections page — the map plus its floating controls:
  * a top-left cluster (collapse/expand the list, toggle bulk-select) and a
  * top-right search box. Used both in the desktop split and the full-map view.
- */
+*/
 export default function CollectionMapPanel({
   places, selectedPlaceId, onSelect, onDeselect, dark, overlay, view, onToggleView,
   canAddPlace, onAddPlace, search, onSearch, t,

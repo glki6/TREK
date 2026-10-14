@@ -3,7 +3,7 @@ import { useTripStore } from '../store/tripStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { calculateRouteWithLegs, withHotelBookends } from '../components/Map/RouteCalculator'
 import { getTransportRouteEndpoints } from '../utils/dayMerge'
-import { getDayBookendHotels } from '../utils/dayOrder'
+import { getDayBookendHotels, isArrivalDay, isDepartureDay } from '../utils/dayOrder'
 import type { TripStoreState } from '../store/tripStore'
 import type { RouteSegment, RouteResult, Accommodation } from '../types'
 
@@ -15,9 +15,10 @@ const NO_ACCOMMODATIONS: Accommodation[] = []
  * Manages route calculation state for a selected day. Extracts geo-coded waypoints from
  * day assignments, draws a straight-line route immediately, then upgrades it to real OSRM
  * road geometry with per-segment durations. Aborts in-flight requests when the day changes.
- */
+*/
 export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: number | null, enabled: boolean = true, profile: 'driving' | 'walking' | 'cycling' = 'driving', accommodations: Accommodation[] = NO_ACCOMMODATIONS) {
-  const [route, setRoute] = useState<[number, number][][] | null>(null)
+  // Accepts per-day route ([number,number][][]), multi-day trip route ([number,number][][][]), or null
+  const [route, setRoute] = useState<([number, number][][] | [number, number][][][]) | null>(null)
   const [routeInfo, setRouteInfo] = useState<RouteResult | null>(null)
   const [routeSegments, setRouteSegments] = useState<RouteSegment[]>([])
   const routeAbortRef = useRef<AbortController | null>(null)
@@ -32,7 +33,8 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
   const updateRouteForDay = useCallback(async (dayId: number | null) => {
     if (routeAbortRef.current) routeAbortRef.current.abort()
     // Route is manual: only compute when explicitly enabled (the "show route" toggle).
-    if (!dayId || !enabled) { setRoute(null); setRouteSegments([]); return }
+    if (!enabled) { setRoute(null); setRouteSegments([]); return }
+    if (!dayId) return // Preserve existing route; just skip recalc
     // Read directly from store (not a render-phase ref) so callers after optimistic
     // updates or non-optimistic deletes always see the latest assignments.
     const currentAssignments = useTripStore.getState().assignments || {}
@@ -134,8 +136,14 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
     const contributes = (e: Entry) => e.kind === 'place' || !!e.from || !!e.to
     const firstStop = entries.find(contributes)
     const lastStop = [...entries].reverse().find(contributes)
-    const drawMorning = firstStop?.kind === 'place' || !!bookends?.morningIsSleptHere
-    const drawEvening = lastStop?.kind === 'place' || !!bookends?.eveningIsOvernight
+    // Suppress hotel bookend legs on arrival days: the morning hotel is just a check-in
+    // fallback (you didn't sleep there), and the evening return leg shouldn't draw when
+    // your last activity is a transport departure (#1321, mirrored from DayPlanSidebar fix).
+    const isArrival = day ? isArrivalDay(day, allDays, accommodations) : false
+    const isDeparture = day ? isDepartureDay(day, allDays, accommodations) : false
+    const drawMorning = (!isArrival || !!bookends?.morningIsSleptHere) && (firstStop?.kind === 'place' || !!bookends?.morningIsSleptHere)
+    // On departure days: suppress evening return leg entirely (you're checking out, not staying)
+    const drawEvening = !isDeparture && (lastStop?.kind === 'place' || !!bookends?.eveningIsOvernight)
     const runsWithHotel = withHotelBookends(
       runs,
       flatPts[0],
@@ -149,7 +157,7 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
     // Draw the hotel → hotel transfer directly. Gated on both bookends being real
     // (drawMorning/drawEvening already exclude the #1321 arrival fallback) and the two
     // hotels being distinct, so an ordinary same-hotel rest day still draws nothing.
-    if (runsWithHotel.length === 0 && drawMorning && drawEvening) {
+    if (!isArrival && !isDeparture && runsWithHotel.length === 0 && drawMorning && drawEvening) {
       const m = hotelPt(bookends?.morning)
       const e = hotelPt(bookends?.evening)
       if (m && e && (m.lat !== e.lat || m.lng !== e.lng)) runsWithHotel.push([m, e])
@@ -158,11 +166,14 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
     const straightLines = (): [number, number][][] =>
       runsWithHotel.map(r => r.map(p => [p.lat, p.lng] as [number, number]))
 
-    if (runsWithHotel.length === 0) { setRoute(null); setRouteSegments([]); return }
+    if (runsWithHotel.length === 0) {
+      setRoute(null); setRouteSegments([]); return
+    }
 
     // Draw straight lines immediately for snappiness, then upgrade to the real
     // OSRM road geometry.
-    setRoute(straightLines())
+    const sl = straightLines()
+    setRoute(sl)
 
     const controller = new AbortController()
     routeAbortRef.current = controller
@@ -206,7 +217,8 @@ export function useRouteCalculation(tripStore: TripStoreState, selectedDayId: nu
   // Recalculate when assignments or transport positions for the SELECTED day change
   const selectedDayAssignments = selectedDayId ? tripStore.assignments?.[String(selectedDayId)] : null
   useEffect(() => {
-    if (!selectedDayId) { setRoute(null); setRouteSegments([]); return }
+    if (!enabled) { setRoute(null); setRouteSegments([]); return }
+    if (!selectedDayId) { return } // Preserve route during transient null (sidebar collapse, place click)
     updateRouteForDay(selectedDayId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayId, selectedDayAssignments, transportSignature, enabled, profile, accommodations, optimizeFromAccommodation, distanceUnit])

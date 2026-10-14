@@ -7,7 +7,7 @@ import { COST_CATEGORIES, type CostCategory } from '@trek/shared'
  * one of these. Category colour is the one place an accent is allowed (it
  * visualises the category); everything else stays black/white. The label comes
  * from i18n (`costs.cat.*`).
- */
+*/
 export interface CostCategoryMeta {
   key: CostCategory
   labelKey: string
@@ -36,7 +36,7 @@ export const COST_CATEGORY_LIST: CostCategoryMeta[] = COST_CATEGORIES.map(k => C
  * Legacy / English free-text categories (and reservation type labels) mapped to
  * the fixed keys. Bookings used to store labels like "Flight"/"Train"/"Other",
  * which never matched the lowercase keys and fell through to `other`.
- */
+*/
 const LEGACY_CATEGORY_MAP: Record<string, CostCategory> = {
   flight: 'flights', flights: 'flights', plane: 'flights', flug: 'flights',
   train: 'transport', bus: 'transport', car: 'transport', 'car rental': 'transport',
@@ -54,7 +54,7 @@ const LEGACY_CATEGORY_MAP: Record<string, CostCategory> = {
   other: 'other', misc: 'other',
 }
 
-/** Map any stored category (incl. legacy/localized free-text values) to a known meta. */
+/** Map any stored category (incl. legacy/localized free-text values) to a known meta.*/
 export function catMeta(cat: string | null | undefined): CostCategoryMeta {
   if (!cat) return COST_CAT_META.other
   if (cat in COST_CAT_META) return COST_CAT_META[cat as CostCategory]

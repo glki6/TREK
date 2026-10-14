@@ -6,7 +6,7 @@
  *
  * Resolves with a null poster (and best-effort duration) if anything fails — the
  * caller still uploads the video; the gallery just shows a placeholder tile.
- */
+*/
 export async function captureVideoPoster(file: File): Promise<{ poster: Blob | null; durationMs: number | null }> {
   return new Promise((resolve) => {
     if (typeof document === 'undefined') { resolve({ poster: null, durationMs: null }); return }
@@ -51,7 +51,7 @@ export async function captureVideoPoster(file: File): Promise<{ poster: Blob | n
   })
 }
 
-/** True for a File the user picked that should go through the video upload path. */
+/** True for a File the user picked that should go through the video upload path.*/
 export function isVideoFile(file: File): boolean {
   return typeof file.type === 'string' && file.type.startsWith('video/')
 }

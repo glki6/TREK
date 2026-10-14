@@ -6,7 +6,7 @@ import { pluginsApi } from '../../api/client'
  * Shows validation/warning contributions from `warningProvider` plugins (#1429).
  * Self-contained + fail-safe: the server skips any slow/failing provider, so this
  * only ever adds rows; it renders nothing (and takes no space) when there are none.
- */
+*/
 type Warning = { pluginId: string; level: 'info' | 'warning' | 'error'; message: string }
 
 const STYLE = {

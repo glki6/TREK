@@ -10,6 +10,7 @@ import { mapsApi } from '../../api/client'
 import { getCategoryIcon, CATEGORY_ICON_MAP } from '../shared/categoryIcons'
 import ReservationOverlay from './ReservationOverlay'
 import { useTransportRoutes } from '../../hooks/useTransportRoutes'
+import { getDayColor } from '../../utils/dayColors'
 import type { Reservation } from '../../types'
 import { POI_CATEGORY_BY_KEY, type Poi } from './poiCategories'
 
@@ -33,7 +34,7 @@ L.Icon.Default.mergeOptions({
 /**
  * Create a round photo-circle marker.
  * Shows image_url if available, otherwise category icon in colored circle.
- */
+*/
 function escAttr(s) {
   if (!s) return ''
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -138,6 +139,104 @@ function createPoiIcon(category: string) {
   })
   poiIconCache.set(category, icon)
   return icon
+}
+
+/**
+ * Create a solid day-colored circle marker with the sequence number centred.
+ * Used when the Day Colors toggle is active.
+*/
+function createDayColorIcon(dayIndex: number, orderNumber: number, isSelected: boolean): L.DivIcon {
+  const size = isSelected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = isSelected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  return L.divIcon({
+    className: "",
+    html: `<div style="\n      width:${size}px;height:${size}px;border-radius:50%;\n      background:${color};border:${isSelected ? 3 : 2.5}px solid white;\n      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;\n      cursor:pointer;font-size:${isSelected ? 20 : 16}px;font-weight:800;color:white;\n      font-family:var(--font-system);line-height:1;\n    ">${orderNumber}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    tooltipAnchor: [size / 2 + 6, 0],
+  })
+}
+
+/**
+ * Compute an SVG arc path from (cx,cy) radius r, startAngle to endAngle (radians).
+ * Angles measured clockwise from 12 o'clock (−π/2 offset).
+*/
+function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const startX = cx + r * Math.cos(startAngle)
+  const startY = cy + r * Math.sin(startAngle)
+  const endX = cx + r * Math.cos(endAngle)
+  const endY = cy + r * Math.sin(endAngle)
+  const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0
+  return `M ${cx} ${cy} L ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY} Z`
+}
+
+/**
+ * Multi-color accommodation marker: pie chart with equal wedges (one per distinct day),
+ * white Home icon centred. Used when day colors ON, no specific day focused,
+ * and the stay spans multiple days.
+*/
+function createAccommodationMultiDayIcon(dayIndices: number[], isSelected: boolean): L.DivIcon {
+  const size = isSelected ? 44 : 36
+  const r = size / 2 - 1.5 // leave room for outer ring, stays inside container
+  const cx = size / 2
+  const cy = size / 2
+  const shadow = isSelected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const ringSw = isSelected ? 3 : 2.5
+
+  // Deduplicate and sort day indices; build equal pie wedges clockwise from 12 o'clock.
+  const uniqueDays = Array.from(new Set(dayIndices)).sort((a, b) => a - b)
+  const wedgeAngle = (2 * Math.PI) / uniqueDays.length
+  let wedges = ''
+  for (let i = 0; i < uniqueDays.length; i++) {
+    const startAngle = i * wedgeAngle - Math.PI / 2
+    const endAngle = (i + 1) * wedgeAngle - Math.PI / 2
+    const color = getDayColor(uniqueDays[i])
+    wedges += `<path d="${svgArcPath(cx, cy, r, startAngle, endAngle)}" fill="${color}" stroke="#fff" stroke-width="0.5"/>`
+  }
+
+  // filled Home icon for pie marker (stroke-only outline looks thin on colored wedges)
+  const HomeFilled = CATEGORY_ICON_MAP['Home']
+  const homeSvg = HomeFilled ? renderToStaticMarkup(createElement(HomeFilled, { size: isSelected ? 22 : 18, color: 'white', strokeWidth: 2.5, fill: 'rgba(255,255,255,0.3)' })) : ''
+  return L.divIcon({
+    className: "",
+    html: `<div style="\
+      position:relative;width:${size}px;height:${size}px;border-radius:50%;
+      box-shadow:${shadow};cursor:pointer;overflow:hidden;\
+    "><svg style="position:absolute;inset:0;display:block" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}<circle cx="${cx}" cy="${cy}" r="${r + ringSw / 2}" fill="none" stroke="#fff" stroke-width="${ringSw}"/></svg><div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none">${homeSvg}</div></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    tooltipAnchor: [size / 2 + 6, 0],
+  })
+}
+
+/**
+ * Day-colored circle marker for accommodation places.
+ * Same as createDayColorIcon but shows a home icon instead of the sequence number.
+*/
+function createAccommodationDayIcon(dayIndex: number, isSelected: boolean): L.DivIcon {
+  const size = isSelected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = isSelected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const homeSvg = categoryIconSvg('Home', isSelected ? 22 : 18)
+  return L.divIcon({
+    className: "",
+    html: `<div style="\
+      width:${size}px;height:${size}px;border-radius:50%;\
+      background:${color};border:${isSelected ? 3 : 2.5}px solid white;\
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;\
+      cursor:pointer;line-height:1;overflow:hidden;\
+    ">${homeSvg}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    tooltipAnchor: [size / 2 + 6, 0],
+  })
 }
 
 // Clears the hover tooltip the moment the camera starts moving and suppresses
@@ -282,6 +381,32 @@ function BoundsController({ places, routeCoords, fitKey, paddingOpts, hasDayDeta
   return null
 }
 
+// ── Fit All Controller ──
+// Zooms map to show ALL trip places (not just selected day)
+function FitAllController({ allPlaces, fitAllKey, paddingOpts }: {
+  allPlaces: Place[]
+  fitAllKey: number
+  paddingOpts: L.FitBoundsOptions
+}) {
+  const map = useMap()
+  const prevFitAllKey = useRef(-1)
+
+  useEffect(() => {
+    if (fitAllKey === prevFitAllKey.current) return
+    prevFitAllKey.current = fitAllKey
+    const coords = allPlaces.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng] as [number, number])
+    if (coords.length === 0) return
+    try {
+      const bounds = L.latLngBounds(coords)
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { ...paddingOpts, maxZoom: 16, animate: true })
+      }
+    } catch {}
+  }, [fitAllKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null
+}
+
 interface MapClickHandlerProps {
   onClick: ((e: L.LeafletMouseEvent) => void) | null
 }
@@ -403,12 +528,40 @@ interface MemoMarkerProps {
   onClickPlace: (id: number) => void
   onHover: (place: any, x: number, y: number) => void
   onHoverOut: () => void
+  /** Day Colors toggle.*/
+  useDayColors?: boolean
+  /** Resolved day assignment for this place (first or selected-day match).*/
+  dayInfo?: { dayIndex: number; orderNumber: number } | null
+  /** All distinct dayIndices from placeDayMap — for multi-color pie.*/
+  accommodationDayIndices?: number[]
+  /** Set of place IDs that are linked to accommodations.*/
+  accommodationPlaceIds?: Set<number>
 }
 
 const MemoMarker = memo(function MemoMarker({
   place, isSelected, orderNumbers, photoUrl, onClickPlace, onHover, onHoverOut,
+  useDayColors = false, dayInfo, accommodationDayIndices, accommodationPlaceIds,
 }: MemoMarkerProps) {
-  const icon = createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
+  // when Day Colors toggle is ON and the place has a day assignment,
+  // render a solid coloured circle with the sequence number instead of the
+  // photo / category icon.
+  // accommodation places show home icon without the sequence number.
+  // Multi-day accommodations (overview, no focus): pie chart with equal wedges.
+  const useDayIcon = useDayColors && !!dayInfo
+  const isAccommodation = !!accommodationPlaceIds?.has(place.id)
+  let icon: L.DivIcon
+  if (useDayIcon) {
+    if (isAccommodation && accommodationDayIndices && accommodationDayIndices.length >= 2) {
+      // Multi-day stay, overview mode → pie chart home marker
+      icon = createAccommodationMultiDayIcon(accommodationDayIndices, isSelected)
+    } else {
+      icon = isAccommodation
+        ? createAccommodationDayIcon(dayInfo.dayIndex, isSelected)
+        : createDayColorIcon(dayInfo.dayIndex, dayInfo.orderNumber, isSelected)
+    }
+  } else {
+    icon = createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
+  }
   return (
     <Marker
       position={[place.lat, place.lng]}
@@ -438,9 +591,12 @@ export const MapView = memo(function MapView({
   zoom = 10,
   tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
   fitKey = 0,
+  allPlaces = [],
+  fitAllKey = 0,
   dayOrderMap = {},
   leftWidth = 0,
   rightWidth = 0,
+  disableClustering = false,
   hasInspector = false,
   hasDayDetail = false,
   reservations = [] as Reservation[],
@@ -451,7 +607,24 @@ export const MapView = memo(function MapView({
   pois = [] as Poi[],
   onPoiClick,
   onViewportChange,
+  placeDayMap = {},
+  useDayColors = false,
+  selectedDayIndex = null,
+  accommodationPlaceIds = new Set(),
 }: any) {
+
+  // Per-day route color: use day palette when toggle ON + a day is selected;
+  // otherwise fall back to the standard Apple blue (zero visual regression).
+  const routeColor = useMemo(() => {
+    if (useDayColors && selectedDayIndex !== null && selectedDayIndex >= 0) {
+      return getDayColor(selectedDayIndex)
+    }
+    return '#0a84ff'
+  }, [useDayColors, selectedDayIndex])
+
+  // Casing color: same hue at reduced opacity for the wider underlay line.
+  const casingOpacity = 0.75
+
   const poiMarkers = useMemo(() => (pois as Poi[]).map((poi: Poi) => (
     <Marker
       key={`poi-${poi.osm_id}`}
@@ -533,9 +706,62 @@ export const MapView = memo(function MapView({
   const thumbRafRef = useRef<number | null>(null)
 
   const placeIds = useMemo(() => places.map(p => p.id).join(','), [places])
-  // Flattened [lat,lng] points of the selected day's route, so the bounds fit can
-  // include the full polyline once it has been computed.
-  const routeCoords = useMemo<[number, number][]>(() => (route || []).flat() as [number, number][], [route])
+  // Normalize route data to a flat list of { segment: [coord..], dayIndex }.
+  // Handles per-day routes ([seg][coords]), multi-day trip routes ([day][seg][coords]),
+  // and edge cases where shape detection is ambiguous.
+  const normalizedRouteSegments = useMemo<
+    { segment: [number, number][]; dayIndex: number }[]
+  >(() => {
+    if (!route || route.length === 0) return []
+    // Check depth: is this [day][seg][coords] (depth 3+) or [seg][coords] (depth 2)?
+    // Heuristic: if route[0][0] exists and route[0][0][0] is a number, we're at
+    // segment level directly. If route[0][0] is an array whose first element is ALSO
+    // an array of numbers, we have one more nesting level.
+    const first = route[0]
+    if (!Array.isArray(first)) return []
+    const firstSub = first[0]
+    let depth3 = false
+    if (Array.isArray(firstSub) && firstSub.length > 0 && Array.isArray(firstSub[0])) {
+      // Could be [day][seg][coords] OR [seg][coords] where each "segment" is actually coords.
+      // Distinguish: in [seg][coords], firstSub[0] = [lat, lng] (numbers).
+      // In [day][seg][coords], firstSub[0] = [lat, lng] too — same shape!
+      // But if route has >1 top-level element AND each sub-element also has >1 child,
+      // it's more likely multi-day. However the safest approach: check if treating as
+      // depth-3 produces valid segments.
+      // Heuristic: if firstSub.length >= 2 && firstSub[0].length >= 2 (multiple coords per seg)
+      // AND route.length matches expected day count pattern, treat as multi-day.
+      // SAFEST FIX: try depth-3 first; if it yields zero valid segments, fall back to depth-2.
+      const testDepth3 = route.flatMap((daySegs, di) =>
+        Array.isArray(daySegs)
+          ? (daySegs as [number, number][][]).flatMap(seg =>
+              Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+                ? [{ segment: seg as [number, number][], dayIndex: di }]
+                : []
+            )
+          : []
+      )
+      if (testDepth3.length > 0) {
+        depth3 = true
+        return testDepth3
+      }
+    }
+    // Depth-2 fallback (per-day route)
+    const result = (route as [number, number][][]).flatMap(seg =>
+      Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+        ? [{ segment: seg as [number, number][], dayIndex: 0 }]
+        : []
+    )
+    // Single-day routes have all segments at dayIndex 0; remap to the actual selected day
+    // so per-day route lines use the correct color (Issue #2)
+    if (result.length > 0 && result.every(s => s.dayIndex === 0) && selectedDayIndex !== null && selectedDayIndex >= 0) {
+      result.forEach(s => { s.dayIndex = selectedDayIndex })
+    }
+    return result
+  }, [route])
+
+  // Flattened [lat,lng] points for bounds fitting.
+  const routeCoords = useMemo<[number, number][]>
+    (() => normalizedRouteSegments.flatMap(s => s.segment), [normalizedRouteSegments])
   useEffect(() => {
     if (!places || places.length === 0 || !placesPhotosEnabled) return
     const cleanups: (() => void)[] = []
@@ -604,6 +830,28 @@ export const MapView = memo(function MapView({
     const pck = place.google_place_id || place.osm_id || `${place.lat},${place.lng}`
     const photoUrl = (pck && photoUrls[pck]) || place.image_url || null
     const orderNumbers = dayOrderMap[place.id] ?? null
+
+    // resolve the day assignment for this place.
+    // placeDayMap can hold a single {dayIndex,orderNumber} or an array (multi-day places).
+    let dayInfo: { dayIndex: number; orderNumber: number } | null = null
+    const raw = placeDayMap[place.id]
+    if (raw) {
+      if (Array.isArray(raw)) {
+        // When a specific day is selected, use that assignment;
+        // otherwise fall back to the earliest (first in array).
+        dayInfo = selectedDayIndex !== null
+          ? (raw.find((a: any) => a.dayIndex === selectedDayIndex) ?? raw[0]) || null
+          : raw[0] || null
+      } else {
+        dayInfo = raw as { dayIndex: number; orderNumber: number }
+      }
+    }
+
+    // Multi-day accommodation pie chart: extract distinct day indices.
+    const accommodationDayIndices = (!accommodationPlaceIds?.has(place.id) || !raw || !Array.isArray(raw))
+      ? undefined
+      : Array.from(new Set((raw as any[]).map((a: any) => a.dayIndex))).sort((a, b) => a - b)
+
     return (
       <MemoMarker
         key={place.id}
@@ -614,9 +862,15 @@ export const MapView = memo(function MapView({
         onClickPlace={handleMarkerClick}
         onHover={handleMarkerHover}
         onHoverOut={handleMarkerHoverOut}
+        useDayColors={useDayColors}
+        dayInfo={dayInfo}
+        accommodationDayIndices={accommodationDayIndices}
+        accommodationPlaceIds={accommodationPlaceIds}
       />
     )
-  }), [places, selectedPlaceId, dayOrderMap, photoUrls, handleMarkerClick, handleMarkerHover, handleMarkerHoverOut])
+  }), [places, selectedPlaceId, dayOrderMap, photoUrls, handleMarkerClick,
+       handleMarkerHover, handleMarkerHoverOut, placeDayMap, useDayColors,
+       selectedDayIndex, accommodationPlaceIds])
 
   const gpxPolylines = useMemo(() => places.flatMap(place => {
     if (!place.route_geometry) return []
@@ -671,6 +925,7 @@ export const MapView = memo(function MapView({
 
       <MapController center={center} zoom={zoom} />
       <BoundsController places={dayPlaces.length > 0 ? dayPlaces : places} routeCoords={dayPlaces.length > 0 ? routeCoords : []} fitKey={fitKey} paddingOpts={paddingOpts} hasDayDetail={hasDayDetail} />
+      <FitAllController allPlaces={allPlaces} fitAllKey={fitAllKey} paddingOpts={paddingOpts} />
       <SelectionController places={places} selectedPlaceId={selectedPlaceId} dayPlaces={dayPlaces} paddingOpts={paddingOpts} />
       <MapClickHandler onClick={onMapClick} />
       <MapContextMenuHandler onContextMenu={onMapContextMenu} />
@@ -678,34 +933,57 @@ export const MapView = memo(function MapView({
       <ViewportController onViewportChange={onViewportChange} />
       <LeafletLocationLayer position={userPosition} mode={trackingMode} />
 
-      <MarkerClusterGroup
-        chunkedLoading
-        chunkInterval={30}
-        chunkDelay={0}
-        maxClusterRadius={30}
-        disableClusteringAtZoom={11}
-        spiderfyOnMaxZoom
-        showCoverageOnHover={false}
-        zoomToBoundsOnClick
-        animate={false}
-        iconCreateFunction={clusterIconCreateFunction}
-      >
-        {markers}
-      </MarkerClusterGroup>
+      {disableClustering ? markers : (
+        <MarkerClusterGroup
+          chunkedLoading
+          chunkInterval={30}
+          chunkDelay={0}
+          maxClusterRadius={30}
+          disableClusteringAtZoom={11}
+          spiderfyOnMaxZoom
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick
+          animate={false}
+          iconCreateFunction={clusterIconCreateFunction}
+        >
+          {markers}
+        </MarkerClusterGroup>
+      )}
 
-      {/* Apple-Maps style: darker-blue casing under a bright-blue core, rounded. */}
-      {route && route.length > 0 && route.flatMap((seg, i) => seg.length > 1 ? [
-        <Polyline
-          key={`${i}-casing`}
-          positions={seg}
-          pathOptions={{ color: '#0a5cc2', weight: 8, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
-        />,
-        <Polyline
-          key={`${i}-core`}
-          positions={seg}
-          pathOptions={{ color: '#0a84ff', weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round' }}
-        />,
-      ] : [])}
+      {/* Apple-Maps style: casing under core, rounded.
+         * per-day route color when Day Colors toggle ON + single day selected
+         * multi-color trip routes — each day's segments in its own palette color
+         * use normalizedRouteSegments to avoid shape detection crash
+         */}
+      {normalizedRouteSegments.length > 0 && normalizedRouteSegments.flatMap(
+        ({ segment, dayIndex }, segIdx) => {
+          const color = useDayColors ? getDayColor(dayIndex) : routeColor
+          return [
+            <Polyline
+              key={`seg-${segIdx}-casing`}
+              positions={segment}
+              pathOptions={{
+                color,
+                weight: 8,
+                opacity: casingOpacity,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />,
+            <Polyline
+              key={`seg-${segIdx}-core`}
+              positions={segment}
+              pathOptions={{
+                color,
+                weight: 5,
+                opacity: 1,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />,
+          ]
+        }
+      )}
 
       {/* GPX imported route geometries */}
       {gpxPolylines}

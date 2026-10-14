@@ -7,7 +7,7 @@ export function getDistanceUnitLabel(unit: DistanceUnit): 'km' | 'mi' {
   return unit === 'imperial' ? 'mi' : 'km'
 }
 
-/** Formats an elevation in metres as feet for imperial, so it doesn't mix with mi distances. */
+/** Formats an elevation in metres as feet for imperial, so it doesn't mix with mi distances.*/
 export function formatElevation(meters: number, unit: DistanceUnit): string {
   const safe = Number.isFinite(meters) ? meters : 0
   return unit === 'imperial' ? `${Math.round(safe * M_TO_FT)} ft` : `${Math.round(safe)} m`

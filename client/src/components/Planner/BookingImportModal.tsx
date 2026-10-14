@@ -21,7 +21,7 @@ const MAX_FILES = 5
  * the parse runs server-side and is tracked by the global BackgroundTasksWidget
  * (progress over the WebSocket). When it finishes, the trip page opens the per-item
  * review flow — so the user can navigate and keep editing while it works.
- */
+*/
 export default function BookingImportModal({ isOpen, onClose, tripId }: BookingImportModalProps) {
   const { t } = useTranslation()
   const addTask = useBackgroundTasksStore((s) => s.addTask)

@@ -6,7 +6,7 @@
  *   - What to store: a map-tiles toggle plus a per-trip on/off.
  *   - Sync conflicts: a keep-mine / keep-theirs resolver and a default strategy.
  *   - Cache stats + clear.
- */
+*/
 import React, { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Trash2, Database, CloudOff, Download, Check, GitMerge, Map as MapIcon } from 'lucide-react'
 import Section from './Section'

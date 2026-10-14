@@ -62,5 +62,6 @@ const planner: TranslationStrings = {
   'planner.keepPosition': '路線最佳化時保持位置',
   'planner.dayDetails': '日程詳情',
   'planner.dayN': '第 {n} 天',
+  'planner.exportAllStops': '导出所有站点',
 };
 export default planner;

@@ -9,7 +9,7 @@ import { useTranslation } from '../i18n'
  * Full-page host for a `page` plugin (#plugins, M3). Thin by design (no state /
  * effects — the page-pattern rule): it resolves the plugin from the store and
  * renders its sandboxed iframe; PluginFrame owns the bridge.
- */
+*/
 export default function PluginPage(): React.ReactElement {
   const { pluginId = '' } = useParams()
   const { t } = useTranslation()

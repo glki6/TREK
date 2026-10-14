@@ -4,7 +4,7 @@ import { X, RefreshCw, Calendar, Power } from 'lucide-react'
 import { SubscribeLinks } from './SubscribeLinks'
 
 interface IcsSubscribeModalProps {
-  /** Token endpoint base, e.g. `/api/trips/123/feed` or `/api/feed/user`. */
+  /** Token endpoint base, e.g. `/api/trips/123/feed` or `/api/feed/user`.*/
   endpoint: string
   title: string
   description: string
@@ -25,7 +25,7 @@ function absolutize(url: string): string {
  * Shared subscribe dialog for the per-trip and all-trips ICS feeds. Opening it
  * only *reads* the current token — it never mints one silently. The user
  * explicitly enables the public link, and can rotate or fully turn it off.
- */
+*/
 export function IcsSubscribeModal({ endpoint, title, description, onClose }: IcsSubscribeModalProps) {
   const tokenUrl = `${endpoint}/token`
   const [feedUrl, setFeedUrl] = useState<string | null>(null)

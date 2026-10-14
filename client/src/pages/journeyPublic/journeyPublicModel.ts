@@ -2,7 +2,7 @@
  * Shared types + pure helpers for the public (read-only) journey share page.
  * No React, no side effects — safe to import from both the data hook and the
  * presentational page.
- */
+*/
 
 export interface PublicEntry {
   id: number

@@ -16,7 +16,7 @@ import type { JourneyEntry } from '../../store/journeyStore'
  * map/trip-date derivations. JourneyDetailPage stays a wiring container around
  * its large two-pane JSX and many presentational sub-components.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useJourneyDetail() {
   const { id } = useParams()
   const navigate = useNavigate()

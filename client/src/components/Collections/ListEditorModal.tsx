@@ -20,11 +20,11 @@ interface CoverSearchPhoto {
 const SWATCHES = ['#6366f1', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#ef4444', '#3b82f6', '#22c55e']
 
 interface ListEditorModalProps {
-  /** null = closed, 'new' = create, a Collection = edit that list. */
+  /** null = closed, 'new' = create, a Collection = edit that list.*/
   target: Collection | 'new' | null
   onClose: () => void
   onCreated: (id: number) => void
-  /** Owner-only: hand off to the delete-confirm flow when editing a list. */
+  /** Owner-only: hand off to the delete-confirm flow when editing a list.*/
   onRequestDelete: (id: number) => void
   t: TranslationFn
 }
@@ -33,7 +33,7 @@ interface ListEditorModalProps {
  * Create / edit a list — name, colour, an optional cover image (tinted with the
  * list colour in the hero), a description and a set of links. On create it makes
  * the list then uploads the cover to the new id; on edit it patches + re-uploads.
- */
+*/
 export default function ListEditorModal({ target, onClose, onCreated, onRequestDelete, t }: ListEditorModalProps): React.ReactElement | null {
   const createCollection = useCollectionStore(s => s.createCollection)
   const updateCollection = useCollectionStore(s => s.updateCollection)

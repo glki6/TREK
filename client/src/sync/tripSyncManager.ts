@@ -9,7 +9,7 @@
  *   - login success
  *   - trip list refresh (DashboardPage)
  *   - WS reconnect (phase 7)
- */
+*/
 import { tripsApi, tagsApi, categoriesApi } from '../api/client'
 import {
   offlineDb,
@@ -80,7 +80,7 @@ function isVideo(file: TripFile): boolean {
 
 // ── Core logic ────────────────────────────────────────────────────────────────
 
-/** Fetch bundle + write all entities for one trip into Dexie. */
+/** Fetch bundle + write all entities for one trip into Dexie.*/
 async function syncTrip(tripId: number): Promise<void> {
   const bundle = await tripsApi.bundle(tripId) as TripBundle
 
@@ -103,7 +103,7 @@ async function syncTrip(tripId: number): Promise<void> {
   })
 }
 
-/** Cache non-photo file blobs for a trip. Fire-and-forget safe. */
+/** Cache non-photo file blobs for a trip. Fire-and-forget safe.*/
 async function cacheFilesForTrip(files: TripFile[]): Promise<void> {
   const nonPhotos = files.filter(f => f.url && !isPhoto(f) && !isVideo(f))
   let cached = 0
@@ -137,15 +137,15 @@ async function cacheFilesForTrip(files: TripFile[]): Promise<void> {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-/** Progress callback payload for a {@link tripSyncManager.prepareForOffline} run. */
+/** Progress callback payload for a {@link tripSyncManager.prepareForOffline} run.*/
 export interface PrepareProgress {
-  /** Current stage. 'done' fires once at the end. */
+  /** Current stage. 'done' fires once at the end.*/
   phase: 'trips' | 'files' | 'tiles' | 'done'
-  /** 1-based index of the trip currently processed in this phase. */
+  /** 1-based index of the trip currently processed in this phase.*/
   current: number
-  /** Total trips to process in this phase. */
+  /** Total trips to process in this phase.*/
   total: number
-  /** Name of the trip currently processed (for the UI). */
+  /** Name of the trip currently processed (for the UI).*/
   label?: string
 }
 
@@ -155,7 +155,7 @@ let _syncing = false
  * Decide which trips to cache and which to drop, honouring both the date rule
  * and the user's per-trip offline choices (#1135 ask 2). Returns the trips to
  * sync; clears Dexie for stale or user-disabled trips as a side effect.
- */
+*/
 async function reconcileTrips(trips: Trip[]): Promise<Trip[]> {
   const stale = trips.filter(isStale)
   // Trips the user turned off explicitly are evicted regardless of date.
@@ -169,7 +169,7 @@ export const tripSyncManager = {
    * Sync all cache-eligible trips.
    * Evicts stale and user-disabled trips. Caches file blobs + map tiles in the
    * background. No-ops when offline.
-   */
+*/
   async syncAll(): Promise<void> {
     if (_syncing || !navigator.onLine || !isAuthed()) return
     _syncing = true
@@ -214,7 +214,7 @@ export const tripSyncManager = {
    * resolving the moment the requests are merely dispatched.
    *
    * Returns the number of trips prepared.
-   */
+*/
   async prepareForOffline(onProgress?: (p: PrepareProgress) => void): Promise<number> {
     if (_syncing || !navigator.onLine || !isAuthed()) return 0
     _syncing = true
@@ -266,7 +266,7 @@ export const tripSyncManager = {
     }
   },
 
-  /** Reset syncing flag — useful in tests. */
+  /** Reset syncing flag — useful in tests.*/
   _resetSyncing(): void {
     _syncing = false
   },

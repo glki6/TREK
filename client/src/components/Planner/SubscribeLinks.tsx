@@ -10,7 +10,7 @@ interface SubscribeLinksProps {
  * Shared presentation for calendar subscription URLs. Renders one-click
  * subscribe actions (Google deep link + webcal handoff) plus a copy fallback.
  * Used by both the per-trip and all-trips subscribe modals.
- */
+*/
 export function SubscribeLinks({ httpsUrl, webcalUrl }: SubscribeLinksProps) {
   const [copied, setCopied] = useState<'https' | 'webcal' | null>(null)
 

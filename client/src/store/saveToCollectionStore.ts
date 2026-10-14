@@ -6,7 +6,7 @@ import { create } from 'zustand'
  * from a trip, plus the maps identity used both to save and to dedup. Every
  * field is optional except the name so the same target shape works for a trip
  * pool place, a day-assignment place or a manually entered one.
- */
+*/
 export interface SaveToCollectionTarget {
   name: string
   source_trip_id?: number | null
@@ -28,10 +28,10 @@ export interface SaveToCollectionTarget {
 }
 
 interface SaveToCollectionState {
-  /** The place currently shown in the picker, or null when it is closed. */
+  /** The place currently shown in the picker, or null when it is closed.*/
   target: SaveToCollectionTarget | null
   /** Bumped after every add/remove so other surfaces (the inspector bookmark
-   *  indicator) can re-check membership without prop threading. */
+   *  indicator) can re-check membership without prop threading.*/
   version: number
   open: (target: SaveToCollectionTarget) => void
   close: () => void

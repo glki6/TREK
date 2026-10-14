@@ -22,7 +22,7 @@ import type { Place, Category, Day, Assignment, Reservation, TripFile, Assignmen
 import type { CollectionStatus } from '@trek/shared'
 import { splitReservationDateTime, formatTime } from '../../utils/formatters'
 import { formatDistance, formatElevation } from '../../utils/units'
-import { getGoogleMapsUrlForPlace } from './placeGoogleMaps'
+import { getGoogleMapsUrlForPlace, openMapsFallback } from './placeGoogleMaps'
 import { getOpenStreetMapUrlForPlace } from './placeOpenStreetMap'
 
 const detailsCache = new Map()
@@ -109,7 +109,7 @@ interface PlaceInspectorProps {
   categories: Category[]
   /** 'trip' (default) keeps every existing trip-planner behaviour byte-identical;
    *  'collection' hides the day/reservation/file sub-panels and swaps the footer
-   *  for the saved-place actions (copy to trip, status, remove from list). */
+   *  for the saved-place actions (copy to trip, status, remove from list).*/
   mode?: 'trip' | 'collection'
   // ── Trip-only props (optional so the collection detail panel can omit them) ──
   days?: Day[]
@@ -251,10 +251,7 @@ export default function PlaceInspector({
   const openingHours = googleDetails?.opening_hours || null
   const openNow = googleDetails?.open_now ?? null
   // Prefer the place's stored ftid; if it has none yet, use the one just fetched from Google.
-  const googleMapsUrl = getGoogleMapsUrlForPlace(
-    place ? { ...place, google_ftid: place.google_ftid || googleDetails?.google_ftid || null } : null,
-    googleDetails?.google_maps_url,
-  )
+  const googleMapsUrl = getGoogleMapsUrlForPlace(place)
   const openStreetMapUrl = getOpenStreetMapUrlForPlace(place)
   const selectedDay = days?.find(d => d.id === selectedDayId)
   const weekdayIndex = getWeekdayIndex(selectedDay?.date)
@@ -429,11 +426,18 @@ export default function PlaceInspector({
               label={<span className="hidden sm:inline">{savedInCollection ? t('inspector.savedToCollection') : t('inspector.saveToCollection')}</span>} />
           )}
           {googleMapsUrl && (
-            <ActionButton onClick={() => window.open(googleMapsUrl, '_blank')} variant="ghost" icon={<Navigation size={13} />}
+            <ActionButton onClick={() => openMapsFallback(googleMapsUrl)} variant="ghost" icon={<Navigation size={13} />}
               label={<span className="hidden sm:inline">{t('inspector.google')}</span>} />
           )}
           {openStreetMapUrl && (
-            <ActionButton onClick={() => window.open(openStreetMapUrl, '_blank')} variant="ghost" icon={<MapIcon size={13} />}
+            <ActionButton onClick={() => {
+              // If both URLs are the same HTTPS URL, open directly (bypass deep-link fallback)
+              if (openStreetMapUrl.native === openStreetMapUrl.https) {
+                window.open(openStreetMapUrl.https, '_blank')
+              } else {
+                openMapsFallback(openStreetMapUrl)
+              }
+            }} variant="ghost" icon={<MapIcon size={13} />}
               label={<span className="hidden sm:inline">{t('inspector.openStreetMap')}</span>} />
           )}
           {(place.website || googleDetails?.website) && (

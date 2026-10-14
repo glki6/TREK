@@ -19,7 +19,7 @@ const SAFE_INLINE_TYPES = new Set([
  * Asserts that `url` is a relative same-origin path so that
  * `credentials: 'include'` cannot be used to send the session cookie to an
  * external host (e.g. if an attacker somehow controls the `url` value).
- */
+*/
 function assertRelativeUrl(url: string): void {
   if (!url.startsWith('/') || url.startsWith('//') || url.startsWith('/\\')) {
     throw new Error(`Refusing to fetch non-relative URL: ${url}`)
@@ -49,7 +49,7 @@ function isIosStandalone(): boolean {
  * straight to the cache; when online we fetch live and only fall back if the
  * network actually fails — which also covers flaky links where navigator.onLine
  * still reports true ("sometimes it works, sometimes it doesn't").
- */
+*/
 async function getFileBlob(url: string): Promise<Blob> {
   assertRelativeUrl(url)
   if (typeof navigator !== 'undefined' && isEffectivelyOffline()) {
@@ -79,7 +79,7 @@ async function getFileBlob(url: string): Promise<Blob> {
  * fetch stays in the PWA's WebView rather than handing off to the system
  * browser (which would lose the session cookie). Falls back to the offline
  * cache when the network is unavailable.
- */
+*/
 export async function downloadFile(url: string, filename?: string): Promise<void> {
   const blob = await getFileBlob(url)
   const blobUrl = URL.createObjectURL(blob)
@@ -102,7 +102,7 @@ export async function downloadFile(url: string, filename?: string): Promise<void
  * — i.e. the file opened twice. The anchor approach avoids that ambiguity:
  * the new tab is opened by the browser's normal link-handling path, and no
  * spurious in-page download is triggered.
- */
+*/
 export async function openFile(url: string, filename?: string): Promise<void> {
   const blob = await getFileBlob(url)
   const blobUrl = URL.createObjectURL(blob)

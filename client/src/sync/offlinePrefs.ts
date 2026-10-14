@@ -15,7 +15,7 @@
  *   conflictStrategy  — what to do when an offline edit collides with a newer
  *                       server change: 'ask' surfaces a per-conflict picker,
  *                       'mine'/'server' resolve automatically.
- */
+*/
 
 export type ConflictStrategy = 'ask' | 'mine' | 'server'
 
@@ -57,7 +57,7 @@ function write(next: OfflinePrefs): void {
   listeners.forEach(fn => { try { fn() } catch { /* isolate listeners */ } })
 }
 
-/** Current snapshot (a copy — callers must not mutate it in place). */
+/** Current snapshot (a copy — callers must not mutate it in place).*/
 export function getOfflinePrefs(): OfflinePrefs {
   return { ..._prefs, disabledTripIds: [..._prefs.disabledTripIds] }
 }
@@ -72,12 +72,12 @@ export function setConflictStrategy(strategy: ConflictStrategy): void {
   write({ ..._prefs, conflictStrategy: strategy })
 }
 
-/** True when this trip should be cached offline (i.e. not explicitly disabled). */
+/** True when this trip should be cached offline (i.e. not explicitly disabled).*/
 export function isTripOfflineEnabled(tripId: number): boolean {
   return !_prefs.disabledTripIds.includes(tripId)
 }
 
-/** Turn offline storage for a single trip on or off. */
+/** Turn offline storage for a single trip on or off.*/
 export function setTripOfflineEnabled(tripId: number, on: boolean): void {
   const has = _prefs.disabledTripIds.includes(tripId)
   if (on && !has) return
@@ -88,13 +88,13 @@ export function setTripOfflineEnabled(tripId: number, on: boolean): void {
   write({ ..._prefs, disabledTripIds })
 }
 
-/** Subscribe to preference changes. Returns an unsubscribe function. */
+/** Subscribe to preference changes. Returns an unsubscribe function.*/
 export function onOfflinePrefsChange(fn: () => void): () => void {
   listeners.add(fn)
   return () => listeners.delete(fn)
 }
 
-/** Reset to defaults — test helper only. */
+/** Reset to defaults — test helper only.*/
 export function _resetOfflinePrefs(): void {
   _prefs = { ...DEFAULTS }
   listeners.clear()

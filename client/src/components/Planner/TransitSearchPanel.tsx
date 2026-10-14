@@ -17,7 +17,7 @@ import type { Day, Place, Accommodation } from '../../types'
  * one to the day. The result is saved as a regular transport reservation
  * (endpoints + metadata.transit), so timeline slotting, editing, deleting and
  * drag/drop all reuse the existing machinery.
- */
+*/
 
 // ── transit data shapes (mirrors the server's compact mapping) ──────────────
 
@@ -61,7 +61,7 @@ function tzAt(lat: number, lng: number): string {
   try { return tzlookup(lat, lng) } catch { return 'UTC' }
 }
 
-/** 'YYYY-MM-DD' + 'HH:mm' in an IANA zone → UTC ISO string. */
+/** 'YYYY-MM-DD' + 'HH:mm' in an IANA zone → UTC ISO string.*/
 function localToUtcIso(dateStr: string, timeStr: string, tz: string): string {
   const naive = Date.parse(`${dateStr}T${timeStr}:00Z`)
   const inTz = new Date(new Date(naive).toLocaleString('en-US', { timeZone: tz })).getTime()
@@ -311,9 +311,9 @@ interface TransitSearchPanelProps {
   days: Day[]
   places: Place[]
   accommodations?: Accommodation[]
-  /** Persist the built reservation payload; resolves when saved. */
+  /** Persist the built reservation payload; resolves when saved.*/
   onAdd: (payload: Record<string, unknown>) => Promise<unknown>
-  /** Pre-seed from/to — used by "change route" on an existing journey. */
+  /** Pre-seed from/to — used by "change route" on an existing journey.*/
   initialFrom?: PickedPlace | null
   initialTo?: PickedPlace | null
 }

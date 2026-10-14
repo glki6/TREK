@@ -31,7 +31,7 @@ export function greatCircle(a: [number, number], b: [number, number], steps = 25
  * map. Carrying a running offset keeps each Δlng under 180°, at the cost of
  * longitudes leaving the [-180, 180] range (both map libraries project those
  * linearly, which is exactly what makes the wrap seamless).
- */
+*/
 export function unwrapLngs(points: [number, number][]): [number, number][] {
   let offset = 0
   return points.map(([lat, lng], i) => {
@@ -51,7 +51,7 @@ export function unwrapLngs(points: [number, number][]): [number, number][] {
  * copies), a ±360-shifted duplicate keeps both halves visible in the
  * standard [-180, 180] view; GL maps repeat features themselves
  * (renderWorldCopies), so the duplicate would just double the line opacity.
- */
+*/
 export function geodesicArcs(a: [number, number], b: [number, number], wrapCopies: boolean): [number, number][][] {
   const arc = unwrapLngs(greatCircle(a, b))
   const crosses = arc.some(([, lng]) => lng < -180 || lng > 180)

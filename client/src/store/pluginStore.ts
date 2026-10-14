@@ -6,7 +6,7 @@ import { pluginsApi } from '../api/client'
  * entries + a full-page iframe route; widget plugins mount on the dashboard.
  * Cloned from addonStore — plugins have their own feed and lifecycle, so they
  * don't overload the addon store.
- */
+*/
 export interface ActivePlugin {
   id: string
   name: string

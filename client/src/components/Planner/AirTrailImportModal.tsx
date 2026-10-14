@@ -15,7 +15,7 @@ interface AirTrailImportModalProps {
   pushUndo?: (label: string, undoFn: () => Promise<void> | void) => void
 }
 
-/** Locale-aware date (e.g. de → 13.06.2026, en-US → 06/13/2026). */
+/** Locale-aware date (e.g. de → 13.06.2026, en-US → 06/13/2026).*/
 function fmtDate(d: string | null, locale: string): string {
   if (!d) return ''
   try {

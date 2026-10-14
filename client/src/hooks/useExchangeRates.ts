@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
  * for the dashboard widget) for the given base and caches per base in memory +
  * localStorage for a few hours. rates[X] = units of X per 1 base, so an amount in
  * currency C converts to base as `amount / rates[C]`.
- */
+*/
 
 const TTL_MS = 6 * 60 * 60 * 1000 // 6h
 const mem = new Map<string, { rates: Record<string, number>; ts: number }>()

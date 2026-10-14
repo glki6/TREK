@@ -44,7 +44,7 @@ const CARD_OPEN = '<div style="font-family:var(--font-system);max-width:220px;">
 const NAME_STYLE = 'font-weight:600;font-size:12.5px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
 const ADDR_STYLE = 'font-size:11px;color:#9ca3af;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
 
-/** Hover-popup card for a planned place: optional photo, name, category row, address. */
+/** Hover-popup card for a planned place: optional photo, name, category row, address.*/
 export function buildPlacePopupHtml(place: PlaceWithCategory, photoUrl: string | null): string {
   const img = isDisplayablePhoto(photoUrl)
     ? `<div style="width:100%;height:84px;border-radius:8px;overflow:hidden;margin-bottom:6px;background:#f3f4f6;"><img src="${esc(photoUrl)}" style="width:100%;height:100%;object-fit:cover;display:block;" /></div>`
@@ -57,7 +57,7 @@ export function buildPlacePopupHtml(place: PlaceWithCategory, photoUrl: string |
   return `${CARD_OPEN}${img}<div style="${NAME_STYLE}">${esc(place.name)}</div>${category}${address}</div>`
 }
 
-/** Hover-popup card for an OSM "explore" POI: category-coloured icon, name, address. */
+/** Hover-popup card for an OSM "explore" POI: category-coloured icon, name, address.*/
 export function buildPoiPopupHtml(poi: Poi): string {
   const cat = POI_CATEGORY_BY_KEY[poi.category]
   const color = cat?.color || '#6b7280'

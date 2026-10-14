@@ -3,7 +3,7 @@ import { weatherApi, accommodationsApi } from '../../api/client'
 import { isDayInAccommodationRange } from '../../utils/dayOrder'
 
 /** Day-detail data + accommodation logic: weather load, accommodations list,
- *  hotel picker form state and create/update/delete handlers. */
+ *  hotel picker form state and create/update/delete handlers.*/
 export function useDayDetail(day: any, days: any, tripId: any, lat: any, lng: any, language: any, onAccommodationChange: any) {
   const [weather, setWeather] = useState(null)
   const [loading, setLoading] = useState(false)

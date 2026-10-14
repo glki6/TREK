@@ -4,7 +4,7 @@ import type { TodoItem } from '../../types'
 import { katColor, PRIO_CONFIG, type Member } from './todoListModel'
 
 /** A single task row in the todo list. Pure presentation; all behaviour is
- *  delegated to onSelect/onToggle so TodoListPanel stays a layout component. */
+ *  delegated to onSelect/onToggle so TodoListPanel stays a layout component.*/
 export default function TodoRow({ item, members, categories, today, isSelected, canEdit, formatDate, onSelect, onToggle, drag }: {
   item: TodoItem
   members: Member[]

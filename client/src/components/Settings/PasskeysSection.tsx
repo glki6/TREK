@@ -6,7 +6,7 @@ import { useToast } from '../shared/Toast'
 import { authApi, type PasskeyCredential } from '../../api/client'
 import { getApiErrorMessage } from '../../types'
 
-/** Parse a SQLite UTC timestamp ("YYYY-MM-DD HH:MM:SS") into a local date string. */
+/** Parse a SQLite UTC timestamp ("YYYY-MM-DD HH:MM:SS") into a local date string.*/
 function fmtDate(ts: string | null): string | null {
   if (!ts) return null
   const iso = ts.includes('T') ? ts : ts.replace(' ', 'T')
@@ -14,7 +14,7 @@ function fmtDate(ts: string | null): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString()
 }
 
-/** True when the browser cancellation / no-matching-credential DOMExceptions fire. */
+/** True when the browser cancellation / no-matching-credential DOMExceptions fire.*/
 function isWebauthnAbort(err: unknown): boolean {
   const name = (err as { name?: string })?.name
   return name === 'NotAllowedError' || name === 'AbortError'
@@ -26,7 +26,7 @@ function isWebauthnAbort(err: unknown): boolean {
  * The "Add a passkey" action only appears when the instance toggle is on AND a
  * usable RP ID resolves; the existing-credential list stays reachable even when
  * the feature is later disabled so users can always clean up.
- */
+*/
 export default function PasskeysSection({ demoMode }: { demoMode?: boolean }): React.ReactElement | null {
   const { t } = useTranslation()
   const toast = useToast()

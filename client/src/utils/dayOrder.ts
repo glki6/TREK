@@ -43,6 +43,38 @@ export const getDayBookendHotels = (
 // Derives route anchors from the accommodation(s) active on a day. A single hotel is the day's home
 // base, so the route is a loop that starts and ends there. A transfer day — checking out of one hotel
 // and into another — instead runs from the morning hotel to the evening one.
+export const isArrivalDay = (day: Day, days: Day[], accommodations: Accommodation[]): boolean => {
+  const inRange = accommodations.filter(a => a.place_lat != null && a.place_lng != null && isDayInAccommodationRange(day, a.start_day_id, a.end_day_id, days))
+  if (inRange.length === 0) return false
+  const dayOrd = getDayOrder(day, days)
+  const orderOf = (id: number) => { const d = days.find(x => x.id === id); return d ? getDayOrder(d, days) : dayOrd }
+  const sleptHere = inRange.find(a => orderOf(a.start_day_id) < dayOrd)
+  return sleptHere == null
+}
+
+// A departure day is the last night at an accommodation — you check out in the morning
+// and head to your next destination, so no return leg should be drawn back to it.
+export const isDepartureDay = (
+  day: Day,
+  days: Day[],
+  accommodations: Accommodation[],
+): boolean => {
+  const inRange = accommodations.filter(a =>
+    a.place_lat != null && a.place_lng != null &&
+    isDayInAccommodationRange(day, a.start_day_id, a.end_day_id, days),
+  )
+  if (inRange.length === 0) return false
+  const dayOrd = getDayOrder(day, days)
+  const orderOf = (id: number) => {
+    const d = days.find(x => x.id === id)
+    return d ? getDayOrder(d, days) : dayOrd
+  }
+  // If any accommodation extends past today → you're staying overnight → NOT departure.
+  // If all accommodations end exactly today → you're leaving → IS departure.
+  const staysOvernight = inRange.find(a => orderOf(a.end_day_id) > dayOrd)
+  return staysOvernight == null
+}
+
 export const getAccommodationAnchors = (
   day: Day,
   days: Day[],

@@ -22,7 +22,7 @@ type PageState = 'loading' | 'login_required' | 'consent' | 'auto_approving' | '
  * the requested-scope selection and the login/redirect plumbing. The page reads
  * the query string once here so the controller stays a pure renderer.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useOAuthAuthorize() {
   const { t } = useTranslation()
   const { isAuthenticated, isLoading: authLoading, loadUser } = useAuthStore()

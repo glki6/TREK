@@ -66,7 +66,7 @@ export function currencyLocale(currency: string): string {
  * thousands/decimal separators and decimal count all follow the user's locale
  * and the currency itself (e.g. de-DE EUR → "1.234,56 €", en-US USD → "$1,234.56",
  * ja-JP JPY → "￥1,235"). Falls back to a "<number> CODE" suffix for unknown codes.
- */
+*/
 export function formatMoney(
   value: number,
   currency: string,
@@ -137,7 +137,7 @@ export function splitReservationDateTime(value?: string | null): { date: string 
  * Resolve a date (YYYY-MM-DD or an ISO timestamp) to a trip day id: exact match, else the
  * nearest day so an out-of-range booking still lands on one. Returns '' when there is no
  * usable date or the trip has no days — callers read that as "no day selected".
- */
+*/
 export function resolveDayId(days: Day[], value: string | null | undefined): Day['id'] | '' {
   const date = value ? String(value).slice(0, 10) : ''
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || days.length === 0) return ''

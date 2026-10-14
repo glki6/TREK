@@ -10,7 +10,7 @@ export function isVideo(mimeType?: string | null) {
   return !!mimeType && mimeType.startsWith('video/')
 }
 
-/** Image or video — the file types that open in the media lightbox (#823). */
+/** Image or video — the file types that open in the media lightbox (#823).*/
 export function isMedia(mimeType?: string | null) {
   return isImage(mimeType) || isVideo(mimeType)
 }
@@ -19,7 +19,7 @@ export function isMedia(mimeType?: string | null) {
  * Markdown file (#1345). Detected by EXTENSION first — browsers often send an
  * empty / octet-stream / text/plain MIME for .md — falling back to the markdown
  * MIME types.
- */
+*/
 export function isMarkdown(mimeType?: string | null, name?: string | null) {
   const ext = (name || '').toLowerCase().split('.').pop()
   if (ext === 'md' || ext === 'markdown') return true
@@ -31,7 +31,7 @@ export function isMarkdown(mimeType?: string | null, name?: string | null) {
  * empty / octet-stream MIME for .pkpass — falling back to the wallet MIME types.
  * Wallet passes must be downloaded so the OS hands them to Apple Wallet rather
  * than rendered in the in-app PDF preview.
- */
+*/
 export function isWalletPass(mimeType?: string | null, name?: string | null) {
   const ext = (name || '').toLowerCase().split('.').pop()
   if (ext === 'pkpass' || ext === 'pkpasses') return true

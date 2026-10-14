@@ -41,7 +41,7 @@ export interface PackingListPanelProps {
  * template apply/save + bulk CSV import flows (driven by signal props). The
  * sections below render header, filters, the grouped list, the bag sidebar/
  * modal and the import dialog.
- */
+*/
 export function usePackingList({ tripId, items, openImportSignal = 0, clearCheckedSignal = 0, saveTemplateSignal = 0, inlineHeader = true }: PackingListPanelProps) {
   const [filter, setFilter] = useState('alle') // 'alle' | 'offen' | 'erledigt'
   // Three-tier sharing (#858): 'common' = the group pool (where existing items

@@ -15,6 +15,7 @@ import { useTransportRoutes } from '../../hooks/useTransportRoutes'
 import { MAPBOX_DEFAULT_STYLE, styleForActiveProvider, basemapLanguage, type GlMapProvider } from './glProviders'
 import LocationButton from './LocationButton'
 import { useGeolocation } from '../../hooks/useGeolocation'
+import { getDayColor } from '../../utils/dayColors'
 import type { Place, Reservation } from '../../types'
 import { POI_CATEGORY_BY_KEY, type Poi } from './poiCategories'
 import { buildPoiPopupHtml } from './placePopup'
@@ -65,7 +66,8 @@ interface RouteSegment {
 interface Props {
   places: Place[]
   dayPlaces?: Place[]
-  route?: [number, number][][] | null
+  // Accepts per-day route ([number,number][][]), multi-day trip route ([number,number][][][]), or null
+  route?: ([number, number][][] | [number, number][][][]) | null
   routeSegments?: RouteSegment[]
   selectedPlaceId?: number | null
   onMarkerClick?: (id: number) => void
@@ -91,6 +93,10 @@ interface Props {
   glProvider?: GlMapProvider
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onMapReady?: (map: any | null) => void
+  useDayColors?: boolean
+  selectedDayIndex?: number | null
+  placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
+  accommodationPlaceIds?: Set<number>
 }
 
 function createMarkerElement(place: Place & { category_color?: string; category_icon?: string }, photoUrl: string | null, orderNumbers: number[] | null, selected: boolean): HTMLDivElement {
@@ -170,6 +176,116 @@ function createMarkerElement(place: Place & { category_color?: string; category_
   return wrap
 }
 
+/**
+ * Create a solid day-colored circle marker with sequence number.
+ * Matches the Leaflet `createDayColorIcon` but returns an HTMLDivElement
+ * for mapbox-gl/MapLibre markers.
+*/
+function createDayColorMarkerElement(dayIndex: number, orderNumber: number, selected: boolean): HTMLDivElement {
+  const size = selected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = selected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const outer = size + (selected ? 3 : 2.5) * 2
+  const el = document.createElement('div')
+  el.style.cssText = `width:${outer}px;height:${outer}px;cursor:pointer;`
+  el.innerHTML = `
+    <div style="
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:${selected ? 3 : 2.5}px solid white;
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
+      font-size:${selected ? 20 : 16}px;font-weight:800;color:white;
+      font-family:var(--font-system);line-height:1;
+      box-sizing:content-box;
+    ">${orderNumber}</div>
+  `
+  return el
+}
+
+/**
+ * Compute an SVG arc path from (cx,cy) radius r, startAngle to endAngle (radians).
+ * Angles measured clockwise from 12 o'clock (-π/2 offset).
+*/
+function svgArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const startX = cx + r * Math.cos(startAngle)
+  const startY = cy + r * Math.sin(startAngle)
+  const endX = cx + r * Math.cos(endAngle)
+  const endY = cy + r * Math.sin(endAngle)
+  const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0
+  return `M ${cx} ${cy} L ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY} Z`
+}
+
+/**
+ * Multi-color accommodation marker for GL map: pie chart with equal wedges (one per distinct day),
+ * white Home icon centred. Used when day colors ON, no specific day focused,
+ * and the stay spans multiple days.
+*/
+function createAccommodationMultiDayMarkerElement(dayIndices: number[], selected: boolean): HTMLDivElement {
+  const size = selected ? 44 : 36
+  const r = size / 2 - 1.5 // leave room for outer ring, stays inside container
+  const cx = size / 2
+  const cy = size / 2
+  const shadow = selected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const outer = size + (selected ? 3 : 2.5) * 2
+  const ringSw = selected ? 3 : 2.5
+
+  const uniqueDays = Array.from(new Set(dayIndices)).sort((a, b) => a - b)
+  const wedgeAngle = (2 * Math.PI) / uniqueDays.length
+  let wedges = ''
+  for (let i = 0; i < uniqueDays.length; i++) {
+    const startAngle = i * wedgeAngle - Math.PI / 2
+    const endAngle = (i + 1) * wedgeAngle - Math.PI / 2
+    const color = getDayColor(uniqueDays[i])
+    wedges += `<path d="${svgArcPath(cx, cy, r, startAngle, endAngle)}" fill="${color}" stroke="#fff" stroke-width="0.5"/>`
+  }
+
+  // filled Home icon for pie marker (stroke-only outline looks thin on colored wedges)
+  const HomeIcon = CATEGORY_ICON_MAP['Home']
+  const homeSvg = HomeIcon ? renderToStaticMarkup(createElement(HomeIcon, { size: selected ? 22 : 18, color: 'white', strokeWidth: 2.5, fill: 'rgba(255,255,255,0.3)' })) : ''
+
+  const el = document.createElement('div')
+  el.style.cssText = `width:${outer}px;height:${outer}px;cursor:pointer;`
+  el.innerHTML = `
+    <div style="
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      position:relative;width:${size}px;height:${size}px;border-radius:50%;
+      box-shadow:${shadow};overflow:hidden;
+    "><svg style="position:absolute;inset:0;display:block" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${wedges}<circle cx="${cx}" cy="${cy}" r="${r + ringSw / 2}" fill="none" stroke="#fff" stroke-width="${ringSw}"/></svg><div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none">${homeSvg}</div></div>
+  `
+  return el
+}
+
+/**
+ * Day-colored circle marker for accommodation places (GL version).
+ * Same as createDayColorMarkerElement but shows a home icon instead of the sequence number.
+*/
+function createAccommodationDayMarkerElement(dayIndex: number, selected: boolean): HTMLDivElement {
+  const size = selected ? 44 : 36
+  const color = getDayColor(dayIndex)
+  const shadow = selected
+    ? '0 0 0 3px rgba(17,24,39,0.25), 0 4px 14px rgba(0,0,0,0.3)'
+    : '0 2px 8px rgba(0,0,0,0.22)'
+  const outer = size + (selected ? 3 : 2.5) * 2
+  const HomeIcon = CATEGORY_ICON_MAP['Home']
+  const homeSvg = HomeIcon ? renderToStaticMarkup(createElement(HomeIcon, { size: selected ? 22 : 18, color: 'white', strokeWidth: 2.5 })) : ''
+  const el = document.createElement('div')
+  el.style.cssText = `width:${outer}px;height:${outer}px;cursor:pointer;`
+  el.innerHTML = `
+    <div style="
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:${selected ? 3 : 2.5}px solid white;
+      box-shadow:${shadow};display:flex;align-items:center;justify-content:center;
+      line-height:1;overflow:hidden;
+    ">${homeSvg}</div>
+  `
+  return el
+}
+
 // Small coloured pin for an OSM "explore" POI (matches the pill category colour).
 function createPoiMarkerElement(category: string): HTMLDivElement {
   const cat = POI_CATEGORY_BY_KEY[category]
@@ -209,7 +325,19 @@ export function MapViewGL({
   onViewportChange,
   glProvider = 'mapbox-gl',
   onMapReady,
+  useDayColors = false,
+  selectedDayIndex = null,
+  placeDayMap = {},
 }: Props) {
+
+  // Per-day route color: use day palette when toggle ON + a day is selected;
+  // otherwise fall back to the standard Apple blue (zero visual regression).
+  const routeColor = useMemo(() => {
+    if (useDayColors && selectedDayIndex !== null && selectedDayIndex >= 0) {
+      return getDayColor(selectedDayIndex)
+    }
+    return '#0a84ff'
+  }, [useDayColors, selectedDayIndex])
   const rawMapboxStyle = useSettingsStore(s => s.settings.mapbox_style || MAPBOX_DEFAULT_STYLE)
   const rawMaplibreStyle = useSettingsStore(s => s.settings.maplibre_style || '')
   const mapboxToken = useSettingsStore(s => s.settings.mapbox_access_token || '')
@@ -741,7 +869,38 @@ export function MapViewGL({
         const pck = place.google_place_id || place.osm_id || `${place.lat},${place.lng}`
         const photoUrl = (pck && photoUrls[pck]) || place.image_url || null
         const selected = place.id === selectedPlaceId
-        const el = createMarkerElement(place as Place & { category_color?: string; category_icon?: string }, photoUrl, orderNumbers, selected)
+
+        // resolve day assignment for this place, then decide marker style.
+        let dayInfoGL: { dayIndex: number; orderNumber: number } | null = null
+        const rawPdm = placeDayMap[place.id]
+        if (rawPdm) {
+          if (Array.isArray(rawPdm)) {
+            dayInfoGL = selectedDayIndex !== null
+              ? (rawPdm.find((a: any) => a.dayIndex === selectedDayIndex) ?? rawPdm[0]) || null
+              : rawPdm[0] || null
+          } else {
+            dayInfoGL = rawPdm as { dayIndex: number; orderNumber: number }
+          }
+        }
+        const useDayIconGL = useDayColors && !!dayInfoGL
+        const isAccommodation = !!accommodationPlaceIds?.has(place.id)
+        // Multi-day accommodation pie chart: extract distinct day indices.
+        const accomDayIndicesGL = (!isAccommodation || !Array.isArray(rawPdm))
+          ? undefined
+          : Array.from(new Set((rawPdm as any[]).map((a: any) => a.dayIndex))).sort((a, b) => a - b)
+        let el: HTMLDivElement
+        if (useDayIconGL) {
+          if (isAccommodation && accomDayIndicesGL && accomDayIndicesGL.length >= 2) {
+            // Multi-day stay, overview mode → pie chart home marker
+            el = createAccommodationMultiDayMarkerElement(accomDayIndicesGL, selected)
+          } else {
+            el = isAccommodation
+              ? createAccommodationDayMarkerElement(dayInfoGL.dayIndex, selected)
+              : createDayColorMarkerElement(dayInfoGL.dayIndex, dayInfoGL.orderNumber, selected)
+          }
+        } else {
+          el = createMarkerElement(place as Place & { category_color?: string; category_icon?: string }, photoUrl, orderNumbers, selected)
+        }
         el.addEventListener('click', (ev) => {
           ev.stopPropagation()
           // Clear the card right away — the flyTo that follows moves the marker
@@ -851,19 +1010,88 @@ export function MapViewGL({
     }
   }, [pois, mapReady, glProvider])
 
+  // Normalize route data to segments with day indices.
+  // Handles per-day routes ([seg][coords]), multi-day trip routes ([day][seg][coords]),
+  // and ambiguous cases where shape detection fails.
+  const normalizedGLSegments = useMemo<
+    { segment: [number, number][]; dayIndex: number }[]
+  >(() => {
+    if (!route || route.length === 0) return []
+    const first = route[0]
+    if (!Array.isArray(first)) return []
+    const firstSub = first[0]
+    // Try depth-3 (multi-day) first; fall back to depth-2 (per-day)
+    if (Array.isArray(firstSub) && firstSub.length > 0 && Array.isArray(firstSub[0])) {
+      const testDepth3 = route.flatMap((daySegs, di) =>
+        Array.isArray(daySegs)
+          ? (daySegs as [number, number][][]).flatMap(seg =>
+              Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+                ? [{ segment: seg as [number, number][], dayIndex: di }]
+                : []
+            )
+          : []
+      )
+      if (testDepth3.length > 0) return testDepth3
+    }
+    // Depth-2 fallback
+    return (route as [number, number][][]).flatMap(seg =>
+      Array.isArray(seg) && seg.length >= 2 && typeof seg[0]?.[0] === 'number'
+        ? [{ segment: seg as [number, number][], dayIndex: 0 }]
+        : []
+    )
+  }, [route])
+
   // Update route geojson
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
     const src = map.getSource('trip-route') as mapboxgl.GeoJSONSource | undefined
     if (!src) return
-    const features = (route || []).filter(seg => seg && seg.length > 1).map(seg => ({
+
+    const features: {
+      type: 'Feature';
+      properties: { dayIndex?: number };
+      geometry: { type: 'LineString'; coordinates: [number, number][] }
+    }[] = normalizedGLSegments.map(({ segment, dayIndex }) => ({
       type: 'Feature' as const,
-      properties: {},
-      geometry: { type: 'LineString' as const, coordinates: seg.map(([lat, lng]) => [lng, lat]) },
+      properties: { dayIndex },
+      geometry: { type: 'LineString' as const, coordinates: segment.map(([lat, lng]) => [lng, lat]) },
     }))
+
     src.setData({ type: 'FeatureCollection', features })
-  }, [route, mapReady])
+  }, [normalizedGLSegments, mapReady])
+
+  // Update route line colors when day-colors toggle or selected day changes.
+  // for multi-day trip routes with Day Colors ON, use data-driven per-feature
+  // coloring so each day's segments get its own palette color.
+  // use normalizedGLSegments instead of brittle shape detection.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    try {
+      // Check if any segment has a non-zero dayIndex (multi-day route)
+      const hasMultipleDays = normalizedGLSegments.some(s => s.dayIndex > 0)
+
+      let colorValue: string | unknown[]
+      if (hasMultipleDays && useDayColors) {
+        // Data-driven color: map each feature's `dayIndex` property to the palette.
+        const dayCount = Math.max(...normalizedGLSegments.map(s => s.dayIndex), 0) + 1
+        const maxDays = Math.min(dayCount, 20)
+        colorValue = ['match', ['get', 'dayIndex']] as unknown[]
+        for (let d = 0; d < maxDays; d++) {
+          ;(colorValue as unknown[]).push(d, getDayColor(d))
+        }
+        // Fallback color for any day beyond our palette
+        ;(colorValue as unknown[]).push(getDayColor(maxDays))
+      } else {
+        colorValue = routeColor
+      }
+
+      map.setPaintProperty('trip-route-casing', 'line-color', colorValue)
+      map.setPaintProperty('trip-route-casing', 'line-opacity', 0.75)
+      map.setPaintProperty('trip-route-line', 'line-color', colorValue)
+    } catch { /* layer may not exist yet */ }
+  }, [routeColor, mapReady, normalizedGLSegments, useDayColors])
 
   // Travel times now live in the day sidebar (per-segment connectors), not on the map.
 

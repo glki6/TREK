@@ -11,7 +11,7 @@ import { calculateRouteWithLegs } from '../components/Map/RouteCalculator'
  * Trains and "other transport" keep their straight line (rail/unknown modes
  * aren't road-routable); flights/cruises/ferries use the great-circle arc.
  * Any routing failure falls back to the straight line the overlay already draws.
- */
+*/
 
 const ROAD_PROFILE: Record<string, 'driving' | 'cycling'> = {
   car: 'driving',
@@ -48,7 +48,7 @@ function orderedWaypoints(r: Reservation): ReservationEndpoint[] {
  * (yet / not routable)" — the caller should draw its straight line for those.
  * Routing runs once per reservation waypoint-set and is cached across the app
  * by RouteCalculator, so day switches and re-renders don't re-fetch.
- */
+*/
 export function useTransportRoutes(reservations: Reservation[]): Map<number, [number, number][]> {
   const [routes, setRoutes] = useState<Map<number, [number, number][]>>(new Map())
   // id → waypoint signature already fetched/attempted, so an unchanged booking

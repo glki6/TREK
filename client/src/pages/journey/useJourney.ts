@@ -12,7 +12,7 @@ import { computeJourneyLifecycle } from '../../utils/journeyLifecycle'
  * suggestion banner and the active/filtered journey derivations. JourneyPage
  * stays a wiring container around its hero/grid/modal JSX and JourneyCard.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useJourney() {
   const navigate = useNavigate()
   const toast = useToast()

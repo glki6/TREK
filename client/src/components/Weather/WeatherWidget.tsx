@@ -42,7 +42,7 @@ interface WeatherWidgetProps {
   lng: number | null
   date: string
   compact?: boolean
-  /** Vertical icon-over-temp layout that inherits its color (for the day badge). */
+  /** Vertical icon-over-temp layout that inherits its color (for the day badge).*/
   stacked?: boolean
 }
 

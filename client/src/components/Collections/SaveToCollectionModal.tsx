@@ -16,7 +16,7 @@ import type { Collection, CollectionMembership } from '@trek/shared'
  * co-owns, and toggles the place in/out of each — a check marks the lists that
  * already hold it. Each change refreshes membership and bumps the store version
  * so the inspector bookmark indicator stays in sync. One mount, no prop drilling.
- */
+*/
 export default function SaveToCollectionModal(): React.ReactElement | null {
   const target = useSaveToCollectionStore(s => s.target)
   const close = useSaveToCollectionStore(s => s.close)

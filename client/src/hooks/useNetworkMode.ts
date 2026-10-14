@@ -13,7 +13,7 @@ import {
  *   offline    — the effective offline state (real disconnection OR forced)
  *   forced     — whether the user has the force-offline switch on
  *   setForced  — flip the force-offline switch
- */
+*/
 export function useNetworkMode(): { offline: boolean; forced: boolean; setForced: (v: boolean) => void } {
   const offline = useSyncExternalStore(onNetworkModeChange, isEffectivelyOffline, () => true)
   const forced = useSyncExternalStore(onNetworkModeChange, isForcedOffline, () => false)

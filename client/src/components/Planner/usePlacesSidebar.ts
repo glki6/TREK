@@ -12,7 +12,7 @@ import { useAddonStore } from '../../store/addonStore'
 import { useSaveToCollectionStore } from '../../store/saveToCollectionStore'
 import { placeToSaveTarget } from '../Collections/saveTarget'
 import type { Place, Category, Day, AssignmentsMap } from '../../types'
-import { getGoogleMapsUrlForPlace } from './placeGoogleMaps'
+import { getGoogleMapsUrlForPlace, openMapsFallback } from './placeGoogleMaps'
 
 export interface PlacesSidebarProps {
   tripId: number
@@ -36,13 +36,16 @@ export interface PlacesSidebarProps {
   pushUndo?: (label: string, undoFn: () => Promise<void> | void) => void
   initialScrollTop?: number
   onScrollTopChange?: (top: number) => void
+  /** maps each placeId → array of {dayIndex, orderNumber} for day-color indicators (multi-day support)*/
+  placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
+  useDayColors?: boolean
 }
 
 /**
  * Sidebar state: file/list import, search + filter + category multi-select,
  * multi-select/bulk-delete and the mobile day-picker sheet. Kept in one hook so
  * PlacesSidebar stays a thin layout shell over the sub-sections below.
- */
+*/
 export function usePlacesSidebar(props: PlacesSidebarProps) {
   const {
     tripId, places, assignments, selectedDayId,
@@ -247,7 +250,7 @@ export function usePlacesSidebar(props: PlacesSidebarProps) {
       canEditPlaces && { label: t('common.edit'), icon: Pencil, onClick: () => props.onEditPlace(place) },
       selDayId && { label: t('planner.addToDay'), icon: CalendarDays, onClick: () => props.onAssignToDay(place.id, selDayId) },
       place.website && { label: t('inspector.website'), icon: ExternalLink, onClick: () => window.open(place.website, '_blank') },
-      googleMapsUrl && { label: t('inspector.google'), icon: Navigation, onClick: () => window.open(googleMapsUrl, '_blank') },
+      googleMapsUrl && { label: t('inspector.google'), icon: Navigation, onClick: () => openMapsFallback(googleMapsUrl) },
       collectionsEnabled && { label: t('inspector.saveToCollection'), icon: Bookmark, onClick: () => useSaveToCollectionStore.getState().open(placeToSaveTarget(place)) },
       { divider: true },
       canEditPlaces && { label: t('common.delete'), icon: Trash2, danger: true, onClick: () => props.onDeletePlace(place.id) },

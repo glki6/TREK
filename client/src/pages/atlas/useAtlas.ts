@@ -26,7 +26,7 @@ function useCountryNames(language: string): (code: string) => string {
  * flows and the country search. AtlasPage stays a wiring container that renders
  * the returned state via its presentational SidebarContent/MobileStats helpers.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useAtlas() {
   const { t, language } = useTranslation()
   const { settings } = useSettingsStore()

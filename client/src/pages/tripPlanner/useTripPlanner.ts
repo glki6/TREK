@@ -32,7 +32,7 @@ import { resolvePoolAssignmentId } from './tripPlannerModel'
  * the map filters/derivations and the splash gate. TripPlannerPage stays a
  * wiring container that lays out the day/map/places panes and modals.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useTripPlanner() {
   const { id } = useParams<{ id: string }>()
   // The route param is a string; convert once here so every downstream component
@@ -203,7 +203,11 @@ export function useTripPlanner() {
   // (driving/walking) is per-session and selects which travel time the connectors show.
   const [routeShown, setRouteShown] = useState(false)
   const [routeProfile, setRouteProfile] = useState<'driving' | 'walking'>('driving')
+  // Mobile: track which days have per-day Route toggled on (synced from DayPlanSidebar via callback).
+  // Enables useRouteCalculation when any mobile route day is active (#Issue B fix v3).
+  const [mobileRouteDays, setMobileRouteDays] = useState<Set<number>>(() => new Set())
   const [fitKey, setFitKey] = useState<number>(0)
+  const [fitAllKey, setFitAllKey] = useState<number>(0)
   const initialFitTripId = useRef<number | null>(null)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<'left' | 'right' | null>(null)
   const mobilePlanScrollTopRef = useRef<number>(0)
@@ -330,15 +334,45 @@ export function useTripPlanner() {
     })
   }, [places, mapCategoryFilter, mapPlacesFilter, assignments, expandedDayIds])
 
-  const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, selectedDayId, routeShown, routeProfile, tripAccommodations)
+  // On mobile, enable route calc when per-day Route toggled (mobileRouteDays.size > 0) OR globally shown.
+  const routeEnabled = routeShown || mobileRouteDays.size > 0
+  // Mobile: selectedDayId can be null/stale when the user only expands + toggles Route without selecting a day.
+  // Derive a target day from mobileRouteDays so useRouteCalculation has something to calculate (#Issue B).
+  const routeTargetDayId = useMemo<number | null>(() => {
+    if (mobileRouteDays.size > 0) {
+      // Mobile per-day Route: at most ONE active day. Never follow selectedDayId —
+      // header clicks must not change the route target, only the Route button does.
+      return Array.from(mobileRouteDays.values())[0] ?? null
+    }
+    return selectedDayId
+  }, [selectedDayId, mobileRouteDays])
+
+  // Active per-day route day (mobile only). Null when no mobile route is active.
+  // Used for map fitting and marker color targeting without affecting routeTargetDayId fallback.
+  const activeRouteDayId = useMemo<number | null>(() => {
+    return mobileRouteDays.size > 0 ? Array.from(mobileRouteDays.values())[0] ?? null : null
+  }, [mobileRouteDays])
+
+  // Fit map when per-day Route activates or switches day (Minor 1).
+  // Do NOT bump on clear to null — avoid erroneous fit when Route is toggled OFF.
+  const prevActiveRouteDayId = useRef<number | null>(null)
+  useEffect(() => {
+    if (activeRouteDayId !== null && activeRouteDayId !== prevActiveRouteDayId.current) {
+      setFitKey(k => k + 1)
+    }
+    prevActiveRouteDayId.current = activeRouteDayId
+  }, [activeRouteDayId])
+  const { route, routeSegments, routeInfo, setRoute, setRouteInfo, updateRouteForDay } = useRouteCalculation({ assignments } as any, routeTargetDayId, routeEnabled, routeProfile, tripAccommodations)
 
   const handleSelectDay = useCallback((dayId: number | null, skipFit?: boolean) => {
     const changed = dayId !== selectedDayId
     tripActions.setSelectedDay(dayId)
     if (changed && !skipFit) setFitKey(k => k + 1)
     setMobileSidebarOpen(null)
-    updateRouteForDay(dayId)
-  }, [updateRouteForDay, selectedDayId])
+    // On mobile with per-day routes active, header clicks must not change route target (#Issue B UI fix).
+    // Only the Route button changes which day's route is drawn.
+    if (mobileRouteDays.size === 0) updateRouteForDay(dayId)
+  }, [updateRouteForDay, selectedDayId, mobileRouteDays])
 
   const handlePlaceClick = useCallback((placeId: number | null, assignmentId?: number | null) => {
     if (assignmentId) {
@@ -818,6 +852,61 @@ export function useTripPlanner() {
 
   const selectedPlace = selectedPlaceId ? places.find(p => p.id === selectedPlaceId) : null
 
+  // ── Global place → {dayIndex, orderNumber} map (all days) ───────────
+  // Maps each place to its first day-index and position within that day.
+  // A place assigned on multiple days keeps the FIRST assignment's info;
+  // this is sufficient for marker coloring and sidebar circle indicators.
+  // accommodation-only places (no day assignments) get entries from
+  // their stay range [start_day_id, end_day_id] so they render home icons.
+  const placeDayMap = useMemo<Record<string, Array<{ dayIndex: number; orderNumber: number }>>>(() => {
+    if (days.length === 0) return {}
+
+    const sortedDays = [...days].sort(
+      (a, b) => ((a as any).day_number ?? 0) - ((b as any).day_number ?? 0),
+    )
+    // day.id → zero-based index lookup
+    const dayIndexByDayId: Record<number, number> = {}
+    sortedDays.forEach((d, i) => { dayIndexByDayId[d.id] = i })
+
+    const map: Record<string, Array<{ dayIndex: number; orderNumber: number }>> = {}
+
+    // 1. Entries from day assignments (existing logic)
+    sortedDays.forEach((day, dayIdx) => {
+      const da = assignments[String(day.id)] || []
+      const sorted = [...da].sort((a, b) => a.order_index - b.order_index)
+      sorted.forEach((assignment, pos) => {
+        if (!assignment.place?.id) return
+        const key = String(assignment.place.id)
+        // Collect all assignments — multi-day places get an array resolved at render time
+        if (!map[key]) map[key] = []
+        map[key].push({ dayIndex: dayIdx, orderNumber: pos + 1 })
+      })
+    })
+
+    // 2. entries from accommodation stay ranges (covers places with no assignments)
+    if (tripAccommodations.length > 0) {
+      for (const acc of tripAccommodations) {
+        if (!acc.place_id) continue
+        const key = String(acc.place_id)
+        const startIdx = dayIndexByDayId[acc.start_day_id]
+        const endIdx = dayIndexByDayId[acc.end_day_id]
+        if (startIdx === undefined || endIdx === undefined) continue
+        // Build span: every day in [start, end] inclusive
+        const lo = Math.min(startIdx, endIdx)
+        const hi = Math.max(startIdx, endIdx)
+        for (let di = lo; di <= hi; di++) {
+          if (!map[key]) map[key] = []
+          // Keep existing entry (assignment) with its orderNumber; add stay-only days at 0
+          if (!map[key].some(e => e.dayIndex === di)) {
+            map[key].push({ dayIndex: di, orderNumber: 0 })
+          }
+        }
+      }
+    }
+
+    return map
+  }, [days, assignments, tripAccommodations])
+
   // Build placeId → order-number map from the selected day's assignments
   const dayOrderMap = useMemo(() => {
     if (!selectedDayId) return {}
@@ -832,14 +921,25 @@ export function useTripPlanner() {
     return map
   }, [selectedDayId, assignments])
 
-  // Places assigned to selected day (with coords) — used for map fitting
+  // Places assigned to selected day (with coords) — used for map fitting.
+  // When per-day Route is active on mobile, use that day so BoundsController fits correctly (Minor 1).
   const dayPlaces = useMemo(() => {
-    if (!selectedDayId) return []
-    const da = assignments[String(selectedDayId)] || []
+    const targetId = activeRouteDayId ?? selectedDayId
+    if (!targetId) return []
+    const da = assignments[String(targetId)] || []
     return da.map(a => a.place).filter(p => p?.lat && p?.lng)
-  }, [selectedDayId, assignments])
+  }, [activeRouteDayId, selectedDayId, assignments])
 
-  const mapTileUrl = settings.map_tile_url || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+  // Auto-switch map tiles to dark theme when in dark mode (matches CollectionMap + Navbar pattern)
+const LIGHT_TILE = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+const DARK_TILE  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+
+  // dark_mode can be: boolean, 'light', 'dark', or 'auto' (system preference)
+  const isDark = settings.dark_mode === true || settings.dark_mode === 'dark' ||
+    (settings.dark_mode === 'auto' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  // User's custom tile URL always wins; auto-switch only applies to defaults
+  const mapTileUrl = settings.map_tile_url || (isDark ? DARK_TILE : LIGHT_TILE)
   const defaultCenter = [settings.default_lat || 48.8566, settings.default_lng || 2.3522]
   const defaultZoom = settings.default_zoom || 10
 
@@ -876,7 +976,8 @@ export function useTripPlanner() {
     transportModalDayId, setTransportModalDayId,
     transportModalAutomated, setTransportModalAutomated, transitPrefill, setTransitPrefill, transitJourney, setTransitJourney,
     reservationPrefill, transportPrefill, importReviewActive, startImportReview, advanceImportReview,
-    routeShown, setRouteShown, routeProfile, setRouteProfile, fitKey, setFitKey,
+    activeRouteDayId,
+    routeShown, setRouteShown, mobileRouteDays, setMobileRouteDays, routeProfile, setRouteProfile, fitKey, setFitKey, fitAllKey, setFitAllKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
     deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
     visibleConnections, setVisibleConnections, toggleConnection, mapTransportDetail, setMapTransportDetail,
@@ -887,7 +988,7 @@ export function useTripPlanner() {
     handleSavePlace, openPlaceEditor, handleDeletePlace, confirmDeletePlace, confirmDeletePlaces, confirmChangeCategory,
     handleAssignToDay, handleRemoveAssignment, handleReorder, handleReorderDays, handleAddDay, handleUpdateDayTitle,
     handleSaveReservation, handleSaveTransport, handleDeleteReservation,
-    selectedPlace, dayOrderMap, dayPlaces,
+    selectedPlace, dayOrderMap, dayPlaces, placeDayMap,
     mapTileUrl, defaultCenter, defaultZoom, fontStyle, splashDone,
   }
 }

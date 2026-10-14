@@ -23,7 +23,7 @@ const hoverOff = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.s
  * Popup for the Places selection toolbar: pick one category to apply to every
  * currently-selected place. Reuses the category swatch styling from the header's
  * filter dropdown; clicking a row applies immediately and closes.
- */
+*/
 export function PlacesBulkCategoryModal({ count, categories, onPick, onClose }: PlacesBulkCategoryModalProps) {
   const { t } = useTranslation()
   return createPortal(

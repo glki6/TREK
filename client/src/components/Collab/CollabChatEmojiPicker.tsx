@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom'
 import { EMOJI_CATEGORIES } from './CollabChat.constants'
 import { TwemojiImg } from './CollabChatTwemojiImg'
 
-/* ── Emoji Picker ── */
+/* ── Emoji Picker ──*/
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void
   onClose: () => void

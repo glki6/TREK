@@ -22,7 +22,7 @@ interface CollectionListProps {
  * List view — one glass row per saved place with a photo avatar, name +
  * category/address, and a one-tap status cycle on the badge. Click the row to
  * open the place (or toggle it in select mode).
- */
+*/
 export default function CollectionList({
   places, labels, selectedPlaceId, selectMode, selectedIds, onOpenPlace, onStatusChange, onToggleSelect, t,
 }: CollectionListProps): React.ReactElement {

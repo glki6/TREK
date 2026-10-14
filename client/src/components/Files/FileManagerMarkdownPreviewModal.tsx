@@ -14,7 +14,7 @@ import { triggerDownload } from './FileManager.helpers'
  * the signed preview URL and renders it with react-markdown. Output is sanitized
  * with rehype-sanitize — these are UNTRUSTED uploads, unlike collab notes — and
  * react-markdown v10 already drops raw HTML, so no script can execute.
- */
+*/
 export function MarkdownPreviewModal(S: FileManagerState) {
   const { previewFile, setPreviewFile, previewFileUrl, toast, t } = S
   const [text, setText] = useState('')

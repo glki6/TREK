@@ -8,7 +8,7 @@ import { addListener, removeListener } from '../../api/websocket'
  * sync and the per-year (re)loads, and exposes the add-prev/next-year helpers.
  * VacayPage stays a wiring container around its sidebar/calendar JSX.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useVacay() {
   const { years, selectedYear, setSelectedYear, addYear, removeYear, loadAll, loadPlan, loadEntries, loadStats, loadHolidays, loading, incomingInvites, acceptInvite, declineInvite, plan } = useVacayStore()
   const [showSettings, setShowSettings] = useState<boolean>(false)

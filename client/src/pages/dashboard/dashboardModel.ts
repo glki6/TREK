@@ -3,7 +3,7 @@
  * and the presentational components in DashboardPage. Kept free of React/IO so
  * both sides can import it without a cycle. Part of the FE "page = wiring
  * container + data hook" convention (see dashboard/README.md).
- */
+*/
 
 import type { Trip } from '../../types'
 

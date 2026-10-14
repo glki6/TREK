@@ -1,5 +1,6 @@
 import { useSettingsStore } from '../../store/settingsStore'
-import type { DistanceUnit, RouteResult, RouteSegment, RouteWithLegs, Waypoint, RouteAnchors } from '../../types'
+import type { Accommodation, AssignmentsMap, Day, DistanceUnit, Place, RouteResult, RouteSegment, RouteWithLegs, Waypoint, RouteAnchors } from '../../types'
+import { getDayBookendHotels } from '../../utils/dayOrder'
 import { formatDistance } from '../../utils/units'
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1'
@@ -18,7 +19,7 @@ const OSRM_PROFILE_BASE: Record<'driving' | 'walking' | 'cycling', string> = {
 const routeCache = new Map<string, RouteWithLegs>()
 const ROUTE_CACHE_MAX = 200
 
-/** Fetches a full route via OSRM and returns coordinates, distance, and duration estimates for driving/walking. */
+/** Fetches a full route via OSRM and returns coordinates, distance, and duration estimates for driving/walking.*/
 export async function calculateRoute(
   waypoints: Waypoint[],
   profile: 'driving' | 'walking' | 'cycling' = 'driving',
@@ -75,7 +76,7 @@ export async function calculateRoute(
  * (matching the sidebar's hotel connectors). A bookend is only added when both its
  * hotel and the first/last located waypoint exist; passing nulls leaves `runs`
  * untouched. The shared first/last waypoint is repeated so the polylines join.
- */
+*/
 export function withHotelBookends(
   runs: Waypoint[][],
   firstWay: Waypoint | undefined,
@@ -98,6 +99,45 @@ export function generateGoogleMapsUrl(places: Waypoint[]): string | null {
   }
   const stops = valid.map((p) => `${p.lat},${p.lng}`).join('/')
   return `https://www.google.com/maps/dir/${stops}`
+}
+
+/**
+ * Build a Google Maps directions URL for ALL stops across ALL days of a trip,
+ * including hotel bookends. Useful for opening the entire itinerary in one go.
+*/
+export function buildTripGoogleMapsUrl(
+  days: Day[],
+  assignments: AssignmentsMap,
+  accommodations: Accommodation[],
+): string | null {
+  const allStops: Waypoint[] = []
+
+  for (const day of days) {
+    // Get hotel bookends for this day via the same helper used by the per-day export
+    const bookends = getDayBookendHotels(day, days, accommodations)
+
+    // Add morning hotel if it has coordinates
+    if (bookends?.morning?.place_lat != null && bookends.morning.place_lng != null) {
+      allStops.push({ lat: bookends.morning.place_lat, lng: bookends.morning.place_lng })
+    }
+
+    // Add all places from this day in planned order
+    const dayPlaces = (assignments[String(day.id)] || [])
+      .sort((a, b) => a.order_index - b.order_index)
+      .map(a => a.place as Place | undefined)
+      .filter(p => p?.lat != null && p?.lng != null) as Waypoint[]
+    allStops.push(...dayPlaces)
+
+    // Add evening hotel if it exists and differs from the last stop already added
+    if (bookends?.evening?.place_lat != null && bookends.evening.place_lng != null) {
+      const lastStop = allStops[allStops.length - 1]
+      if (!(lastStop.lat === bookends.evening.place_lat && lastStop.lng === bookends.evening.place_lng)) {
+        allStops.push({ lat: bookends.evening.place_lat, lng: bookends.evening.place_lng })
+      }
+    }
+  }
+
+  return generateGoogleMapsUrl(allStops)
 }
 
 // Squared planar distance — enough for nearest-neighbor comparisons and cheaper than a full haversine.
@@ -173,7 +213,7 @@ function twoOptImprove<T extends Waypoint>(order: T[], start?: Waypoint, end?: W
  * Reorders waypoints to minimize travel distance: a nearest-neighbor pass for a good starting order,
  * then 2-opt to untangle crossings. Optional anchors (e.g. the day's accommodation) pin the route's
  * ends — start === end makes it a loop out from and back to the hotel; a transfer day runs start → end.
- */
+*/
 export function optimizeRoute<T extends Waypoint>(places: T[], anchors: RouteAnchors = {}): T[] {
   const { start, end } = anchors
   const valid = places.filter((p) => p.lat && p.lng)
@@ -192,7 +232,7 @@ export function optimizeRoute<T extends Waypoint>(places: T[], anchors: RouteAnc
   return order
 }
 
-/** Fetches per-leg distance/duration from OSRM and returns segment metadata (midpoints, walking/driving times). */
+/** Fetches per-leg distance/duration from OSRM and returns segment metadata (midpoints, walking/driving times).*/
 export async function calculateSegments(
   waypoints: Waypoint[],
   { signal }: { signal?: AbortSignal } = {}
@@ -230,7 +270,7 @@ export async function calculateSegments(
  * map) and per-leg distance/duration (for the sidebar connectors). Results are cached
  * by the exact waypoint list. Throws on OSRM failure so callers can fall back to a
  * straight line.
- */
+*/
 export async function calculateRouteWithLegs(
   waypoints: Waypoint[],
   { signal, profile = 'driving' }: { signal?: AbortSignal; profile?: 'driving' | 'walking' | 'cycling' } = {}
@@ -282,6 +322,58 @@ export async function calculateRouteWithLegs(
     if (oldest !== undefined) routeCache.delete(oldest)
   }
   return result
+}
+
+/**
+ * Calculates route geometry + stats for an entire trip by iterating all day runs.
+ * Reuses calculateRouteWithLegs() internally (benefits from existing cache).
+ * Returns aggregated geometry grouped by day — each day's polyline segments are
+ * kept together so the map can colour them independently.
+ *
+ * @param allDayRuns - Outer array = days, inner arrays = runs within each day
+*/
+export async function calculateTripRoute(
+  allDayRuns: Waypoint[][][],
+  { signal, profile = 'driving' }: { signal?: AbortSignal; profile?: 'driving' | 'walking' | 'cycling' } = {}
+): Promise<{
+  /** Outer array = days, inner arrays = runs within each day*/
+  coordinates: [number, number][][][];
+  distance: number;
+  duration: number;
+  legs: RouteSegment[];
+  dayBreakdown: { distance: number; duration: number }[];
+}> {
+  const allCoordinates: [number, number][][][] = []
+  let totalDistance = 0
+  let totalDuration = 0
+  const allLegs: RouteSegment[] = []
+  const dayBreakdown: { distance: number; duration: number }[] = []
+
+  for (const dayRuns of allDayRuns) {
+    const dayCoords: [number, number][][] = []
+    let dayDistance = 0
+    let dayDuration = 0
+
+    for (const run of dayRuns) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      try {
+        const r = await calculateRouteWithLegs(run, { signal, profile })
+        dayCoords.push(r.coordinates)
+        totalDistance += r.distance
+        dayDistance += r.distance
+        totalDuration += r.duration
+        dayDuration += r.duration
+        allLegs.push(...r.legs)
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') throw err
+        console.warn('[RouteCalculator] calculateTripRoute: run failed, continuing with partial results', err)
+      }
+    }
+    allCoordinates.push(dayCoords)
+    dayBreakdown.push({ distance: dayDistance, duration: dayDuration })
+  }
+
+  return { coordinates: allCoordinates, distance: totalDistance, duration: totalDuration, legs: allLegs, dayBreakdown }
 }
 
 function getDistanceUnit(): DistanceUnit {

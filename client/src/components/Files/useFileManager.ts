@@ -27,7 +27,7 @@ export interface FileManagerProps {
  * File manager state: upload (dropzone + paste), star/trash/restore, the
  * filter tabs, lightbox + PDF preview and the assign-to-place/reservation
  * modal. Kept in one hook so FileManager renders as thin layout sections.
- */
+*/
 export function useFileManager({ files = [], onUpload, onDelete, onUpdate, places, days = [], assignments = {}, reservations = [], tripId, allowedFileTypes }: FileManagerProps) {
   const [uploading, setUploading] = useState(false)
   const [filterType, setFilterType] = useState('all')

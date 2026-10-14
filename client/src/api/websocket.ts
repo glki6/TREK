@@ -13,7 +13,7 @@ let shouldReconnect = false
 let refetchCallback: RefetchCallback | null = null
 let mySocketId: string | null = null
 let connecting = false
-/** Hook run before refetchCallback on reconnect. Awaited so mutations land first. */
+/** Hook run before refetchCallback on reconnect. Awaited so mutations land first.*/
 let preReconnectHook: (() => Promise<void>) | null = null
 
 export function getSocketId(): string | null {
@@ -21,7 +21,7 @@ export function getSocketId(): string | null {
 }
 
 /** Trip ids the app currently has open (joined). Used to re-hydrate the active
- *  trip's store after the network comes back via the `online` event. */
+ *  trip's store after the network comes back via the `online` event.*/
 export function getActiveTrips(): string[] {
   return Array.from(activeTrips)
 }
@@ -35,7 +35,7 @@ export function setRefetchCallback(fn: RefetchCallback | null): void {
  * fires on WS reconnect.  Use this to flush the mutation queue so queued
  * local writes reach the server before the app reads back canonical state.
  * Pass null to clear.
- */
+*/
 export function setPreReconnectHook(fn: (() => Promise<void>) | null): void {
   preReconnectHook = fn
 }

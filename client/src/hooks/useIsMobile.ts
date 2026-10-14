@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-/** Returns true when the viewport is below the lg breakpoint (1024px). */
+/** Returns true when the viewport is below the lg breakpoint (1024px).*/
 export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 1024,

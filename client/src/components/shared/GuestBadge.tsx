@@ -4,7 +4,7 @@ import { useTranslation } from '../../i18n'
 /**
  * Small "Guest" pill (#1362) shown next to a member's name in assignment pickers
  * so it's clear the person is an accountless guest. Purely presentational.
- */
+*/
 export default function GuestBadge({ size = 'sm' }: { size?: 'sm' | 'xs' }) {
   const { t } = useTranslation()
   const fs = size === 'xs' ? 9 : 10

@@ -12,7 +12,7 @@ type GetState = StoreApi<TripStoreState>['getState']
  * Persist remote event to IndexedDB so the data is available offline.
  * Fire-and-forget: errors are swallowed to never block the Zustand update.
  * Called AFTER set() so `state` already reflects the update.
- */
+*/
 function writeToDexie(
   type: string,
   payload: Record<string, unknown>,
@@ -143,7 +143,7 @@ function writeToDexie(
   })()
 }
 
-/** Write a Day (with its current assignments + notes from Zustand) to Dexie. */
+/** Write a Day (with its current assignments + notes from Zustand) to Dexie.*/
 async function _writeDayToDb(dayId: number, state: TripStoreState): Promise<void> {
   const day = state.days.find(d => d.id === dayId)
   if (!day) return
@@ -160,7 +160,7 @@ async function _writeDayToDb(dayId: number, state: TripStoreState): Promise<void
  * Applies a remote WebSocket event to the local Zustand store, keeping state in sync across collaborators.
  * Each event type maps to an immutable state update (create/update/delete) for the relevant entity.
  * After the Zustand update, the change is also written through to IndexedDB for offline access.
- */
+*/
 export function handleRemoteEvent(set: SetState, get: GetState, event: WebSocketEvent): void {
   const { type, ...payload } = event
 

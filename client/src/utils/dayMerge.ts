@@ -35,7 +35,7 @@ export function getSpanPhase(
  * pickup day (the departure endpoint) and from on its drop-off day (the arrival endpoint) — on
  * the days in between you simply hold the vehicle, so it adds no waypoints and must not pull the
  * route to those points. Single-day transports contribute both endpoints.
- */
+*/
 export function getTransportRouteEndpoints(
   r: any,
   dayId: number
@@ -66,7 +66,7 @@ export function getDisplayTimeForDay(
   return r.reservation_time || null
 }
 
-/** Per-leg detail of a multi-leg flight or train, or null for single-leg / other. */
+/** Per-leg detail of a multi-leg flight or train, or null for single-leg / other.*/
 function parseMultiLegs(r: any): any[] | null {
   if (r?.type !== 'flight' && r?.type !== 'train') return null
   let meta = r.metadata
@@ -83,7 +83,7 @@ function parseMultiLegs(r: any): any[] | null {
  * touches `dayId`, each with its own day span + departure/arrival time so it
  * slots into the timeline independently. A single-leg booking (or any other
  * reservation) is returned untouched, so existing behaviour is unchanged.
- */
+*/
 export function expandFlightLegsForDay(
   r: any,
   dayId: number,
@@ -127,7 +127,7 @@ export function expandFlightLegsForDay(
   return out
 }
 
-/** Filter reservations that are active transports for the given day, excluding assignment-linked ones. */
+/** Filter reservations that are active transports for the given day, excluding assignment-linked ones.*/
 export function getTransportForDay(opts: {
   reservations: any[]
   dayId: number
@@ -165,7 +165,7 @@ export function getTransportForDay(opts: {
  * transport/leg display time, a timed note) sorts by that time. An item WITHOUT a
  * time inherits the time of the timed item before it, so untimed items stay where
  * they were manually placed. Stable on the incoming order for ties.
- */
+*/
 function applyChronoOrder(
   items: MergedItem[],
   dayId: number,
@@ -187,7 +187,7 @@ function applyChronoOrder(
     .map(k => k.it)
 }
 
-/** Merge places, notes, and transports into a single ordered day timeline. */
+/** Merge places, notes, and transports into a single ordered day timeline.*/
 export function getMergedItems(opts: {
   dayAssignments: any[]
   dayNotes: any[]

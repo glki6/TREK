@@ -15,7 +15,7 @@ import type { AdminUser, AdminStats, OidcConfig, UpdateInfo } from './adminModel
  * and toggle handlers. AdminPage stays a wiring container that builds the
  * (t-dependent) tab list and renders the tab panels around this state.
  * Behaviour is identical to the previous in-component logic.
- */
+*/
 export function useAdmin() {
   const { demoMode, serverTimezone } = useAuthStore()
   const { t } = useTranslation()

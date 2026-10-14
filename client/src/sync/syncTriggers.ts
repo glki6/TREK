@@ -11,7 +11,7 @@
  *
  * Call `registerSyncTriggers()` once on app mount.
  * Call `unregisterSyncTriggers()` on unmount / logout.
- */
+*/
 import { mutationQueue } from './mutationQueue'
 import { tripSyncManager } from './tripSyncManager'
 import { isEffectivelyOnline, onNetworkModeChange } from './networkMode'
@@ -25,7 +25,7 @@ let _unsubscribeNetworkMode: (() => void) | null = null
 let _wasEffectivelyOnline = isEffectivelyOnline()
 let _registered = false
 
-/** Pull the latest server state for every open trip into the Zustand store. */
+/** Pull the latest server state for every open trip into the Zustand store.*/
 function rehydrateActiveTrips() {
   const store = useTripStore.getState()
   for (const tripId of getActiveTrips()) {
@@ -37,7 +37,7 @@ function rehydrateActiveTrips() {
  * Network came back — flush local writes first, then re-seed Dexie for all
  * cacheable trips and re-hydrate the open trip's store so a collaborator's
  * edits made while we were offline appear without navigating away.
- */
+*/
 function onOnline() {
   // A real browser reconnect must NOT override a user-forced offline session:
   // syncAll would re-seed Dexie from the server and wipe un-flushed optimistic
@@ -52,14 +52,14 @@ function onOnline() {
     })
 }
 
-/** Tab became visible — flush only; don't trigger a potentially expensive syncAll. */
+/** Tab became visible — flush only; don't trigger a potentially expensive syncAll.*/
 function onVisibility() {
   if (!document.hidden && isEffectivelyOnline()) {
     mutationQueue.flush().catch(console.error)
   }
 }
 
-/** Periodic heartbeat — drain any lingering pending mutations. */
+/** Periodic heartbeat — drain any lingering pending mutations.*/
 function onPeriodic() {
   if (isEffectivelyOnline()) {
     mutationQueue.flush().catch(console.error)
@@ -71,7 +71,7 @@ function onPeriodic() {
  * effective network mode. Coming back online — whether the network returned or
  * the user lifted the force-offline switch — behaves like a real reconnection:
  * flush queued writes, then re-seed and re-hydrate.
- */
+*/
 function onNetworkMode() {
   const nowOnline = isEffectivelyOnline()
   if (nowOnline && !_wasEffectivelyOnline) onOnline()

@@ -1,6 +1,6 @@
 import { URL_REGEX } from './CollabChat.constants'
 
-/* ── Message Text with clickable URLs ── */
+/* ── Message Text with clickable URLs ──*/
 interface MessageTextProps {
   text: string
 }

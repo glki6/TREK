@@ -25,7 +25,7 @@ export interface FlightLeg {
   arr_time?: string | null
 }
 
-/** reservation.metadata may be a JSON string or an already-parsed object. */
+/** reservation.metadata may be a JSON string or an already-parsed object.*/
 export function parseReservationMetadata(r: Pick<Reservation, 'metadata'>): Record<string, any> {
   const m = r.metadata
   if (!m) return {}
@@ -41,7 +41,7 @@ export function parseReservationMetadata(r: Pick<Reservation, 'metadata'>): Reco
   return m as Record<string, any>
 }
 
-/** Endpoints ordered by `sequence` (geometry + order source of truth). */
+/** Endpoints ordered by `sequence` (geometry + order source of truth).*/
 export function orderedEndpoints(r: Pick<Reservation, 'endpoints'>): ReservationEndpoint[] {
   return (r.endpoints || []).slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
 }
@@ -50,7 +50,7 @@ export function orderedEndpoints(r: Pick<Reservation, 'endpoints'>): Reservation
  * Ordered legs of a flight. `metadata.legs` is preferred; otherwise a single leg
  * is derived from the endpoints (and finally the flat metadata) so that legacy
  * single-leg flights — and flights created before this feature — still work.
- */
+*/
 export function getFlightLegs(r: Reservation): FlightLeg[] {
   const meta = parseReservationMetadata(r)
   if (Array.isArray(meta.legs) && meta.legs.length > 0) {
@@ -88,7 +88,7 @@ export function getFlightLegs(r: Reservation): FlightLeg[] {
  * A train booking mirrors the flight leg model (#1150), but its stops are
  * STATIONS (labels, not IATA codes) and each leg carries a train number +
  * platform instead of an airline + flight number.
- */
+*/
 export interface TrainLeg {
   from: string | null // station label (or null)
   to: string | null
@@ -105,7 +105,7 @@ export interface TrainLeg {
  * Ordered legs of a train booking. Prefers `metadata.legs`; otherwise derives a
  * single leg from the endpoints + flat metadata, so single-leg trains — and
  * trains created before this feature — still work.
- */
+*/
 export function getTrainLegs(r: Reservation): TrainLeg[] {
   const meta = parseReservationMetadata(r)
   if (Array.isArray(meta.legs) && meta.legs.length > 0) {
@@ -140,7 +140,7 @@ export function getTrainLegs(r: Reservation): TrainLeg[] {
   }]
 }
 
-/** Number of flight segments. 1 for a simple from -> to booking. */
+/** Number of flight segments. 1 for a simple from -> to booking.*/
 export function legCount(r: Reservation): number {
   return getFlightLegs(r).length
 }
@@ -156,7 +156,7 @@ export function isMultiLegFlight(r: Reservation): boolean {
 /**
  * Ordered route labels (IATA codes, or names when no code) for display, e.g.
  * ['FRA','BER','HND']. Uses endpoints; falls back to the flat metadata pair.
- */
+*/
 export function routeStops(r: Reservation): string[] {
   const eps = orderedEndpoints(r)
   if (eps.length >= 2) return eps.map(e => e.code || e.name)

@@ -37,14 +37,14 @@ interface PlaceFormModalProps {
   dayAssignments?: Assignment[]
   /** Mobile keeps the untouched single-column form; desktop adds the saved-place
    *  picker column when the Collections addon is enabled. Sourced from the trip
-   *  planner's matchMedia('(max-width:767px)'). */
+   *  planner's matchMedia('(max-width:767px)').*/
   isMobile?: boolean
 }
 
 
 /** Place create/edit form state: maps search + Google-URL resolve + autocomplete,
  * category creation, file attachments and submit. Keeps PlaceFormModal a thin
- * render over the form fields. */
+ * render over the form fields.*/
 
 // #1152: a manually-added place is treated as a likely duplicate of an existing
 // trip place if it shares the Google Place ID, the (case-insensitive) name, or

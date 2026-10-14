@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import ReactDOM from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTripStore } from '../store/tripStore'
@@ -34,7 +34,7 @@ import PluginFrame from '../components/Plugins/PluginFrame'
 import TripWarningsBanner from '../components/Planner/TripWarningsBanner'
 import Navbar from '../components/Layout/Navbar'
 import { useToast } from '../components/shared/Toast'
-import { Map, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train } from 'lucide-react'
+import { Map, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train, Grid3x3, Maximize2, Palette } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { addonsApi, accommodationsApi, authApi, tripsApi, assignmentsApi, mapsApi } from '../api/client'
 import { accommodationRepo } from '../repo/accommodationRepo'
@@ -199,7 +199,8 @@ export default function TripPlannerPage(): React.ReactElement | null {
     transportModalDayId, setTransportModalDayId,
     transportModalAutomated, setTransportModalAutomated, transitPrefill, setTransitPrefill, transitJourney, setTransitJourney,
     reservationPrefill, transportPrefill, importReviewActive, advanceImportReview,
-    routeShown, setRouteShown, routeProfile, setRouteProfile, fitKey, setFitKey,
+    activeRouteDayId,
+    routeShown, setRouteShown, mobileRouteDays, setMobileRouteDays, routeProfile, setRouteProfile, fitKey, setFitKey, fitAllKey, setFitAllKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
     deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
     visibleConnections, setVisibleConnections, toggleConnection, mapTransportDetail, setMapTransportDetail,
@@ -210,13 +211,34 @@ export default function TripPlannerPage(): React.ReactElement | null {
     handleSavePlace, openPlaceEditor, handleDeletePlace, confirmDeletePlace, confirmDeletePlaces, confirmChangeCategory,
     handleAssignToDay, handleRemoveAssignment, handleReorder, handleReorderDays, handleAddDay, handleUpdateDayTitle,
     handleSaveReservation, handleSaveTransport, handleDeleteReservation,
-    selectedPlace, dayOrderMap, dayPlaces,
+    selectedPlace, dayOrderMap, dayPlaces, placeDayMap,
     mapTileUrl, defaultCenter, defaultZoom, fontStyle, splashDone,
   } = useTripPlanner()
 
   const poi = usePoiExplore()
   const [glMap, setGlMap] = useState<CompassMap | null>(null)
   const poiPillEnabled = useSettingsStore(s => s.settings.map_poi_pill_enabled) !== false
+  const [disableClustering, setDisableClustering] = useState(false)
+  const [useDayColors, setUseDayColors] = useState(false)
+
+  // Zero-based index of the currently selected day (for per-day route coloring).
+  // Derived from showDayDetail (day detail panel open) or selectedDayId as fallback.
+  const selectedDayIndex = useMemo(() => {
+    // Priority: detail panel > active per-day route day (mobile) > selected day
+    const targetId = showDayDetail?.id ?? activeRouteDayId ?? selectedDayId
+    if (!targetId) return null
+    const idx = days.findIndex(d => d.id === targetId)
+    return idx >= 0 ? idx : null
+  }, [days, showDayDetail?.id, activeRouteDayId, selectedDayId])
+
+  // set of place IDs linked to accommodations — used for map marker styling.
+  const accommodationPlaceIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const acc of tripAccommodations) {
+      if (acc.place_id) ids.add(acc.place_id)
+    }
+    return ids
+  }, [tripAccommodations])
 
   // Costs expense editor opened from a booking modal (save-then-open). Lives at the
   // page level so it has tripMembers / base currency / current user available.
@@ -319,6 +341,8 @@ export default function TripPlannerPage(): React.ReactElement | null {
               zoom={defaultZoom}
               tileUrl={mapTileUrl}
               fitKey={fitKey}
+              allPlaces={places.filter(p => p.lat && p.lng)}
+              fitAllKey={fitAllKey}
               dayOrderMap={dayOrderMap}
               leftWidth={leftCollapsed ? 0 : leftWidth}
               rightWidth={rightCollapsed ? 0 : rightWidth}
@@ -334,7 +358,12 @@ export default function TripPlannerPage(): React.ReactElement | null {
               pois={poi.pois}
               onPoiClick={openAddPlaceFromPoi}
               onViewportChange={poi.onViewportChange}
+              disableClustering={disableClustering}
               onMapReady={setGlMap}
+              placeDayMap={placeDayMap}
+              useDayColors={useDayColors}
+              selectedDayIndex={selectedDayIndex}
+              accommodationPlaceIds={accommodationPlaceIds}
             />
 
             {(poiPillEnabled || glMap) && (
@@ -346,12 +375,176 @@ export default function TripPlannerPage(): React.ReactElement | null {
               </div>
             )}
 
-            {/* Mobile: the compass/reset-orientation control lives centre-top on its own
-                (the desktop cluster above is hidden below md), between the edge Plan/Places tabs. */}
-            {glMap && (
-              <div className="flex md:hidden" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 25, pointerEvents: 'none' }}>
-                <MapCompassPill map={glMap} />
-              </div>
+            {/* Mobile: day colors toggle FAB — state only */}
+            {isMobile && (
+              <button
+                onClick={() => setUseDayColors(c => !c)}
+                style={{
+                  position: 'absolute',
+                  bottom: showDayDetail && !selectedPlace
+                    ? 'calc(var(--bottom-nav-h, 84px) + 20px + var(--day-panel-h, 0px) + 156px)'
+                    : 'calc(var(--bottom-nav-h, 84px) + 156px)',
+                  right: 12,
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: useDayColors ? '#3b82f6' : 'var(--bg-card, white)',
+                  color: useDayColors ? 'white' : 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                title={useDayColors ? 'Disable day colors' : 'Enable day colors'}
+              >
+                <Palette size={20} />
+              </button>
+            )}
+
+            {/* Mobile: cluster toggle FAB above Fit All button */}
+            {isMobile && (
+              <button
+                onClick={() => setDisableClustering(c => !c)}
+                style={{
+                  position: 'absolute',
+                  bottom: showDayDetail && !selectedPlace
+                    ? 'calc(var(--bottom-nav-h, 84px) + 20px + var(--day-panel-h, 0px) + 108px)'
+                    : 'calc(var(--bottom-nav-h, 84px) + 108px)',
+                  right: 12,
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: disableClustering ? '#3b82f6' : 'var(--bg-card, white)',
+                  color: disableClustering ? 'white' : 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                title={disableClustering ? 'Re-enable marker clustering' : 'Disable marker clustering'}
+              >
+                <Grid3x3 size={20} />
+              </button>
+            )}
+
+            {/* Mobile: Fit All FAB — zooms map to show all trip places */}
+            {isMobile && (
+              <button
+                onClick={() => setFitAllKey(k => k + 1)}
+                style={{
+                  position: 'absolute',
+                  bottom: showDayDetail && !selectedPlace
+                    ? 'calc(var(--bottom-nav-h, 84px) + 20px + var(--day-panel-h, 0px) + 60px)'
+                    : 'calc(var(--bottom-nav-h, 84px) + 60px)',
+                  right: 12,
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: 'var(--bg-card, white)',
+                  color: 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                title="Fit All Places"
+              >
+                <Maximize2 size={20} />
+              </button>
+            )}
+
+            {/* Desktop: Day colors toggle FAB */}
+            {!isMobile && (
+              <button
+                onClick={() => setUseDayColors(c => !c)}
+                style={{
+                  position: 'absolute',
+                  bottom: 156,
+                  right: rightCollapsed ? 12 : (rightWidth + 12),
+                  zIndex: 1000,
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: useDayColors ? '#3b82f6' : 'var(--bg-card, white)',
+                  color: useDayColors ? 'white' : 'var(--text-muted, #6b7280)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s, color 0.2s, right 0.25s ease',
+                }}
+                title={useDayColors ? 'Disable day colors' : 'Enable day colors'}
+              >
+                <Palette size={20} />
+              </button>
+            )}
+
+            {/* Desktop: Cluster toggle + Fit All FAB buttons — dynamic positioning relative to right sidebar */}
+            {!isMobile && (
+              <>
+                <button
+                  onClick={() => setDisableClustering(c => !c)}
+                  style={{
+                    position: 'absolute',
+                    bottom: 108,
+                    right: rightCollapsed ? 12 : (rightWidth + 12),
+                    zIndex: 1000,
+                    width: 42,
+                    height: 42,
+                    borderRadius: '50%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: disableClustering ? '#3b82f6' : 'var(--bg-card, white)',
+                    color: disableClustering ? 'white' : 'var(--text-muted, #6b7280)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s, color 0.2s, right 0.25s ease',
+                  }}
+                  title={disableClustering ? 'Re-enable marker clustering' : 'Disable marker clustering'}
+                >
+                  <Grid3x3 size={20} />
+                </button>
+                <button
+                  onClick={() => setFitAllKey(k => k + 1)}
+                  style={{
+                    position: 'absolute',
+                    bottom: 60,
+                    right: rightCollapsed ? 12 : (rightWidth + 12),
+                    zIndex: 1000,
+                    width: 42,
+                    height: 42,
+                    borderRadius: '50%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: 'var(--bg-card, white)',
+                    color: 'var(--text-muted, #6b7280)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s, color 0.2s, right 0.25s ease',
+                  }}
+                  title="Fit All Places"
+                >
+                  <Maximize2 size={20} />
+                </button>
+              </>
             )}
 
             <div className="hidden md:block" style={{ position: 'absolute', left: 10, top: 10, bottom: 10, zIndex: 20 }}>
@@ -399,6 +592,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
                   onUpdateDayTitle={handleUpdateDayTitle}
                   onAssignToDay={handleAssignToDay}
                   onRouteCalculated={(r) => { if (r) { setRoute([r.coordinates]); setRouteInfo(r) } else { setRoute(null); setRouteInfo(null) } }}
+                  onTripRouteSet={(coords) => { if (coords) { setRoute(coords); setRouteInfo({ distanceText: '', durationText: '' }) } else { setRoute(null); setRouteInfo(null) } }}
                   reservations={reservations}
                   visibleConnectionIds={visibleConnections}
                   onToggleConnection={toggleConnection}
@@ -421,12 +615,16 @@ export default function TripPlannerPage(): React.ReactElement | null {
                   onSetRouteProfile={setRouteProfile}
                   onNavigateToFiles={() => handleTabChange('dateien')}
                   onExpandedDaysChange={setExpandedDayIds}
+                  onExpandedRouteDaysChange={setMobileRouteDays}
                   pushUndo={pushUndo}
                   canUndo={canUndo}
                   lastActionLabel={lastActionLabel}
                   onUndo={handleUndo}
                   onRouteRefresh={() => { if (selectedDayId) updateRouteForDay(selectedDayId) }}
                   onAddBookingToAssignment={can('day_edit', trip) ? (dayId, assignmentId) => { tripActions.setSelectedDay(dayId); setBookingForAssignmentId(assignmentId); setEditingReservation(null); setShowReservationModal(true) } : undefined}
+                  placeDayMap={placeDayMap}
+                  useDayColors={useDayColors}
+                  selectedDayIndex={selectedDayIndex}
                 />
                 {!leftCollapsed && (
                   <div
@@ -493,6 +691,8 @@ export default function TripPlannerPage(): React.ReactElement | null {
                     pushUndo={pushUndo}
                     days={days}
                     isMobile={false}
+                    placeDayMap={placeDayMap}
+                    useDayColors={useDayColors}
                   />
                 </div>
               </div>
@@ -620,7 +820,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
             )}
 
             {mobileSidebarOpen && ReactDOM.createPortal(
-              <div className="bg-[rgba(0,0,0,0.3)]" style={{ position: 'fixed', inset: 0, zIndex: 9999 }} onClick={() => setMobileSidebarOpen(null)}>
+              <div className="bg-[rgba(0,0,0,0.3)]" style={{ position: 'fixed', inset: 0, zIndex: 9999 }} onClick={() => { console.log('[overlay click] closing mobile sidebar'); setMobileSidebarOpen(null) }}>
                 <div className="bg-surface-card" style={{ position: 'absolute', top: 'var(--nav-h)', left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
                   <div className="border-b border-edge-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
                     <span className="text-content" style={{ fontWeight: 600, fontSize: 'calc(14px * var(--fs-scale-body, 1))' }}>{mobileSidebarOpen === 'left' ? t('trip.mobilePlan') : t('trip.mobilePlaces')}</span>
@@ -630,7 +830,7 @@ export default function TripPlannerPage(): React.ReactElement | null {
                   </div>
                   <div style={{ flex: 1, overflow: 'auto' }}>
                     {mobileSidebarOpen === 'left'
-                      ? <DayPlanSidebar tripId={tripId} trip={trip} days={days} places={places} categories={categories} assignments={assignments} selectedDayId={selectedDayId} selectedPlaceId={selectedPlaceId} selectedAssignmentId={selectedAssignmentId} onSelectDay={(id) => { handleSelectDay(id); setMobileSidebarOpen(null) }} onPlaceClick={(placeId, assignmentId) => { handlePlaceClick(placeId, assignmentId) }} onReorder={handleReorder} onReorderDays={handleReorderDays} onAddDay={handleAddDay} onUpdateDayTitle={handleUpdateDayTitle} onAssignToDay={handleAssignToDay} onRouteCalculated={(r) => { if (r) { setRoute([r.coordinates]); setRouteInfo(r) } }} reservations={reservations} visibleConnectionIds={visibleConnections} onToggleConnection={toggleConnection} onAddReservation={(dayId) => { setEditingReservation(null); tripActions.setSelectedDay(dayId); setShowReservationModal(true); setMobileSidebarOpen(null) }} onAddTransport={can('day_edit', trip) ? (dayId) => { setTransportModalDayId(dayId); setEditingTransport(null); setTransitPrefill(null); setTransportModalAutomated(false); setShowTransportModal(true); setMobileSidebarOpen(null) } : undefined} onOpenTransit={(r) => { setTransitJourney(r); setMobileSidebarOpen(null) }} onPlanTransit={can('day_edit', trip) ? (dayId) => { setTransportModalDayId(dayId); setEditingTransport(null); setTransitPrefill(null); setTransportModalAutomated(true); setShowTransportModal(true); setMobileSidebarOpen(null) } : undefined} onAddPlace={() => { setEditingPlace(null); setShowPlaceForm(true); setMobileSidebarOpen(null) }} onDayDetail={(day) => { setShowDayDetail(day); setSelectedPlaceId(null); selectAssignment(null) }} onRemoveAssignment={handleRemoveAssignment} onEditPlace={(place, assignmentId) => { setEditingPlace(place); setEditingAssignmentId(assignmentId || null); setShowPlaceForm(true); setMobileSidebarOpen(null) }} onDeletePlace={(placeId) => handleDeletePlace(placeId)} accommodations={tripAccommodations} routeShown={routeShown} routeProfile={routeProfile} onToggleRoute={() => setRouteShown(v => !v)} onSetRouteProfile={setRouteProfile} onNavigateToFiles={() => { setMobileSidebarOpen(null); handleTabChange('dateien') }} onExpandedDaysChange={setExpandedDayIds} pushUndo={pushUndo} canUndo={canUndo} lastActionLabel={lastActionLabel} onUndo={handleUndo} onEditTransport={can('day_edit', trip) ? (reservation) => { setEditingTransport(reservation); setTransportModalDayId(reservation.day_id ?? null); setShowTransportModal(true); setMobileSidebarOpen(null) } : undefined} onEditReservation={can('reservation_edit', trip) ? (r) => { setEditingReservation(r); setShowReservationModal(true); setMobileSidebarOpen(null) } : undefined} initialScrollTop={mobilePlanScrollTopRef.current} onScrollTopChange={(top) => { mobilePlanScrollTopRef.current = top }} showRouteToolsWhenExpanded isMobile />
+                      ? <DayPlanSidebar tripId={tripId} trip={trip} days={days} places={places} categories={categories} assignments={assignments} selectedDayId={selectedDayId} selectedPlaceId={selectedPlaceId} selectedAssignmentId={selectedAssignmentId} onSelectDay={(id) => { handleSelectDay(id); setMobileSidebarOpen(null) }} onPlaceClick={(placeId, assignmentId) => { handlePlaceClick(placeId, assignmentId) }} onReorder={handleReorder} onReorderDays={handleReorderDays} onAddDay={handleAddDay} onUpdateDayTitle={handleUpdateDayTitle} onAssignToDay={handleAssignToDay} onRouteCalculated={(r) => { if (r) { setRoute([r.coordinates]); setRouteInfo(r) } }} onTripRouteSet={(coords) => { if (coords) { setRoute(coords); setRouteInfo({ distanceText: "", durationText: "" }) } else { setRoute(null); setRouteInfo(null) } }} reservations={reservations} visibleConnectionIds={visibleConnections} onToggleConnection={toggleConnection} onAddReservation={(dayId) => { setEditingReservation(null); tripActions.setSelectedDay(dayId); setShowReservationModal(true); setMobileSidebarOpen(null) }} onAddTransport={can('day_edit', trip) ? (dayId) => { setTransportModalDayId(dayId); setEditingTransport(null); setTransitPrefill(null); setTransportModalAutomated(false); setShowTransportModal(true); setMobileSidebarOpen(null) } : undefined} onOpenTransit={(r) => { setTransitJourney(r); setMobileSidebarOpen(null) }} onPlanTransit={can('day_edit', trip) ? (dayId) => { setTransportModalDayId(dayId); setEditingTransport(null); setTransitPrefill(null); setTransportModalAutomated(true); setShowTransportModal(true); setMobileSidebarOpen(null) } : undefined} onAddPlace={() => { setEditingPlace(null); setShowPlaceForm(true); setMobileSidebarOpen(null) }} onDayDetail={(day) => { setShowDayDetail(day); setSelectedPlaceId(null); selectAssignment(null) }} onRemoveAssignment={handleRemoveAssignment} onEditPlace={(place, assignmentId) => { setEditingPlace(place); setEditingAssignmentId(assignmentId || null); setShowPlaceForm(true); setMobileSidebarOpen(null) }} onDeletePlace={(placeId) => handleDeletePlace(placeId)} accommodations={tripAccommodations} routeShown={routeShown} routeProfile={routeProfile} onToggleRoute={() => setRouteShown(v => !v)} onSetRouteProfile={setRouteProfile} onNavigateToFiles={() => { setMobileSidebarOpen(null); handleTabChange('dateien') }} onExpandedDaysChange={setExpandedDayIds} onExpandedRouteDaysChange={setMobileRouteDays} pushUndo={pushUndo} canUndo={canUndo} lastActionLabel={lastActionLabel} onUndo={handleUndo} onEditTransport={can('day_edit', trip) ? (reservation) => { setEditingTransport(reservation); setTransportModalDayId(reservation.day_id ?? null); setShowTransportModal(true); setMobileSidebarOpen(null) } : undefined} onEditReservation={can('reservation_edit', trip) ? (r) => { setEditingReservation(r); setShowReservationModal(true); setMobileSidebarOpen(null) } : undefined} initialScrollTop={mobilePlanScrollTopRef.current} onScrollTopChange={(top) => { mobilePlanScrollTopRef.current = top }} showRouteToolsWhenExpanded isMobile placeDayMap={placeDayMap} useDayColors={useDayColors} selectedDayIndex={selectedDayIndex} />
                       : <PlacesSidebar tripId={tripId} places={places} categories={categories} assignments={assignments} selectedDayId={selectedDayId} selectedPlaceId={selectedPlaceId} onPlaceClick={(placeId) => { handlePlaceClick(placeId); setMobileSidebarOpen(null) }} onAddPlace={() => { setEditingPlace(null); setShowPlaceForm(true); setMobileSidebarOpen(null) }} onAssignToDay={handleAssignToDay} onEditPlace={(place) => { openPlaceEditor(place); setMobileSidebarOpen(null) }} onDeletePlace={(placeId) => handleDeletePlace(placeId)} onBulkDeletePlaces={(ids) => setDeletePlaceIds(ids)} onBulkDeleteConfirm={(ids) => confirmDeletePlaces(ids)} onBulkChangeCategory={(ids, catId) => confirmChangeCategory(ids, catId)} days={days} isMobile onCategoryFilterChange={setMapCategoryFilter} onPlacesFilterChange={setMapPlacesFilter} pushUndo={pushUndo} initialScrollTop={mobilePlacesScrollTopRef.current} onScrollTopChange={(top) => { mobilePlacesScrollTopRef.current = top }} />
                     }
                   </div>

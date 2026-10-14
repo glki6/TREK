@@ -3,7 +3,7 @@
  * has no photo yet (a trip, a saved place). Picked by a stable numeric id so a
  * given entity always keeps the same colour. Mirrors the dashboard trip-card
  * palette so collection cards feel of a piece with the dashboard.
- */
+*/
 export const GRADIENTS = [
   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -15,7 +15,7 @@ export const GRADIENTS = [
   'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
 ] as const
 
-/** Deterministic gradient for a numeric id (handles negatives defensively). */
+/** Deterministic gradient for a numeric id (handles negatives defensively).*/
 export function entityGradient(id: number): string {
   const i = ((id % GRADIENTS.length) + GRADIENTS.length) % GRADIENTS.length
   return GRADIENTS[i]
