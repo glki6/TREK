@@ -16,6 +16,7 @@ const common: TranslationStrings = {
   'common.selectAll': '全选',
   'common.deselectAll': '取消全选',
   'common.error': '错误',
+  'common.success': '成功',
   'common.unknownError': '未知错误',
   'common.tooManyAttempts': '尝试次数过多，请稍后再试。',
   'common.back': '返回',
@@ -51,17 +52,26 @@ const common: TranslationStrings = {
   'common.justNow': '刚刚',
   'common.hoursAgo': '{count}小时前',
   'common.daysAgo': '{count}天前',
-  'common.datepicker.prevMonth': 'Previous month', // en-fallback
-  'common.datepicker.nextMonth': 'Next month', // en-fallback
-  'common.datepicker.prevYear': 'Previous year', // en-fallback
-  'common.datepicker.nextYear': 'Next year', // en-fallback
-  'common.datepicker.prevYears': 'Previous years', // en-fallback
-  'common.datepicker.nextYears': 'Next years', // en-fallback
-  'common.datepicker.selectMonth': 'Select month', // en-fallback
-  'common.datepicker.selectYear': 'Select year', // en-fallback
-  'common.datepicker.enterManually': 'Enter date manually', // en-fallback
-  'common.datepicker.typeDate': 'Type a date', // en-fallback
-  'common.datepicker.dialog': 'Date picker', // en-fallback
-  'common.datepicker.clearDate': 'Clear date', // en-fallback
+  'common.datepicker.prevMonth': '上个月',
+  'common.datepicker.nextMonth': '下个月',
+  'common.datepicker.prevYear': '去年',
+  'common.datepicker.nextYear': '明年',
+  'common.datepicker.prevYears': '前些年',
+  'common.datepicker.nextYears': '后些年',
+  'common.datepicker.selectMonth': '选择月份',
+  'common.datepicker.selectYear': '选择年份',
+  'common.datepicker.enterManually': '手动输入日期',
+  'common.datepicker.typeDate': '输入日期',
+  'common.datepicker.dialog': '日期选择器',
+  'common.datepicker.clearDate': '清除日期',
+  'common.errorTitle': '出错了',
+  'common.errorBody': '应用的这一部分已停止工作。您的数据是安全的。',
+  'common.errorPanelTitle': '无法显示此部分',
+  'common.errorPanelBody': '页面的其余部分仍可正常使用。',
+  'common.errorRetry': '重试',
+  'common.errorReload': '重新加载页面',
+  'common.errorUpdateTitle': '有新版本可用',
+  'common.errorUpdateBody': '此标签页打开期间 TREK 已更新。请重新加载以获取新版本。',
+  'common.errorPluginTitle': '无法显示此插件',
 };
 export default common;

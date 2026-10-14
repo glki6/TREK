@@ -108,16 +108,64 @@ const admin: TranslationStrings = {
   'admin.requireMfa': 'فرض المصادقة الثنائية (2FA)',
   'admin.requireMfaHint': 'يجب على المستخدمين الذين لا يملكون 2FA إكمال الإعداد في الإعدادات قبل استخدام التطبيق.',
   'admin.apiKeys': 'مفاتيح API',
-  'admin.apiKeysHint': 'اختياري. يُفعّل بيانات الأماكن الموسعة مثل الصور والطقس.',
+  'admin.apiKeysHint': 'من أين تأتي بيانات الأماكن. فهرس TREK لا يحتاج مفتاحًا؛ والمزوّدان أدناه اختياريان.',
+  'admin.trekApi.badgeDefault': 'الافتراضي الموصى به',
+  'admin.googleCaveat.badge': 'غير مُستحسَن',
+  'admin.googleCaveat.body':
+    'TREK مفتوح المصدر ولسنا محايدين هنا. بهذا الحجم لا توجد التقييمات وصور المحال العادية إلا لدى Google، وهذا هو الاحتكار. الحقل موجود لانعدام البديل، لا لأننا نوصي به. عندئذ يذهب كل استعلام إلى Google.',
+  'admin.trekApi.tagline':
+    'فهرس الأماكن الخاص بـ TREK. بحث بلا مفتاح من Google، بلا حصة، وبلا أن يُحصي أحد عمليات بحثك.',
+  'admin.trekApi.factPlaces':
+    '73.6 مليون مكان حول العالم',
+  'admin.trekApi.factNoKey':
+    'بلا مفتاح وبلا حصة',
+  'admin.trekApi.factOffline':
+    'حِزَم الدول تعمل دون اتصال',
+  'admin.trekApi.factPrivacy':
+    'لا تُسجَّل عمليات البحث أبدًا',
+  'admin.trekApi.more':
+    'ماذا يحتوي',
+  'admin.trekApi.fieldPhone':
+    'هاتف',
+  'admin.trekApi.fieldStableId':
+    'معرّف ثابت',
+  'admin.trekApi.includedNote':
+    'الأوصاف تأتي من موقع المكان نفسه، وساعات العمل من OpenStreetMap حيث تكون مُدخَلة.',
+  'admin.trekApi.notRatings':
+    'التقييمات',
+  'admin.trekApi.notPhotos':
+    'صور المحال العادية',
+  'admin.trekApi.notIncludedNote':
+    'لا يوفّر أيًّا منهما أي مصدر مفتوح بأي ثمن. يبقى مفتاح Google هو السبيل الوحيد إليهما.',
+  'admin.trekApi.sourcesLabel':
+    'المصادر',
+  'admin.trekApi.sourcesNote':
+    'كل حقل في الاستجابة يذكر من أيٍّ منها جاء.',
+  'admin.trekApi.included':
+    'مشمول',
+  'admin.trekApi.notIncluded':
+    'غير مشمول',
   'admin.mapsKey': 'مفتاح Google Maps API',
   'admin.mapsKeyHint': 'مطلوب للبحث عن الأماكن. احصل عليه من console.cloud.google.com',
   'admin.mapsKeyHintLong':
-    'بدون مفتاح API، يُستخدم OpenStreetMap للبحث. مع مفتاح Google يمكن تحميل الصور والتقييمات وساعات العمل أيضًا. احصل عليه من console.cloud.google.com.',
+    'بدون مفتاح Google API يُستخدَم TREK API المُوصى به. ومع المفتاح يمكن إضافةً تحميل الصور والتقييمات وساعات العمل. أنشئ مفتاحًا على console.cloud.google.com.',
   'admin.recommended': 'مُوصى به',
   'admin.weatherKey': 'مفتاح OpenWeatherMap API',
   'admin.weatherKeyHint': 'لبيانات الطقس. مجاني من openweathermap.org',
   'admin.unsplashKey': 'مفتاح واجهة برمجة تطبيقات Unsplash',
   'admin.unsplashKeyHint': 'للبحث عن الصور. مجاني من unsplash.com/developers',
+  'admin.amapKey': 'مفتاح واجهة برمجة تطبيقات Amap (高德地图)',
+  'admin.amapKeyHint':
+    'للبحث عن الأماكن في البر الرئيسي للصين، حيث لا يمكن الوصول إلى Google وتكون بيانات OpenStreetMap شحيحة. يتطلب مفتاحًا من نوع «Web 服务» (خدمة ويب)، وليس مفتاح JS API. يمكن الحصول عليه من console.amap.com.',
+  'admin.placesProvider.title': 'مزوّد البحث عن الأماكن',
+  'admin.placesProvider.subtitle':
+    'يجيب فهرس TREK الخاص وOpenStreetMap عن كل بحث. هنا يُختار من يُسأل أيضاً عندما لا يجدان شيئاً: «تلقائي» يفضّل Google عند وجود مفتاح، ثم Amap.',
+  'admin.placesProvider.auto': 'تلقائي',
+  'admin.placesProvider.google': 'Google Places',
+  'admin.placesProvider.amap': 'Amap (高德地图)',
+  'admin.placesProvider.openstreetmap': 'OpenStreetMap',
+  'admin.placesProvider.missingKey': 'لا يوجد مفتاح API للمزوّد المختار، لذا يجيب عن البحث عن الأماكن فهرس TREK وOpenStreetMap وحدهما.',
+  'admin.placesProvider.saved': 'تم حفظ مزوّد البحث عن الأماكن',
   'admin.validateKey': 'اختبار',
   'admin.keyValid': 'متصل',
   'admin.keyInvalid': 'غير صالح',
@@ -135,6 +183,8 @@ const admin: TranslationStrings = {
   'admin.fileTypesHint': 'حدد أنواع الملفات التي يمكن للمستخدمين رفعها.',
   'admin.fileTypesFormat': 'امتدادات مفصولة بفواصل (مثل jpg,png,pdf,doc). استخدم * للسماح بجميع الأنواع.',
   'admin.fileTypesSaved': 'تم حفظ إعدادات أنواع الملفات',
+  'admin.googleOptions': 'فيمَ يُستخدَم المفتاح',
+  'admin.googleOptionsSummary': '{on} من {total} مُفعَّل',
   'admin.placesPhotos.title': 'صور الأماكن',
   'admin.placesPhotos.subtitle': 'جلب الصور من Google Places API. عطّلها للحفاظ على حصة API. صور Wikimedia غير متأثرة.',
   'admin.placesAutocomplete.title': 'الإكمال التلقائي للأماكن',
@@ -142,6 +192,24 @@ const admin: TranslationStrings = {
   'admin.placesDetails.title': 'تفاصيل الأماكن',
   'admin.placesDetails.subtitle':
     'جلب معلومات تفصيلية عن الأماكن (الساعات، التقييم، الموقع) من Google Places API. عطّلها للحفاظ على حصة API.',
+  'admin.placesEnrich.title': 'إثراء الأماكن',
+  'admin.placesEnrich.subtitle':
+    'يعرض صورًا ووصفًا أثناء إضافة مكان. تُستخدم ويكيبيديا وOpenStreetMap دائمًا، وتُضاف Google عند تفعيل صور الأماكن أو تفاصيل الأماكن.',
+  'admin.placesGoogleOnly.title': 'البحث عبر Google فقط',
+  'admin.placesGoogleOnly.subtitle': 'كل بحث وكل اقتراح يذهب إلى Google Places. عند الإيقاف يجيب فهرس TREK وOpenStreetMap أولًا، ولا يُسأل Google إلا إذا لم يجدا شيئًا.',
+  'admin.placesGoogleOnly.missingKey': 'يتطلب مفتاح Google Maps API. من دونه يعمل البحث عبر فهرس TREK وOpenStreetMap مهما كان وضع هذا المفتاح.',
+  'admin.placesGoogleOnly.otherProvider': 'يتطلب Google كمزود للأماكن. عند اختيار Amap أو OpenStreetMap لا يذهب أي بحث إلى Google مهما كان وضع هذا المفتاح.',
+  'admin.transitProvider.title': 'مزود النقل العام',
+  'admin.transitProvider.subtitle': 'الخدمة التي تجيب على بحث النقل العام.',
+  'admin.transitProvider.transitous': 'Transitous (مجاني)',
+  'admin.transitProvider.google': 'Google',
+  'admin.transitProvider.transitousHint': 'تغذيات GTFS مجتمعية. مجانية وبدون مفتاح، وأفضل تغطية في أوروبا.',
+  'admin.transitProvider.googleHint': 'يستخدم مفتاح Google أعلاه للمناطق التي لا تتوفر لها بيانات في Transitous. يُحاسب على كل بحث — ويُستخدم Transitous ما دام لا يوجد مفتاح.',
+  'admin.transitProvider.noKeyWarning': 'تم اختيار Google، لكن لا يوجد مفتاح Google مُهيأ — لا يزال بحث النقل يستخدم Transitous. أضف مفتاحًا ضمن مفاتيح API أعلاه.',
+  'admin.transitProvider.personalKeyWarning': 'مفتاح Google الخاص بك وحده مضبوط، لذا يعود بحث النقل لبقية الأعضاء إلى Transitous. احفظ المفتاح أعلاه كمسؤول لتطبيقه على مستوى المثيل.',
+  'admin.placeShadow.title': 'سجل البحث عن الأماكن',
+  'admin.placeShadow.subtitle':
+    'تسجيل نتيجة البحث التي جرى اختيارها، حتى يمكن لاحقًا قياس فهرس أماكن آخر على عمليات بحث حقيقية. لا يغادر أي شيء هذا الخادم، ويمكن للمشرف تصدير السجل أو حذفه في أي وقت.',
   'admin.bagTracking.title': 'تتبع الأمتعة',
   'admin.bagTracking.subtitle': 'تفعيل الوزن وتعيين الأمتعة للعناصر',
   'admin.collab.chat.title': 'الدردشة',
@@ -177,15 +245,24 @@ const admin: TranslationStrings = {
   'admin.packingTemplates.loadError': 'فشل تحميل القوالب',
   'admin.packingTemplates.createError': 'فشل إنشاء القالب',
   'admin.packingTemplates.deleteError': 'فشل حذف القالب',
+  'admin.packingTemplates.deleteCategoryError': 'فشل حذف الفئة',
+  'admin.packingTemplates.deleteItemError': 'فشل حذف العنصر',
   'admin.packingTemplates.saveError': 'فشل الحفظ',
   'admin.tabs.addons': 'الإضافات',
   'admin.tabs.plugins': 'الإضافات الخارجية',
+  'admin.tabs.storage': 'التخزين',
   'admin.plugins.rescan': 'إعادة الفحص',
   'admin.plugins.rescanned': 'تمت إعادة فحص مجلد الإضافات',
   'admin.plugins.upload': 'رفع إضافة',
   'admin.plugins.dropToUpload': 'أفلت ملف .zip لتثبيت الإضافة',
   'admin.plugins.uploaded': 'تم رفع الإضافة “{name}” — فعّلها لتشغيلها',
   'admin.plugins.sideloaded': 'محمّلة يدويًا',
+  'admin.plugins.devLinkBadge': 'Dev-Link',
+  'admin.plugins.devLinkHint': 'يُحمّل من دليل بناء محلي ويُعاد تحميله فوريًا ببيانات حقيقية — للتطوير فقط',
+  'admin.plugins.devLinkTitle': 'ربط إضافة محلية',
+  'admin.plugins.devLinkPathPlaceholder': '/absolute/path/to/your/plugin',
+  'admin.plugins.devLinkButton': 'ربط',
+  'admin.plugins.devLinkLinked': 'تم ربط {id} — فعّلها للتشغيل',
   'admin.plugins.sideloadedHint': 'تم رفعها يدويًا — ليست من السجل، غير موقّعة وغير مراجَعة',
   'admin.plugins.browse': 'تصفح الإضافات',
   'admin.plugins.installed': 'مثبّتة',
@@ -198,6 +275,18 @@ const admin: TranslationStrings = {
   'admin.plugins.deactivated': 'تم تعطيل الإضافة',
   'admin.plugins.viewErrors': 'عرض سجل الأخطاء',
   'admin.plugins.errorLog': 'سجل الأخطاء',
+  'admin.plugins.allowedHosts': 'المضيفون المسموح بهم',
+  'admin.plugins.allowedHosts.hint':
+    'تتصل هذه الإضافة بخدمة لا يمكن لأحد سواك تسميتها (خادم مستضاف ذاتيًا). أضف المضيفين الذين يمكنها الوصول إليهم — ولن تصل إلى غيرهم.',
+  'admin.plugins.allowedHosts.none': 'لم تتم إضافة أي مضيف بعد.',
+  'admin.plugins.allowedHosts.unsupported':
+    'لا تستخدم هذه الإضافة مضيفين يحددهم المشغّل. مضيفوها المسموح بهم ثابتون في ملف التعريف.',
+  'admin.plugins.allowedHosts.restartNote': 'الحفظ يعيد تشغيل الإضافة لتأخذ القائمة الجديدة.',
+  'admin.plugins.allowedHosts.add': 'إضافة مضيف مسموح به',
+  'admin.plugins.allowedHosts.count': '{n} مضيف مسموح به',
+  'admin.plugins.operatorEgressPill': '+ مضيفون تضيفهم',
+  'admin.plugins.operatorEgressHint':
+    'تتصل هذه الإضافة بخدمة لا يمكن لأحد سواك تسميتها (خادم مستضاف ذاتيًا). بعد التثبيت أضف المضيفين من ⋯ ← المضيفون المسموح بهم. ولن تصل إلى غيرهم.',
   'admin.plugins.noErrors': 'لا توجد أخطاء مسجّلة.',
   'admin.plugins.uninstalled': 'تمت إزالة الإضافة',
   'admin.plugins.uninstallTitle': 'إزالة الإضافة؟',
@@ -214,6 +303,7 @@ const admin: TranslationStrings = {
   'admin.plugins.updateTo': 'Update → v{version}',
   'admin.plugins.enabledToggle': 'تفعيل الإضافة',
   'plugins.notFound': 'الإضافة غير موجودة',
+  'plugins.frameLoadFailed': 'This plugin could not be loaded.',
   'admin.plugins.title': 'الإضافات الخارجية',
   'admin.plugins.subtitle': 'ثبّت وأدر إضافات الجهات الخارجية على خادمك.',
   'admin.plugins.disabledTitle': 'الإضافات الخارجية معطّلة',
@@ -239,6 +329,7 @@ const admin: TranslationStrings = {
   'admin.plugins.scope.user': 'لكل مستخدم',
   'admin.plugins.fieldRequired': 'مطلوب',
   'admin.plugins.sourceRepo': 'مستودع المصدر',
+  'admin.plugins.reportIssue': 'الإبلاغ عن مشكلة',
   'admin.plugins.homepage': 'الصفحة الرئيسية',
   'admin.plugins.requiresTrek': 'يتطلب TREK {version}+',
   'admin.plugins.reviewedOn': 'تمت المراجعة {date}',
@@ -248,7 +339,49 @@ const admin: TranslationStrings = {
     'قراءة معلومات الملف الشخصي الأساسية (الاسم والصورة الرمزية — وليس بيانات الاعتماد أبدًا)',
   'admin.plugins.perm.db:read:costs': 'قراءة المصروفات (بنود الميزانية) التي يمكن للمستخدم الحالي الوصول إليها',
   'admin.plugins.perm.db:read:packing': 'قراءة قوائم الأمتعة للرحلات التي يمكن للمستخدم الحالي الوصول إليها',
+  'admin.plugins.perm.db:write:packing':
+    'إنشاء عناصر قائمة الأمتعة وتعديلها وحذفها في الرحلات التي يمكن للمستخدم الحالي تعديلها',
+  'admin.plugins.perm.weather:read': 'قراءة توقعات الطقس المخزنة مؤقتًا للمضيف (حسب الإحداثيات)',
+  'admin.plugins.perm.db:read:categories': 'قراءة قائمة فئات الأماكن العامة',
+  'admin.plugins.perm.db:read:tags': 'قراءة وسوم المستخدم الحالي',
+  'admin.plugins.perm.db:write:tags': 'إنشاء وسوم المستخدم الحالي وتعديلها وحذفها',
+  'admin.plugins.perm.db:read:todos': 'قراءة مهام الرحلات التي يمكن للمستخدم الحالي الوصول إليها',
+  'admin.plugins.perm.db:write:todos': 'إنشاء مهام وتعديلها وحذفها في الرحلات التي يمكن للمستخدم الحالي تعديلها',
+  'admin.plugins.perm.db:write:atlas':
+    'وضع علامة على البلدان والمناطق كمُزارة وإدارة قائمة أمنيات المستخدم الحالي (يتطلب إضافة Atlas)',
+  'admin.plugins.perm.db:write:vacay':
+    'تبديل أيام الإجازة وعطلات الشركة في الخطة النشطة للمستخدم الحالي (يتطلب إضافة Vacay)',
+  'admin.plugins.perm.db:write:journal':
+    'إنشاء إدخالات اليوميات وتعديلها وحذفها في اليوميات التي يمكن للمستخدم الحالي تعديلها (يتطلب إضافة Journey)',
+  'admin.plugins.perm.db:write:collections':
+    'إنشاء المجموعات وتعديلها وحفظ الأماكن فيها، بدور المجموعة الخاص بالمستخدم الحالي (يتطلب إضافة Collections)',
+  'admin.plugins.perm.db:write:files':
+    'إرفاق ملفات بالرحلات التي يمكن للمستخدم الحالي تعديلها (حد 10 ميغابايت، الامتدادات المحظورة مرفوضة) وإدارة روابطها',
+  'admin.plugins.perm.db:write:collab':
+    'نشر ملاحظات واستطلاعات ورسائل دردشة في الرحلات التي يمكن للمستخدم الحالي تعديلها (يتطلب إضافة Collab)',
+  'admin.plugins.perm.db:write:members':
+    'إضافة مستخدمين إلى الرحلات — يمنح الوصول إلى الرحلة؛ محمي بحق إدارة الأعضاء الخاص بالمستخدم الحالي',
+  'admin.plugins.perm.notify:send':
+    'إرسال إشعار (صندوق الجرس + بريد إلكتروني/ntfy) إلى المستخدم الحالي أو رحلة ينتمي إليها — لا إلى مستلم عشوائي أبدًا',
+  'admin.plugins.perm.ai:invoke':
+    'تشغيل مزود الذكاء الاصطناعي الذي أعده المسؤول (إكمال النص + استخراج المستندات) نيابة عن المستخدم الحالي — لا تحتفظ الإضافة بمفتاح أبدًا',
+  'admin.plugins.perm.oauth:client':
+    'الاتصال بخدمة خارجية نيابة عنك عبر OAuth يديره المضيف (يحتفظ المضيف بالرموز، ولا تراها الإضافة أبدًا)',
   'admin.plugins.perm.db:read:files': 'قراءة ملفات الرحلات التي يمكن للمستخدم الحالي الوصول إليها',
+  'admin.plugins.perm.db:write:reservations':
+    'إنشاء الحجوزات وتعديلها وحذفها في الرحلات التي يمكن للمستخدم الحالي تعديلها',
+  'admin.plugins.perm.db:write:accommodations':
+    'إنشاء أماكن الإقامة وتعديلها وحذفها في الرحلات التي يمكن للمستخدم الحالي تعديلها',
+  'admin.plugins.perm.db:read:journal': 'قراءة يوميات السفر الخاصة بالمستخدم الحالي (يتطلب إضافة Journey)',
+  'admin.plugins.perm.db:read:atlas': 'قراءة البلدان والمناطق التي زارها المستخدم الحالي (يتطلب إضافة Atlas)',
+  'admin.plugins.perm.db:read:vacay': 'قراءة خطة الإجازة الخاصة بالمستخدم الحالي (يتطلب إضافة Vacay)',
+  'admin.plugins.perm.db:read:daynotes': 'قراءة ملاحظات اليوم للرحلات التي يمكن للمستخدم الحالي الوصول إليها',
+  'admin.plugins.perm.db:read:collections':
+    'قراءة مجموعات الأماكن المحفوظة الخاصة بالمستخدم الحالي (يتطلب إضافة Collections)',
+  'admin.plugins.perm.db:write:daynotes':
+    'إنشاء ملاحظات اليوم وتعديلها وحذفها في الرحلات التي يمكن للمستخدم الحالي تعديلها',
+  'admin.plugins.perm.jobs:run':
+    'تشغيل مهام الخلفية المُعلنة وفق جدول زمني (بدون سياق مستخدم — لا يمكنه قراءة بيانات المستخدم)',
   'admin.plugins.perm.db:write:costs': 'إنشاء مصروفات (بنود الميزانية) على الرحلات التي يمكن للمستخدم الحالي تعديلها',
   'admin.plugins.perm.db:write:places': 'إضافة الأماكن وتعديلها وحذفها في الرحلات التي يمكن للمستخدم الحالي تعديلها',
   'admin.plugins.perm.db:write:days': 'إضافة الأيام وتعديلها وحذفها في الرحلات التي يمكن للمستخدم الحالي تعديلها',
@@ -261,9 +394,39 @@ const admin: TranslationStrings = {
   'admin.plugins.perm.hook:photo-provider': 'توفير الصور لميزة الذكريات',
   'admin.plugins.perm.hook:calendar-source': 'توفير الأحداث للتقويم',
   'admin.plugins.perm.hook:place-detail-provider': 'المساهمة بتفاصيل إضافية (مراجعات، تقييمات، روابط) لمكان ما',
+  'admin.plugins.perm.hook:search-provider': 'الإجابة على عمليات البحث عن الأماكن من فهرس خاص به، إلى جانب نتائج TREK',
   'admin.plugins.perm.hook:trip-warning-provider': 'إظهار تحذيرات التحقق على الرحلة (تظهر في المخطط)',
+  'admin.plugins.perm.hook:table-contributor': 'إضافة أعمدة وإجراءات إلى عروض الرحلة (الحجوزات، الأماكن، الأيام)',
+  'admin.plugins.perm.hook:map-marker-provider': 'إضافة علامات إلى خريطة الرحلة (مثل عرض الحجوزات أو نقاط الاهتمام)',
+  'admin.plugins.perm.hook:map-layer-provider': 'رسم مسارات وممرات ومناطق على خريطة الرحلة',
+  'admin.plugins.perm.hook:route-provider':
+    'توفير ملفات تعريف توجيه يحسب بها المخطط مسارات الأيام (مثل توجيه السيارات الكهربائية مع توقفات للشحن)',
+  'admin.plugins.perm.hook:day-schedule-provider': 'إلحاق مدخلات زمنية بخطة اليوم (توقفات للشحن، هوامش احتياطية)',
+  'admin.plugins.perm.hook:day-tint-provider':
+    'تلوين الأيام في خطة اليوم (مثلاً تحديد المرحلة التي ينتمي إليها كل يوم)',
+  'admin.plugins.cap.mcpTools': 'ينشر أدوات ذكاء اصطناعي',
+  'admin.plugins.mcpToolsTitle': 'أدوات الذكاء الاصطناعي المنشورة',
+  'admin.plugins.mcpToolsHint': 'يمكن لمساعد ذكي تشغيلها نيابة عن المستخدم. وتعمل كل أداة بالصلاحيات الممنوحة أعلاه.',
+  'admin.plugins.perm.mcp:tools':
+    'نشر أدوات يمكن لمساعد ذكاء اصطناعي تشغيلها نيابة عنك (يعمل بالصلاحيات التي تمنحها للإضافة هنا، وليس بصلاحياته هو)',
+  'admin.plugins.perm.geolocation:read':
+    'الاستعلام عن موقعك المباشر ما دامت إحدى واجهاته مفتوحة (يقرأه TREK بإذن الموقع الممنوح لهذا الموقع الإلكتروني، لا بإذن خاص بالإضافة)',
+  'admin.plugins.perm.hook:pdf-section-provider': 'إضافة أقسام نصية إلى تصدير PDF للرحلة',
+  'admin.plugins.perm.hook:atlas-layer-provider':
+    'إبراز دول على خريطة أطلس العالمية (مثل قوائم الأمنيات أو تحذيرات السفر)',
+  'admin.plugins.perm.hook:journal-entry-provider': 'إضافة صفوف إضافية (روابط، إحصاءات) إلى مدخلات اليوميات',
+  'admin.plugins.perm.hook:user-data':
+    'محو أو تصدير البيانات التي يخزّنها عن مستخدم (اللائحة العامة لحماية البيانات: حذف الحساب وطلبات البيانات)',
+  'admin.plugins.perm.hook:trip-card-provider': 'إضافة شارات صغيرة (الحالة، الأعداد) إلى بطاقات الرحلات في لوحة التحكم',
+  'admin.plugins.perm.hook:notification-channel': 'تسليم إشعاراتك عبر قناة إضافية',
   'admin.plugins.perm.events:subscribe': 'التفاعل مع أحداث النشاط الأساسية (اسم الحدث والرحلة فقط، دون المحتوى مطلقًا)',
   'admin.plugins.perm.http:outbound': 'إجراء طلبات صادرة إلى المضيفات المُعلنة الخاصة بها',
+  'admin.plugins.perm.db:read:collab':
+    'قراءة الملاحظات والاستطلاعات ورسائل الدردشة في الرحلات التي يمكن للمستخدم الحالي الوصول إليها (يتطلب إضافة Collab)',
+  'admin.plugins.perm.db:read:files:content':
+    'قراءة محتوى (بايتات) ملفات الرحلات التي يمكن للمستخدم الحالي الوصول إليها',
+  'admin.plugins.perm.db:create:trips': 'إنشاء رحلات جديدة يملكها المستخدم الحالي',
+  'admin.plugins.perm.rates:read': 'قراءة أسعار صرف العملات المخزنة مؤقتًا للمضيف',
   'admin.plugins.updateConsentTitle': 'يتطلب هذا التحديث أذونات جديدة',
   'admin.plugins.updateConsentBody':
     '{name} v{version} يطلب أذونات لم تمنحها بعد. تم تثبيت الإصدار الجديد لكنه يبقى متوقفًا حتى توافق عليه.',
@@ -290,6 +453,34 @@ const admin: TranslationStrings = {
   'admin.plugins.security.reviewedTitle': 'ماذا تعني "تمت مراجعتها"',
   'admin.plugins.security.reviewedBody':
     'الإضافة التي تمت مراجعتها فُحصت يدويًا بحثًا عن البرمجيات الخبيثة بواسطة أحد القائمين على TREK في كل إصدار — جرى فحصها بحثًا عن شيفرة ضارة، لا لمعرفة ما إذا كانت تعمل جيدًا. وهي ليست وعدًا بأن الإضافة غير ضارة.',
+  'admin.plugins.security.signedTitle': 'ماذا تعني "موقّعة"',
+  'admin.plugins.security.signedBody':
+    'المجموع الاختباري الذي يتحقق منه TREK عند كل تثبيت يثبت أن الملفات هي بالضبط ما يضمنه السجل. أما التوقيع فيثبت شيئًا مختلفًا: أنها جاءت من المؤلف، موقّعة بمفتاح لا يملكه سواه. الإضافة الموقّعة تجمع الاثنين معًا. وغير الموقّعة ليست غير آمنة — إنها ببساطة تحمل ضمانًا واحدًا أقل، ومعظم الإضافات في السجل غير موقّعة اليوم.',
+  'admin.plugins.signed': 'موقّعة',
+  'admin.plugins.signedHint': 'جرى التحقق منها مقابل مفتاح توقيع المؤلف عند تثبيتها',
+  'admin.plugins.unsigned': 'غير موقّعة',
+  'admin.plugins.unsignedHint':
+    'الملفات تطابق ما يضمنه السجل، لكن لا شيء يربطها بالمؤلف. ضمان واحد أقل — وليست غير آمنة.',
+  'admin.plugins.updateBlocked': 'تم حظر التحديث — {reason}',
+  'admin.plugins.reviewBlock': 'مراجعة',
+  'admin.plugins.retrusted': 'تم الوثوق بمفتاح التوقيع الجديد — وتم تحديث الإضافة',
+  'admin.plugins.sig.title': 'تعذّر التحقق من توقيع {name}',
+  'admin.plugins.sig.keyChangedBody':
+    'مفتاح توقيع المؤلف ليس المفتاح الذي ثُبّتت به هذه الإضافة. المؤلفون يبدّلون مفاتيحهم أحيانًا — لكن مهاجمًا استولى على الإضافة سيبدو تمامًا هكذا.',
+  'admin.plugins.sig.invalidBody':
+    'الملفات لا تطابق توقيع المؤلف. إنها ليست ما وقّعه المؤلف — فإما أنها تلفت، وإما أنه جرى العبث بها. لا يمكن تجاوز ذلك.',
+  'admin.plugins.sig.missingBody':
+    'كانت هذه الإضافة موقّعة عند تثبيتها، لكن الإصدار الجديد لا يحمل أي توقيع. لن يقبل TREK هذا التراجع بصمت. لا يمكن تجاوز ذلك.',
+  'admin.plugins.sig.incompleteBody':
+    'مدخل السجل موقّع نصف توقيع: يعلن عن مفتاح للمؤلف لكن الإصدار لا يحمل توقيعًا (أو العكس). هذا خطأ من جانب الإضافة. لا يمكن تجاوز ذلك.',
+  'admin.plugins.sig.pinnedKey': 'المفتاح الذي ثُبّتت به',
+  'admin.plugins.sig.newKey': 'المفتاح الذي تقدّمه الآن',
+  'admin.plugins.sig.confirmOutOfBand':
+    'لا يستطيع TREK التمييز بين تبديل مشروع للمفتاح وبين استيلاء على الإضافة — يبدو الأمران متطابقين من هنا. تحقّق من المفتاح الجديد مع المؤلف عبر قناة تثق بها أصلًا قبل قبوله. وحين تفعل، يتم تحديث الإضافة ويُحفظ المفتاح الجديد.',
+  'admin.plugins.sig.retrustConfirm': 'الوثوق بالمفتاح الجديد والتحديث',
+  'admin.plugins.sig.cancel': 'عدم الوثوق به',
+  'admin.plugins.sig.consentUnsigned':
+    'لا شيء يربط هذا الإصدار بمؤلفه — الملفات تطابق السجل، لكنها لا تحمل توقيع المؤلف.',
   'admin.plugins.security.trustTitle': 'الخلاصة',
   'admin.plugins.security.trustBody':
     'تثبيت إضافة يشبه تثبيت أي تطبيق من جهة خارجية: لا تُضِف سوى شيفرة من مطورين تثق بهم، وعند الشك، افحصها بنفسك أولًا. لا يتحمل TREK أي مسؤولية عن إضافات الجهات الخارجية.',
@@ -306,12 +497,33 @@ const admin: TranslationStrings = {
   'admin.plugins.sortName': 'الاسم',
   'admin.plugins.sortRecent': 'المحدّثة حديثًا',
   'admin.plugins.sortUpdates': 'التحديثات أولًا',
+  'admin.plugins.sortDownloads': 'الأكثر تنزيلًا',
   'admin.plugins.updatesAvailable': '{count} تحديثات متاحة لإضافاتك.',
+  'admin.plugins.newerNeedsTrek': 'الإصدار v{version} متوفر — يتطلب TREK {range}',
+  'admin.plugins.versionsTitle': 'الإصدارات',
+  'admin.plugins.versionPickerTitle': 'تغيير الإصدار — {name}',
+  'admin.plugins.versionSwitch': 'التبديل إلى {version}',
+  'admin.plugins.versionNeedsTrek': 'يتطلب TREK {range}',
+  'admin.plugins.changeVersion': 'تغيير الإصدار…',
+  'admin.plugins.noVersions': 'لم يتم العثور على إصدارات منشورة في السجل.',
+  'admin.plugins.downgradeTitle': 'التراجع عن هذه الإضافة؟',
+  'admin.plugins.downgradeBody': 'التبديل من v{from} إلى v{to}: تبقى البيانات المكتوبة بواسطة الإصدار الأحدث في مكانها، وقد لا يفهمها الإصدار الأقدم.',
+  'admin.plugins.downgradeConfirm': 'تراجع',
+  'admin.plugins.updatesHeld': 'التحديثات متوقفة عند v{version}',
+  'admin.plugins.resumeUpdates': 'استئناف التحديثات',
+  'admin.plugins.updatesResumed': 'تم استئناف التحديثات',
   'admin.plugins.updateAll': 'تحديث الكل',
   'admin.plugins.noMatchInstalled': 'لا توجد إضافات مثبّتة تطابق بحثك.',
   'admin.plugins.noMatchRegistry': 'لا توجد إضافات في السجل تطابق بحثك.',
   'admin.plugins.restart': 'إعادة التشغيل',
   'admin.plugins.restarted': 'تمت إعادة تشغيل الإضافة',
+  'admin.plugins.instanceSettings': 'إعدادات مستوى الخادم',
+  'admin.plugins.settingsSaved': 'تم حفظ الإعدادات',
+  'admin.plugins.settingsSavedRestarted': 'تم حفظ الإعدادات — تمت إعادة تشغيل الإضافة',
+  'admin.plugins.actions': 'الإجراءات',
+  'admin.plugins.actions.confirm': 'تنفيذ هذا الإجراء؟',
+  'admin.plugins.actions.inactive': 'فعّل الإضافة لتشغيل إجراءاتها',
+  'admin.plugins.requiredMissing': '"{field}" مطلوب',
   'admin.plugins.cap.readsTrips': 'يقرأ رحلاتك',
   'admin.plugins.cap.readsUsers': 'يقرأ الملفات الشخصية الأساسية',
   'admin.plugins.cap.readsCosts': 'يقرأ مصروفاتك',
@@ -326,11 +538,21 @@ const admin: TranslationStrings = {
   'admin.plugins.cap.widget': 'أداة لوحة التحكم',
   'admin.plugins.cap.heroWidget': 'أداة بطاقة الصعود',
   'admin.plugins.cap.placeSlot': 'تفاصيل المكان',
+  'admin.plugins.cap.daySlot': 'تفاصيل اليوم',
+  'admin.plugins.cap.reservationSlot': 'تفاصيل الحجز',
+  'admin.plugins.cap.replacesTabs': 'يستبدل تبويبات المخطط',
   'admin.plugins.cap.realtime': 'تحديثات فورية',
+  'admin.plugins.cap.notificationChannel': 'قناة الإشعارات',
   'admin.plugins.cap.photos': 'يوفّر الصور',
   'admin.plugins.cap.calendar': 'يوفّر أحداث التقويم',
   'admin.plugins.cap.placeDetails': 'يُثري الأماكن',
+  'admin.plugins.cap.search': 'يجيب على عمليات البحث',
   'admin.plugins.cap.warnings': 'يرصد المشكلات',
+  'admin.plugins.cap.mapLayers': 'يرسم على الخريطة',
+  'admin.plugins.cap.routing': 'يوفّر التوجيه',
+  'admin.plugins.cap.daySchedule': 'يضيف أوقات الخطة',
+  'admin.plugins.cap.dayTint': 'يلوّن الأيام',
+  'admin.plugins.cap.geolocation': 'يقرأ موقعك',
   'admin.plugins.cap.events': 'يتفاعل مع النشاط',
   'admin.plugins.cap.requiresAddon': 'يتطلب {addon}',
   'admin.plugins.cap.dependsOn': 'يحتاج إلى {id} {version}',
@@ -344,6 +566,22 @@ const admin: TranslationStrings = {
   'admin.plugins.dep.download': 'تنزيل',
   'admin.plugins.dep.update': 'تحديث',
   'admin.plugins.dep.resolveHint': 'ينزّل أحدث إصدار متوافق، بما في ذلك تبعياته الخاصة.',
+  'admin.plugins.dep.trekIncompatible': 'يتطلب TREK {range} — يعمل هذا الخادم بالإصدار {host}',
+  'admin.plugins.dep.trekUnknown': 'لا يحدد إصدارات TREK المدعومة',
+  'admin.plugins.installCompatible': 'تثبيت {version}',
+  'admin.plugins.installAnyway': 'التثبيت على أي حال',
+  'admin.plugins.rangeBypass.pill': 'فحوصات الإصدار متوقفة',
+  'admin.plugins.rangeBypass.pillHint':
+    'تم ضبط TREK_PLUGINS_IGNORE_TREK_RANGE — يمكن تثبيت الإضافات وتشغيلها خارج إصدارات TREK التي أعلنها مطوروها',
+  'admin.plugins.rangeBypass.title': 'خارج إصدارات TREK المدعومة',
+  'admin.plugins.rangeBypass.noticeTitle': 'تم التثبيت خارج إصدارات TREK المدعومة',
+  'admin.plugins.rangeBypass.body':
+    'تعلن «{name}» دعم TREK {range}، بينما يعمل هذا الخادم بالإصدار {host}. يسمح TREK بذلك فقط لأن TREK_PLUGINS_IGNORE_TREK_RANGE مضبوط. لم يحدّث المطوّر نطاق إصدارات الإضافة لهذا الإصدار من TREK، لذا لا يوجد ضمان أنها ستعمل — وفي حالات نادرة قد تُتلف إضافة غير متوافقة بيانات TREK. تابع فقط إذا كنت تقبل هذه المخاطرة.',
+  'admin.plugins.rangeBypass.bodyUnknown':
+    'لا تعلن «{name}» أي إصدارات TREK تدعمها؛ يعمل هذا الخادم بالإصدار {host}. يسمح TREK بذلك فقط لأن TREK_PLUGINS_IGNORE_TREK_RANGE مضبوط. لا شيء يدل على أن المطوّر اختبرها على هذا الإصدار من TREK، لذا لا يوجد ضمان أنها ستعمل — وفي حالات نادرة قد تُتلف إضافة غير متوافقة بيانات TREK. تابع فقط إذا كنت تقبل هذه المخاطرة.',
+  'admin.plugins.dep.trekBypassed': 'خارج نطاق TREK الخاص بها ({range}) — فحوصات الإصدار متوقفة',
+  'admin.plugins.dep.trekBypassedUnknown': 'لا تعلن أي نطاق TREK — فحوصات الإصدار متوقفة',
+  'admin.plugins.incompatible': 'غير متوافق',
   'admin.plugins.accessTitle': 'ما الذي يمكنها الوصول إليه',
   'admin.plugins.connectsTitle': 'يتصل بـ',
   'admin.plugins.detailsTitle': 'التفاصيل',
@@ -352,12 +590,13 @@ const admin: TranslationStrings = {
   'admin.plugins.metaSize': 'الحجم',
   'admin.plugins.metaRequires': 'يتطلب',
   'admin.plugins.metaReviewed': 'تمت المراجعة',
+  'admin.plugins.downloads': 'التنزيلات',
   'admin.addons.title': 'الإضافات',
   'admin.addons.subtitle': 'فعّل أو عطّل الميزات لتخصيص تجربة TREK.',
   'admin.addons.catalog.packing.name': 'القوائم',
   'admin.addons.catalog.packing.description': 'قوائم التعبئة والمهام لرحلاتك',
-  'admin.addons.catalog.budget.name': 'الميزانية',
-  'admin.addons.catalog.budget.description': 'تتبع النفقات وخطط ميزانية الرحلة',
+  'admin.addons.catalog.budget.name': 'التكاليف',
+  'admin.addons.catalog.budget.description': 'تتبّع مصاريف الرحلة وقسّمها بين المسافرين',
   'admin.addons.catalog.documents.name': 'المستندات',
   'admin.addons.catalog.documents.description': 'حفظ وإدارة وثائق السفر',
   'admin.addons.catalog.vacay.name': 'الإجازة',
@@ -365,12 +604,23 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.atlas.name': 'الأطلس',
   'admin.addons.catalog.atlas.description': 'خريطة العالم مع الدول التي تمت زيارتها وإحصائيات السفر',
   'admin.addons.catalog.collab.name': 'التعاون',
-  'admin.addons.catalog.collab.description': 'ملاحظات واستطلاعات ودردشة لحظية لتخطيط الرحلة',
+  'admin.addons.catalog.collab.description': 'ملاحظات واستطلاعات ومحادثة واقتراحات للتخطيط المشترك',
+  'admin.addons.catalog.roadtrip.name': 'رحلة برية',
+  'admin.addons.catalog.roadtrip.description': 'خطّط رحلات القيادة مع محطات توقف، وتُحدَّث أوقات القيادة والوصول تلقائيًا',
   'admin.addons.catalog.memories.name': 'صور (Immich)',
   'admin.addons.catalog.memories.description': 'شارك صور رحلتك عبر Immich',
   'admin.addons.catalog.mcp.description': 'بروتوكول سياق النموذج لتكامل مساعد الذكاء الاصطناعي',
   'admin.addons.subtitleBefore': 'فعّل أو عطّل الميزات لتخصيص تجربة ',
   'admin.addons.subtitleAfter': '.',
+  'admin.addons.catalog.naver_list_import.name': 'Naver List Import',
+  'admin.addons.catalog.naver_list_import.description': 'استيراد الأماكن من قائمة Naver Maps مشتركة',
+  'admin.addons.catalog.airtrail.name': 'AirTrail',
+  'admin.addons.catalog.airtrail.description': 'مزامنة الرحلات من خادم AirTrail الخاص بك',
+  'admin.addons.catalog.dawarich.name': 'Dawarich',
+  'admin.addons.catalog.dawarich.description':
+    'قراءة الزيارات والمسارات المسجَّلة من خادم Dawarich يربطه كل قارئ بنفسه',
+  'admin.addons.catalog.llm_parsing.name': 'التحليل بالذكاء الاصطناعي',
+  'admin.addons.catalog.llm_parsing.description': 'يقرأ الحجوزات التي يعجز المحلل المدمج عن فهمها، بنموذج ذكاء اصطناعي تختاره',
   'admin.addons.enabled': 'مفعّل',
   'admin.addons.disabled': 'معطّل',
   'admin.addons.type.trip': 'رحلة',
@@ -381,6 +631,7 @@ const admin: TranslationStrings = {
   'admin.addons.integrationHint': 'خدمات الواجهة الخلفية وتكاملات API بدون صفحة مخصصة',
   'admin.addons.toast.updated': 'تم تحديث الإضافة',
   'admin.addons.toast.error': 'فشل تحديث الإضافة',
+  'admin.addons.group.count': '{enabled} من {total} مُفعّل',
   'admin.addons.noAddons': 'لا توجد إضافات متاحة',
   'admin.weather.title': 'بيانات الطقس',
   'admin.weather.badge': 'منذ 24 مارس 2026',
@@ -489,8 +740,7 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.journey.description':
     'Trip tracking & travel journal with check-ins, photos, and daily stories', // en-fallback
   'admin.addons.catalog.collections.name': 'المجموعات',
-  'admin.addons.catalog.collections.description':
-    'مكتبة أماكن شخصية — احفظ الأماكن عبر الرحلات في قوائم مسماة، وانسخها إلى أي رحلة، وشاركها مع الآخرين',
+  'admin.addons.catalog.collections.description': 'اجمع الأماكن من أي رحلة في قوائم مسماة وأعد استخدامها',
   'admin.passkey.title': 'تسجيل الدخول بمفتاح المرور',
   'admin.passkey.cardHint': 'اسمح للمستخدمين بتسجيل الدخول باستخدام مفاتيح المرور (WebAuthn). معطّل افتراضيًا.',
   'admin.passkey.login': 'تفعيل تسجيل الدخول بمفتاح المرور',
@@ -521,6 +771,9 @@ const admin: TranslationStrings = {
   'admin.defaultSettings.mapboxStylePlaceholder': 'اختر نمطًا…',
   'admin.defaultSettings.mapbox3d': 'المباني والتضاريس ثلاثية الأبعاد',
   'admin.defaultSettings.mapboxQuality': 'وضع الجودة العالية',
+  'admin.defaultSettings.cartoKey': 'مفتاح CARTO المشترك',
+  'admin.defaultSettings.cartoKeyHint':
+    'يُستخدم لكل مستخدم لم يُدخل مفتاحه الخاص، حتى يحصل الخادم بأكمله على بلاطات CARTO بدون علامة مائية. يُخزَّن مشفّرًا.',
   'admin.group.users': 'Users',
   'admin.group.config': 'Configuration',
   'admin.group.integration': 'Integrations',
@@ -529,5 +782,9 @@ const admin: TranslationStrings = {
   'admin.invite.tripNone': 'بدون رحلة',
   'admin.invite.tripHint': 'تتم إضافة المستخدم الجديد تلقائيًا إلى هذه الرحلة عند تسجيله عبر الرابط.',
   'admin.invite.boundTo': 'يُضاف إلى {trip}',
+  'admin.placesUsageTitle': 'فيمَ يُستخدم المفتاح',
+  'admin.mapsKeyHintShort': 'يضيف الصور والتقييمات وساعات العمل. عندها يذهب كل بحث إلى Google.',
+  'admin.amapKeyHintShort': 'للبحث عن الأماكن داخل الصين القارية. يحتاج مفتاح خدمة ويب، لا مفتاح JS API.',
+  'admin.collab.links.subtitle': 'الروابط المشتركة والإشارات المرجعية',
 };
 export default admin;

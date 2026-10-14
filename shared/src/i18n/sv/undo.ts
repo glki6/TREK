@@ -14,10 +14,12 @@ const undo: TranslationStrings = {
   'undo.lock': 'Plats lås växlad',
   'undo.importGpx': 'GPX importering',
   'undo.importKeyholeMarkup': 'KMZ/KML importering',
+  'undo.importFiles': 'Filimport',
   'undo.importGoogleList': 'Google Maps importering',
   'undo.importNaverList': 'Naver Maps importering',
   'undo.importBooking': 'Boknings godkännande importering',
   'undo.addPlace': 'Plats tillagd',
   'undo.done': 'Återställd: {action}',
+  'undo.failed': 'Det gick inte att ångra: {action}',
 };
 export default undo;

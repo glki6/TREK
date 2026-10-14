@@ -99,6 +99,36 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Χρήση φωτογραφίας Unsplash από {photographer}',
   'dashboard.titleRequired': 'Ο τίτλος είναι υποχρεωτικός',
   'dashboard.endDateError': 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έναρξης',
+  'dashboard.tripTooLong': 'Ένα ταξίδι μπορεί να διαρκεί το πολύ {days} ημέρες',
+  'dashboard.dateShiftTitle': 'Νέα ημερομηνία έναρξης',
+  'dashboard.dateShiftIntro':
+    'Αλλάξατε την ημερομηνία έναρξης αυτού του ταξιδιού. Πώς θέλετε να ακολουθήσουν τα σχέδιά σας τις νέες ημερομηνίες;',
+  'dashboard.dateShiftKeepBookings': 'Διατήρηση κρατήσεων στις ημερομηνίες τους',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Τα σχέδια ημέρας μετακινούνται με τις νέες ημερομηνίες, ενώ οι κρατήσεις και τα καταλύματα παραμένουν στις αρχικές τους ημερομηνίες, εφόσον αυτές εξακολουθούν να ανήκουν στο ταξίδι.',
+  'dashboard.dateShiftAll': 'Μετατόπιση όλων',
+  'dashboard.dateShiftAllDesc':
+    'Ολόκληρο το δρομολόγιο μετακινείται με τις νέες ημερομηνίες, συμπεριλαμβανομένων των κρατήσεων και των καταλυμάτων.',
+  'dashboard.dateShiftHint':
+    'Συμβουλή: για να μετατοπίσετε μόνο ένα μέρος του δρομολογίου σας, ανοίξτε την «Αναδιάταξη ημερών» στο ημερήσιο πλάνο, προσθέστε την ημέρα μετά το τέλος του ταξιδιού με το κουμπί που δείχνει την ημερομηνία της και μετακινήστε την εκεί όπου πρέπει να μείνει το κενό.',
+  'dashboard.shrinkTitle': 'Αφαίρεση ημερών;',
+  'dashboard.shrinkIntro': 'Με την αποθήκευση των νέων ημερομηνιών αφαιρούνται αυτές οι ημέρες:',
+  'dashboard.shrinkMoreDays': '+{count} ακόμη',
+  'dashboard.shrinkLastDays': 'Αφαιρούνται οι τελευταίες ημέρες, όχι οι πρώτες',
+  'dashboard.shrinkLastDaysHint':
+    'Τα πλάνα των ημερών μετακινούνται μαζί με τις νέες ημερομηνίες, οπότε αφαιρούνται πάντα οι τελευταίες ημέρες του πλάνου σας, ακόμη κι όταν άλλαξε η αρχή.',
+  'dashboard.shrinkBookingsHint':
+    'Παραμένουν στις Κρατήσεις. Όσες έχουν ημερομηνία που ανήκει ακόμη στο ταξίδι επιστρέφουν σε εκείνη την ημέρα.',
+  'dashboard.shrinkBookingsShiftHint': 'Παραμένουν στις Κρατήσεις, χωρίς ημέρα.',
+  'dashboard.shrinkStayHint':
+    'Η άφιξη ή η αναχώρηση πέφτει σε ημέρα που αφαιρείται, οπότε αφαιρείται ολόκληρη η διαμονή.',
+  'dashboard.shrinkStayBookedHint':
+    'Η άφιξη ή η αναχώρηση πέφτει σε ημέρα που αφαιρείται, οπότε αφαιρείται ολόκληρη η διαμονή. Η κράτησή της «{booking}» και το έξοδό της παραμένουν στις Κρατήσεις.',
+  'dashboard.shrinkStayBookingHint':
+    'Η άφιξη ή η αναχώρηση πέφτει σε ημέρα που αφαιρείται, οπότε αφαιρείται ολόκληρη η διαμονή. Η κράτησή της «{booking}» παραμένει στις Κρατήσεις.',
+  'dashboard.shrinkConfirm': 'Αφαίρεση ημερών και αποθήκευση',
+  'dashboard.shrinkUnknown':
+    'Δεν ήταν δυνατός ο έλεγχος των ημερών αυτού του ταξιδιού. Αν οι νέες ημερομηνίες έχουν λιγότερες ημέρες, η αποθήκευση αφαιρεί τις τελευταίες ημέρες και ό,τι έχει προγραμματιστεί σε αυτές.',
   'dashboard.greeting.morning': 'Καλημέρα,',
   'dashboard.greeting.afternoon': 'Καλό απόγευμα,',
   'dashboard.greeting.evening': 'Καλησπέρα,',
@@ -108,6 +138,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Τοποθεσίες',
   'dashboard.mobile.buddies': 'Συνταξιδιώτες',
   'dashboard.mobile.newTrip': 'Νέο Ταξίδι',
+  'dashboard.mobile.addCoverImage': 'Προσθήκη εικόνας εξωφύλλου',
   'dashboard.mobile.currency': 'Νόμισμα',
   'dashboard.mobile.timezone': 'Ζώνη ώρας',
   'dashboard.mobile.upcomingTrips': 'Επερχόμενα Ταξίδια',
@@ -122,9 +153,15 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Αύριο',
   'dashboard.mobile.inDays': 'Σε {count} ημέρες',
   'dashboard.mobile.inMonths': 'Σε {count} μήνες',
+  'dashboard.mobile.spotlightDayOf': 'Ημέρα {day} από {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} ημέρα',
+  'dashboard.mobile.spotlightDaysMany': '{count} ημέρες',
   'dashboard.mobile.completed': 'Ολοκληρώθηκε',
   'dashboard.mobile.currencyConverter': 'Μετατροπέας Νομισμάτων',
   'dashboard.newTripSub': 'Plan a new trip from scratch', // en-fallback
+  'dashboard.subscribeAllTrips': 'Εγγραφή σε όλα τα ταξίδια',
+  'dashboard.subscribeAllTripsDesc':
+    'Μία ροή ημερολογίου για όλα τα ενεργά σας ταξίδια, η οποία διατηρείται αυτόματα συγχρονισμένη. Εξαιρούνται τα αρχειοθετημένα ταξίδια και τα ταξίδια που ολοκληρώθηκαν πριν από περισσότερες από 90 ημέρες.',
   'dashboard.filter.planned': 'Planned', // en-fallback
   'dashboard.hero.badgeLive': 'LIVE NOW', // en-fallback
   'dashboard.hero.badgeToday': 'STARTS TODAY', // en-fallback

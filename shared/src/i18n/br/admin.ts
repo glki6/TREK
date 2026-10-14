@@ -86,16 +86,63 @@ const admin: TranslationStrings = {
   'admin.requireMfa': 'Exigir autenticação em dois fatores (2FA)',
   'admin.requireMfaHint': 'Usuários sem 2FA precisam concluir a configuração em Configurações antes de usar o app.',
   'admin.apiKeys': 'Chaves de API',
-  'admin.apiKeysHint': 'Opcional. Habilita dados estendidos de lugares, como fotos e clima.',
+  'admin.apiKeysHint': 'De onde vêm os dados de locais. O índice do TREK não precisa de chave; os dois provedores abaixo são opcionais.',
+  'admin.trekApi.badgeDefault': 'Padrão recomendado',
+  'admin.googleCaveat.badge': 'Não recomendado',
+  'admin.googleCaveat.body':
+    'O TREK é código aberto e aqui não somos neutros. Nesta escala, avaliações e fotos de estabelecimentos comuns só existem no Google, e isso é um monopólio. O campo está aqui por falta de alternativa, não porque o recomendamos. Aí cada consulta vai para o Google.',
+  'admin.trekApi.tagline':
+    'O índice de locais do próprio TREK. Pesquisar sem chave do Google, sem cota e sem que ninguém conte as suas buscas.',
+  'admin.trekApi.factPlaces':
+    '73,6 milhões de locais no mundo',
+  'admin.trekApi.factNoKey':
+    'Sem chave, sem cota',
+  'admin.trekApi.factOffline':
+    'Os pacotes por país funcionam offline',
+  'admin.trekApi.factPrivacy':
+    'As buscas nunca são registadas',
+  'admin.trekApi.more':
+    'O que vem dentro',
+  'admin.trekApi.fieldPhone':
+    'Telefone',
+  'admin.trekApi.fieldStableId':
+    'Identificador estável',
+  'admin.trekApi.includedNote':
+    'As descrições vêm do site do próprio local; os horários, do OpenStreetMap onde estiverem preenchidos.',
+  'admin.trekApi.notRatings':
+    'Avaliações',
+  'admin.trekApi.notPhotos':
+    'Fotos de estabelecimentos comuns',
+  'admin.trekApi.notIncludedNote':
+    'Nenhuma fonte aberta tem uma nem outra, a preço nenhum. Para essas duas uma chave do Google continua sendo o único caminho.',
+  'admin.trekApi.sourcesLabel':
+    'Fontes',
+  'admin.trekApi.sourcesNote':
+    'Cada campo de uma resposta diz de qual delas veio.',
+  'admin.trekApi.included':
+    'Incluído',
+  'admin.trekApi.notIncluded':
+    'Não incluído',
   'admin.mapsKey': 'Chave da API Google Maps',
   'admin.mapsKeyHint': 'Necessária para busca de lugares. Obtenha em console.cloud.google.com',
   'admin.mapsKeyHintLong':
-    'Sem chave de API, o OpenStreetMap é usado na busca. Com uma chave Google, também podem ser carregadas fotos, avaliações e horários. Obtenha em console.cloud.google.com.',
+    'Sem chave de API do Google é usada a API do TREK recomendada. Com uma chave é possível carregar além disso fotos, avaliações e horários. Crie uma em console.cloud.google.com.',
   'admin.recommended': 'Recomendado',
   'admin.weatherKey': 'Chave OpenWeatherMap',
   'admin.weatherKeyHint': 'Para dados meteorológicos. Grátis em openweathermap.org',
   'admin.unsplashKey': 'Chave de API do Unsplash',
   'admin.unsplashKeyHint': 'Para busca de imagens. Grátis em unsplash.com/developers',
+  'admin.amapKey': 'Chave de API do Amap (高德地图)',
+  'admin.amapKeyHint':
+    'Para a busca de lugares na China continental, onde o Google é inacessível e o OpenStreetMap tem poucos dados. Exige uma chave do tipo "Web 服务" (serviço web), não uma chave da API JS. Obtenha em console.amap.com.',
+  'admin.placesProvider.title': 'Provedor de busca de lugares',
+  'admin.placesProvider.subtitle': 'O índice do próprio TREK e o OpenStreetMap respondem a cada busca. Aqui se escolhe quem mais é consultado quando eles não acham nada: Automático prefere o Google se houver chave, depois Amap.',
+  'admin.placesProvider.auto': 'Automático',
+  'admin.placesProvider.google': 'Google Places',
+  'admin.placesProvider.amap': 'Amap (高德地图)',
+  'admin.placesProvider.openstreetmap': 'OpenStreetMap',
+  'admin.placesProvider.missingKey': 'O provedor selecionado não tem chave de API configurada, então a busca de lugares é respondida apenas pelo índice do TREK e pelo OpenStreetMap.',
+  'admin.placesProvider.saved': 'Provedor de busca de lugares salvo',
   'admin.validateKey': 'Testar',
   'admin.keyValid': 'Conectado',
   'admin.keyInvalid': 'Inválida',
@@ -112,6 +159,8 @@ const admin: TranslationStrings = {
   'admin.fileTypesHint': 'Configure quais tipos de arquivo os usuários podem enviar.',
   'admin.fileTypesFormat': 'Extensões separadas por vírgula (ex.: jpg,png,pdf,doc). Use * para permitir todos.',
   'admin.fileTypesSaved': 'Configurações de tipos de arquivo salvas',
+  'admin.googleOptions': 'Para que a chave é usada',
+  'admin.googleOptionsSummary': '{on} de {total} ativados',
   'admin.placesPhotos.title': 'Fotos de Locais',
   'admin.placesPhotos.subtitle':
     'Busca fotos da Google Places API. Desative para economizar cota da API. Fotos do Wikimedia não são afetadas.',
@@ -121,6 +170,24 @@ const admin: TranslationStrings = {
   'admin.placesDetails.title': 'Detalhes do Local',
   'admin.placesDetails.subtitle':
     'Busca informações detalhadas do local (horários, avaliação, site) da Google Places API. Desative para economizar cota da API.',
+  'admin.placesEnrich.title': 'Enriquecimento de lugares',
+  'admin.placesEnrich.subtitle':
+    'Mostra imagens e uma descrição ao adicionar um lugar. Wikipédia e OpenStreetMap são sempre usados; o Google entra quando Fotos de lugares ou Detalhes de lugares estão ativos.',
+  'admin.placesGoogleOnly.title': 'Pesquisar apenas com o Google',
+  'admin.placesGoogleOnly.subtitle': 'Toda pesquisa e toda sugestão vão para o Google Places. Desligado, o índice do TREK e o OpenStreetMap respondem primeiro, e o Google só é consultado se eles não encontrarem nada.',
+  'admin.placesGoogleOnly.missingKey': 'Precisa de uma chave de API do Google Maps. Sem ela, a pesquisa usa o índice do TREK e o OpenStreetMap, independentemente desta chave.',
+  'admin.placesGoogleOnly.otherProvider': 'Precisa do Google como provedor de lugares. Com Amap ou OpenStreetMap selecionado, nenhuma busca vai ao Google, seja qual for a posição deste botão.',
+  'admin.transitProvider.title': 'Provedor de transporte público',
+  'admin.transitProvider.subtitle': 'Qual serviço responde à busca de transporte público.',
+  'admin.transitProvider.transitous': 'Transitous (grátis)',
+  'admin.transitProvider.google': 'Google',
+  'admin.transitProvider.transitousHint': 'Feeds GTFS da comunidade. Gratuito e sem chave, com a melhor cobertura na Europa.',
+  'admin.transitProvider.googleHint': 'Usa a chave do Google acima, para regiões sem dados no Transitous. Cobrado por busca — o Transitous é usado enquanto nenhuma chave estiver configurada.',
+  'admin.transitProvider.noKeyWarning': 'O Google está selecionado, mas nenhuma chave do Google está configurada — a busca de transporte ainda usa o Transitous. Adicione uma chave em Chaves de API acima.',
+  'admin.transitProvider.personalKeyWarning': 'Apenas a sua própria chave do Google está definida, então a busca dos outros membros ainda cai no Transitous. Salve a chave acima como admin para aplicá-la a toda a instância.',
+  'admin.placeShadow.title': 'Registo de pesquisas de locais',
+  'admin.placeShadow.subtitle':
+    'Registar qual resultado de pesquisa foi escolhido, para que outro índice de locais possa ser avaliado depois com pesquisas reais. Nada sai desta instância e um administrador pode exportar ou apagar o registo a qualquer momento.',
   'admin.bagTracking.title': 'Rastreamento de malas',
   'admin.bagTracking.subtitle': 'Ativar peso e atribuição de mala para itens da lista',
   'admin.collab.chat.title': 'Chat',
@@ -156,15 +223,25 @@ const admin: TranslationStrings = {
   'admin.packingTemplates.loadError': 'Falha ao carregar modelos',
   'admin.packingTemplates.createError': 'Falha ao criar modelo',
   'admin.packingTemplates.deleteError': 'Falha ao excluir modelo',
+  'admin.packingTemplates.deleteCategoryError': 'Falha ao excluir a categoria',
+  'admin.packingTemplates.deleteItemError': 'Falha ao excluir o item',
   'admin.packingTemplates.saveError': 'Falha ao salvar',
   'admin.tabs.addons': 'Complementos',
   'admin.tabs.plugins': 'Plugins',
+  'admin.tabs.storage': 'Armazenamento',
   'admin.plugins.rescan': 'Reescanear',
   'admin.plugins.rescanned': 'Pasta de plugins reescaneada',
   'admin.plugins.upload': 'Enviar plugin',
   'admin.plugins.dropToUpload': 'Solte um .zip de plugin para instalar',
   'admin.plugins.uploaded': 'Plugin “{name}” enviado — ative para executar',
   'admin.plugins.sideloaded': 'Carregado manualmente',
+  'admin.plugins.devLinkBadge': 'Dev-Link',
+  'admin.plugins.devLinkHint':
+    'Carregado de um diretório de build local e recarregado a quente com dados reais — apenas para desenvolvimento',
+  'admin.plugins.devLinkTitle': 'Vincular um plugin local',
+  'admin.plugins.devLinkPathPlaceholder': '/absolute/path/to/your/plugin',
+  'admin.plugins.devLinkButton': 'Vincular',
+  'admin.plugins.devLinkLinked': '{id} vinculado — ative-o para executar',
   'admin.plugins.sideloadedHint': 'Enviado manualmente — não é do registro, sem assinatura e sem revisão',
   'admin.plugins.browse': 'Explorar plugins',
   'admin.plugins.installed': 'Instalado',
@@ -177,6 +254,18 @@ const admin: TranslationStrings = {
   'admin.plugins.deactivated': 'Plugin desativado',
   'admin.plugins.viewErrors': 'Ver registro de erros',
   'admin.plugins.errorLog': 'Registro de erros',
+  'admin.plugins.allowedHosts': 'Hosts permitidos',
+  'admin.plugins.allowedHosts.hint':
+    'Este plugin fala com um serviço que só você pode nomear (um servidor auto-hospedado). Adicione os hosts que ele pode alcançar — nenhum outro.',
+  'admin.plugins.allowedHosts.none': 'Nenhum host adicionado ainda.',
+  'admin.plugins.allowedHosts.unsupported':
+    'Este plugin não usa hosts fornecidos pelo operador. Seus hosts permitidos são fixos no manifesto.',
+  'admin.plugins.allowedHosts.restartNote': 'Salvar reinicia o plugin para que ele use a nova lista.',
+  'admin.plugins.allowedHosts.add': 'Adicionar host permitido',
+  'admin.plugins.allowedHosts.count': '{n} host(s) permitido(s)',
+  'admin.plugins.operatorEgressPill': '+ hosts que você adicionar',
+  'admin.plugins.operatorEgressHint':
+    'Este plugin fala com um serviço que só você pode nomear (um servidor auto-hospedado). Após instalar, adicione os hosts que ele pode alcançar em ⋯ → Hosts permitidos. Nenhum outro.',
   'admin.plugins.noErrors': 'Nenhum erro registrado.',
   'admin.plugins.uninstalled': 'Plugin desinstalado',
   'admin.plugins.uninstallTitle': 'Desinstalar plugin?',
@@ -193,6 +282,7 @@ const admin: TranslationStrings = {
   'admin.plugins.updateTo': 'Atualizar → v{version}',
   'admin.plugins.enabledToggle': 'Ativar plugin',
   'plugins.notFound': 'Plugin não encontrado',
+  'plugins.frameLoadFailed': 'This plugin could not be loaded.',
   'admin.plugins.title': 'Plugins',
   'admin.plugins.subtitle': 'Instale e gerencie plugins de terceiros na sua instância.',
   'admin.plugins.disabledTitle': 'Os plugins estão desativados',
@@ -218,6 +308,7 @@ const admin: TranslationStrings = {
   'admin.plugins.scope.user': 'Por usuário',
   'admin.plugins.fieldRequired': 'Obrigatório',
   'admin.plugins.sourceRepo': 'Repositório de origem',
+  'admin.plugins.reportIssue': 'Relatar um problema',
   'admin.plugins.homepage': 'Página inicial',
   'admin.plugins.requiresTrek': 'Requer TREK {version}+',
   'admin.plugins.reviewedOn': 'Revisado em {date}',
@@ -226,7 +317,50 @@ const admin: TranslationStrings = {
   'admin.plugins.perm.db:read:users': 'Ler informações básicas de perfil (nome, avatar — nunca credenciais)',
   'admin.plugins.perm.db:read:costs': 'Ler despesas (itens de orçamento) às quais o usuário atual tem acesso',
   'admin.plugins.perm.db:read:packing': 'Ler listas de bagagem de viagens às quais o usuário atual tem acesso',
+  'admin.plugins.perm.db:write:packing':
+    'Criar, editar e remover itens da lista de bagagem em viagens que o usuário atual pode editar',
+  'admin.plugins.perm.weather:read': 'Ler a previsão do tempo em cache do host (por coordenadas)',
+  'admin.plugins.perm.db:read:categories': 'Ler a lista global de categorias de locais',
+  'admin.plugins.perm.db:read:tags': 'Ler as etiquetas do usuário atual',
+  'admin.plugins.perm.db:write:tags': 'Criar, editar e remover as etiquetas do usuário atual',
+  'admin.plugins.perm.db:read:todos': 'Ler as tarefas de viagens às quais o usuário atual tem acesso',
+  'admin.plugins.perm.db:write:todos': 'Criar, editar e remover tarefas em viagens que o usuário atual pode editar',
+  'admin.plugins.perm.db:write:atlas':
+    'Marcar países e regiões como visitados e gerenciar a lista de desejos do usuário atual (requer o complemento Atlas)',
+  'admin.plugins.perm.db:write:vacay':
+    'Alternar dias de férias e feriados da empresa no plano ativo do usuário atual (requer o complemento Vacay)',
+  'admin.plugins.perm.db:write:journal':
+    'Criar, editar e remover entradas de diário em diários que o usuário atual pode editar (requer o complemento Journey)',
+  'admin.plugins.perm.db:write:collections':
+    'Criar e editar coleções e salvar locais nelas, com o papel de coleção do usuário atual (requer o complemento Collections)',
+  'admin.plugins.perm.db:write:files':
+    'Anexar arquivos a viagens que o usuário atual pode editar (limite de 10 MB, extensões bloqueadas recusadas) e gerenciar seus vínculos',
+  'admin.plugins.perm.db:write:collab':
+    'Publicar notas, enquetes e mensagens de chat em viagens que o usuário atual pode editar (requer o complemento Collab)',
+  'admin.plugins.perm.db:write:members':
+    'Adicionar usuários a viagens — concede acesso à viagem; protegido pelo direito de gerenciar membros do usuário atual',
+  'admin.plugins.perm.notify:send':
+    'Enviar uma notificação (caixa do sino + e-mail/ntfy) ao usuário atual ou a uma viagem à qual ele pertence — nunca a um destinatário arbitrário',
+  'admin.plugins.perm.ai:invoke':
+    'Usar o provedor de IA configurado pelo administrador (conclusão de texto + extração de documentos) em nome do usuário atual — o complemento nunca guarda uma chave',
+  'admin.plugins.perm.oauth:client':
+    'Conectar-se a um serviço de terceiros em seu nome via OAuth intermediado pelo host (o host guarda os tokens, o plugin nunca os vê)',
   'admin.plugins.perm.db:read:files': 'Ler arquivos de viagens às quais o usuário atual tem acesso',
+  'admin.plugins.perm.db:write:reservations':
+    'Criar, editar e remover reservas em viagens que o usuário atual pode editar',
+  'admin.plugins.perm.db:write:accommodations':
+    'Criar, editar e remover acomodações em viagens que o usuário atual pode editar',
+  'admin.plugins.perm.db:read:journal': 'Ler os diários de viagem do usuário atual (requer o complemento Journey)',
+  'admin.plugins.perm.db:read:atlas':
+    'Ler os países e regiões visitados pelo usuário atual (requer o complemento Atlas)',
+  'admin.plugins.perm.db:read:vacay': 'Ler o plano de férias do usuário atual (requer o complemento Vacay)',
+  'admin.plugins.perm.db:read:daynotes': 'Ler as notas do dia de viagens às quais o usuário atual tem acesso',
+  'admin.plugins.perm.db:read:collections':
+    'Ler as coleções de locais salvos do usuário atual (requer o complemento Collections)',
+  'admin.plugins.perm.db:write:daynotes':
+    'Criar, editar e remover notas do dia em viagens que o usuário atual pode editar',
+  'admin.plugins.perm.jobs:run':
+    'Executar seus jobs em segundo plano de forma agendada (sem contexto de usuário — não pode ler dados do usuário)',
   'admin.plugins.perm.db:write:costs': 'Criar despesas (itens de orçamento) em viagens que o usuário atual pode editar',
   'admin.plugins.perm.db:write:places': 'Adicionar, editar e remover locais em viagens que o usuário atual pode editar',
   'admin.plugins.perm.db:write:days': 'Adicionar, editar e remover dias em viagens que o usuário atual pode editar',
@@ -242,10 +376,46 @@ const admin: TranslationStrings = {
   'admin.plugins.perm.hook:calendar-source': 'Fornecer eventos para o calendário',
   'admin.plugins.perm.hook:place-detail-provider':
     'Contribuir com detalhes extras (avaliações, notas, links) para um local',
+  'admin.plugins.perm.hook:search-provider':
+    'Responder buscas de lugares a partir de um índice próprio, ao lado dos resultados do TREK',
   'admin.plugins.perm.hook:trip-warning-provider': 'Emitir avisos de validação em uma viagem (exibidos no planejador)',
+  'admin.plugins.perm.hook:table-contributor':
+    'Adicionar colunas e ações às visualizações da viagem (reservas, locais, dias)',
+  'admin.plugins.perm.hook:map-marker-provider':
+    'Adicionar marcadores ao mapa da viagem (ex. mostrar reservas ou POIs)',
+  'admin.plugins.perm.hook:map-layer-provider': 'Desenhar rotas, corredores e zonas no mapa da viagem',
+  'admin.plugins.perm.hook:route-provider':
+    'Oferecer perfis de roteamento com os quais o planejador calcula os dias (ex. rotas para carro elétrico com paradas de recarga)',
+  'admin.plugins.perm.hook:day-schedule-provider':
+    'Anexar entradas de horário ao plano do dia (paradas de recarga, margens de segurança)',
+  'admin.plugins.perm.hook:day-tint-provider':
+    'Colorir os dias no plano do dia (por exemplo, a qual trecho da viagem um dia pertence)',
+  'admin.plugins.cap.mcpTools': 'Publica ferramentas de IA',
+  'admin.plugins.mcpToolsTitle': 'Ferramentas de IA publicadas',
+  'admin.plugins.mcpToolsHint': 'Um assistente pode executá-las em nome de um usuário. Cada uma age com o acesso concedido acima.',
+  'admin.plugins.perm.mcp:tools':
+    'Publicar ferramentas que um assistente de IA pode executar em seu nome (ele age com o acesso que você concede ao plugin aqui, não com o dele)',
+  'admin.plugins.perm.geolocation:read':
+    'Consultar sua localização em tempo real enquanto uma das visualizações dele estiver aberta (o TREK a lê com a permissão de localização deste site, não com uma permissão própria do plugin)',
+  'admin.plugins.perm.hook:pdf-section-provider': 'Anexar seções de texto à exportação em PDF da viagem',
+  'admin.plugins.perm.hook:atlas-layer-provider':
+    'Destacar países no mapa-múndi do Atlas (ex. listas de desejos ou avisos de viagem)',
+  'admin.plugins.perm.hook:journal-entry-provider':
+    'Adicionar linhas extras (links, estatísticas) às entradas do diário',
+  'admin.plugins.perm.hook:user-data':
+    'Apagar ou exportar os dados que armazena sobre um usuário (LGPD/GDPR: exclusão de conta e solicitações de dados)',
+  'admin.plugins.perm.hook:trip-card-provider':
+    'Adicionar pequenos selos (status, contagens) aos cartões de viagem do painel',
+  'admin.plugins.perm.hook:notification-channel': 'Entregar suas notificações por um canal adicional',
   'admin.plugins.perm.events:subscribe':
     'Reagir a eventos de atividade do núcleo (apenas nome do evento + viagem, nunca o conteúdo)',
   'admin.plugins.perm.http:outbound': 'Fazer requisições de saída para os hosts declarados',
+  'admin.plugins.perm.db:read:collab':
+    'Ler notas, enquetes e mensagens de chat de viagens às quais o usuário atual tem acesso (requer o complemento Collab)',
+  'admin.plugins.perm.db:read:files:content':
+    'Ler o conteúdo (bytes) dos arquivos de viagens às quais o usuário atual tem acesso',
+  'admin.plugins.perm.db:create:trips': 'Criar novas viagens pertencentes ao usuário atual',
+  'admin.plugins.perm.rates:read': 'Ler as taxas de câmbio em cache do host',
   'admin.plugins.updateConsentTitle': 'Esta atualização precisa de novas permissões',
   'admin.plugins.updateConsentBody':
     '{name} v{version} está solicitando permissões que você ainda não concedeu. A nova versão está instalada, mas permanece desativada até que você a aprove.',
@@ -272,6 +442,34 @@ const admin: TranslationStrings = {
   'admin.plugins.security.reviewedTitle': 'O que significa "Revisado"',
   'admin.plugins.security.reviewedBody':
     'Um plugin revisado foi verificado manualmente em busca de malware por um mantenedor do TREK em cada versão — checado quanto a código malicioso, não quanto a funcionar bem. Não é uma promessa de que o plugin seja inofensivo.',
+  'admin.plugins.security.signedTitle': 'O que significa "Assinado"',
+  'admin.plugins.security.signedBody':
+    'A soma de verificação que o TREK confere em toda instalação prova que os arquivos são exatamente aqueles pelos quais o registro responde. Uma assinatura prova algo diferente: que eles vieram do autor, assinados com uma chave que só ele possui. Um plugin assinado tem as duas coisas. Um plugin sem assinatura não é inseguro — ele apenas carrega uma garantia a menos, e hoje a maioria dos plugins do registro não é assinada.',
+  'admin.plugins.signed': 'Assinado',
+  'admin.plugins.signedHint': 'Verificado contra a chave de assinatura do autor no momento da instalação',
+  'admin.plugins.unsigned': 'Sem assinatura',
+  'admin.plugins.unsignedHint':
+    'Os arquivos correspondem àquilo pelo qual o registro responde, mas nada os liga ao autor. Uma garantia a menos — não é inseguro.',
+  'admin.plugins.updateBlocked': 'Atualização bloqueada — {reason}',
+  'admin.plugins.reviewBlock': 'Revisar',
+  'admin.plugins.retrusted': 'Nova chave de assinatura confiada — o plugin foi atualizado',
+  'admin.plugins.sig.title': 'Não foi possível verificar a assinatura de {name}',
+  'admin.plugins.sig.keyChangedBody':
+    'A chave de assinatura do autor não é aquela com a qual este plugin foi instalado. Autores realmente trocam de chave — mas um invasor que tivesse assumido o plugin se pareceria exatamente com isto.',
+  'admin.plugins.sig.invalidBody':
+    'Os arquivos não correspondem à assinatura do autor. Eles não são o que o autor assinou — ou foram corrompidos, ou foram adulterados. Isso não pode ser ignorado.',
+  'admin.plugins.sig.missingBody':
+    'Este plugin estava assinado quando você o instalou, mas a nova versão não traz assinatura alguma. O TREK não vai aceitar essa perda em silêncio. Isso não pode ser ignorado.',
+  'admin.plugins.sig.incompleteBody':
+    'A entrada no registro está assinada pela metade: ela declara uma chave do autor, mas a versão não traz assinatura (ou o contrário). Isso é um erro do lado do plugin. Isso não pode ser ignorado.',
+  'admin.plugins.sig.pinnedKey': 'Chave com que foi instalado',
+  'admin.plugins.sig.newKey': 'Chave que ele está oferecendo agora',
+  'admin.plugins.sig.confirmOutOfBand':
+    'O TREK não consegue distinguir uma troca legítima de chave de um sequestro do plugin — daqui, as duas coisas são idênticas. Confirme a nova chave com o autor por um canal em que você já confia antes de aceitá-la. Assim que aceitar, o plugin é atualizado e a nova chave passa a ser lembrada.',
+  'admin.plugins.sig.retrustConfirm': 'Confiar na nova chave e atualizar',
+  'admin.plugins.sig.cancel': 'Não confiar',
+  'admin.plugins.sig.consentUnsigned':
+    'Nada liga esta versão ao seu autor — os arquivos correspondem ao registro, mas não trazem assinatura do autor.',
   'admin.plugins.security.trustTitle': 'Em resumo',
   'admin.plugins.security.trustBody':
     'Instalar um plugin é como instalar qualquer app de terceiros: adicione apenas código de autores em quem você confia e, em caso de dúvida, inspecione-o você mesmo antes. O TREK não assume nenhuma responsabilidade por plugins de terceiros.',
@@ -288,12 +486,33 @@ const admin: TranslationStrings = {
   'admin.plugins.sortName': 'Nome',
   'admin.plugins.sortRecent': 'Atualizados recentemente',
   'admin.plugins.sortUpdates': 'Atualizações primeiro',
+  'admin.plugins.sortDownloads': 'Mais baixados',
   'admin.plugins.updatesAvailable': '{count} atualizações disponíveis para seus plugins.',
+  'admin.plugins.newerNeedsTrek': 'v{version} disponível — requer TREK {range}',
+  'admin.plugins.versionsTitle': 'Versões',
+  'admin.plugins.versionPickerTitle': 'Alterar versão — {name}',
+  'admin.plugins.versionSwitch': 'Mudar para {version}',
+  'admin.plugins.versionNeedsTrek': 'requer TREK {range}',
+  'admin.plugins.changeVersion': 'Alterar versão…',
+  'admin.plugins.noVersions': 'Nenhuma versão publicada encontrada no registro.',
+  'admin.plugins.downgradeTitle': 'Reverter este plugin?',
+  'admin.plugins.downgradeBody': 'Mudando de v{from} para v{to}: os dados gravados pela versão mais recente permanecem no lugar, e a versão mais antiga pode não entendê-los.',
+  'admin.plugins.downgradeConfirm': 'Reverter',
+  'admin.plugins.updatesHeld': 'Atualizações pausadas em v{version}',
+  'admin.plugins.resumeUpdates': 'Retomar atualizações',
+  'admin.plugins.updatesResumed': 'Atualizações retomadas',
   'admin.plugins.updateAll': 'Atualizar todos',
   'admin.plugins.noMatchInstalled': 'Nenhum plugin instalado corresponde à sua busca.',
   'admin.plugins.noMatchRegistry': 'Nenhum plugin no registro corresponde à sua busca.',
   'admin.plugins.restart': 'Reiniciar',
   'admin.plugins.restarted': 'Plugin reiniciado',
+  'admin.plugins.instanceSettings': 'Configurações da instância',
+  'admin.plugins.settingsSaved': 'Configurações salvas',
+  'admin.plugins.settingsSavedRestarted': 'Configurações salvas — plugin reiniciado',
+  'admin.plugins.actions': 'Ações',
+  'admin.plugins.actions.confirm': 'Executar esta ação?',
+  'admin.plugins.actions.inactive': 'Ative o plugin para executar suas ações',
+  'admin.plugins.requiredMissing': '"{field}" é obrigatório',
   'admin.plugins.cap.readsTrips': 'Lê suas viagens',
   'admin.plugins.cap.readsUsers': 'Lê perfis básicos',
   'admin.plugins.cap.readsCosts': 'Lê suas despesas',
@@ -308,11 +527,21 @@ const admin: TranslationStrings = {
   'admin.plugins.cap.widget': 'Widget do painel',
   'admin.plugins.cap.heroWidget': 'Widget de cartão de embarque',
   'admin.plugins.cap.placeSlot': 'Detalhe do local',
+  'admin.plugins.cap.daySlot': 'Detalhe do dia',
+  'admin.plugins.cap.reservationSlot': 'Detalhe da reserva',
+  'admin.plugins.cap.replacesTabs': 'Substitui abas do planejador',
   'admin.plugins.cap.realtime': 'Atualizações em tempo real',
+  'admin.plugins.cap.notificationChannel': 'Canal de notificação',
   'admin.plugins.cap.photos': 'Fornece fotos',
   'admin.plugins.cap.calendar': 'Fornece eventos de calendário',
   'admin.plugins.cap.placeDetails': 'Enriquece locais',
+  'admin.plugins.cap.search': 'Responde buscas',
   'admin.plugins.cap.warnings': 'Sinaliza problemas',
+  'admin.plugins.cap.mapLayers': 'Desenha no mapa',
+  'admin.plugins.cap.routing': 'Oferece roteamento',
+  'admin.plugins.cap.daySchedule': 'Adiciona horários ao plano',
+  'admin.plugins.cap.dayTint': 'Colore os dias',
+  'admin.plugins.cap.geolocation': 'Lê sua localização',
   'admin.plugins.cap.events': 'Reage a atividades',
   'admin.plugins.cap.requiresAddon': 'Requer {addon}',
   'admin.plugins.cap.dependsOn': 'Requer {id} {version}',
@@ -326,6 +555,24 @@ const admin: TranslationStrings = {
   'admin.plugins.dep.download': 'Baixar',
   'admin.plugins.dep.update': 'Atualizar',
   'admin.plugins.dep.resolveHint': 'Baixa a versão compatível mais recente, incluindo suas próprias dependências.',
+  'admin.plugins.dep.trekIncompatible': 'Requer TREK {range} — este servidor executa {host}',
+  'admin.plugins.dep.trekUnknown': 'Não informa quais versões do TREK são compatíveis',
+  'admin.plugins.installCompatible': 'Instalar {version}',
+  'admin.plugins.installAnyway': 'Instalar mesmo assim',
+  'admin.plugins.rangeBypass.pill': 'Verificações de versão desligadas',
+  'admin.plugins.rangeBypass.pillHint':
+    'TREK_PLUGINS_IGNORE_TREK_RANGE está definido — plugins podem ser instalados e executados fora das versões do TREK declaradas por seus autores',
+  'admin.plugins.rangeBypass.title': 'Fora das versões do TREK suportadas',
+  'admin.plugins.rangeBypass.noticeTitle': 'Instalado fora das versões do TREK suportadas',
+  'admin.plugins.rangeBypass.body':
+    '“{name}” declara suporte ao TREK {range}, e este servidor executa {host}. O TREK só o deixa passar porque TREK_PLUGINS_IGNORE_TREK_RANGE está definido. O autor não atualizou o intervalo de versões do plugin para este TREK, então não há garantia de que funcione — e, em casos raros, um plugin incompatível pode corromper os dados do TREK. Continue apenas se aceitar esse risco.',
+  'admin.plugins.rangeBypass.bodyUnknown':
+    '“{name}” não declara quais versões do TREK suporta; este servidor executa {host}. O TREK só o deixa passar porque TREK_PLUGINS_IGNORE_TREK_RANGE está definido. Nada indica que o autor o tenha testado neste TREK, então não há garantia de que funcione — e, em casos raros, um plugin incompatível pode corromper os dados do TREK. Continue apenas se aceitar esse risco.',
+  'admin.plugins.dep.trekBypassed':
+    'Fora do seu intervalo TREK ({range}) — verificações de versão desligadas',
+  'admin.plugins.dep.trekBypassedUnknown':
+    'Não declara nenhum intervalo TREK — verificações de versão desligadas',
+  'admin.plugins.incompatible': 'Incompatível',
   'admin.plugins.accessTitle': 'O que ele pode acessar',
   'admin.plugins.connectsTitle': 'Conecta-se a',
   'admin.plugins.detailsTitle': 'Detalhes',
@@ -334,14 +581,15 @@ const admin: TranslationStrings = {
   'admin.plugins.metaSize': 'Tamanho',
   'admin.plugins.metaRequires': 'Requer',
   'admin.plugins.metaReviewed': 'Revisado em',
+  'admin.plugins.downloads': 'Downloads',
   'admin.addons.title': 'Complementos',
   'admin.addons.subtitle': 'Ative ou desative recursos para personalizar sua experiência no TREK.',
   'admin.addons.catalog.memories.name': 'Memórias',
   'admin.addons.catalog.memories.description': 'Álbuns de fotos compartilhados em cada viagem',
   'admin.addons.catalog.packing.name': 'Listas',
   'admin.addons.catalog.packing.description': 'Listas de bagagem e tarefas a fazer para suas viagens',
-  'admin.addons.catalog.budget.name': 'Orçamento',
-  'admin.addons.catalog.budget.description': 'Acompanhe despesas e planeje o orçamento da viagem',
+  'admin.addons.catalog.budget.name': 'Custos',
+  'admin.addons.catalog.budget.description': 'Acompanhe as despesas da viagem e divida-as entre os viajantes',
   'admin.addons.catalog.documents.name': 'Documentos',
   'admin.addons.catalog.documents.description': 'Armazene e gerencie documentos de viagem',
   'admin.addons.catalog.vacay.name': 'Férias',
@@ -349,11 +597,22 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.atlas.name': 'Atlas',
   'admin.addons.catalog.atlas.description': 'Mapa mundial com países visitados e estatísticas',
   'admin.addons.catalog.collab.name': 'Colab',
-  'admin.addons.catalog.collab.description': 'Notas, enquetes e chat em tempo real para planejar a viagem',
+  'admin.addons.catalog.collab.description': 'Notas, enquetes, chat e sugestões para planejar em grupo',
+  'admin.addons.catalog.roadtrip.name': 'Viagem de carro',
+  'admin.addons.catalog.roadtrip.description': 'Planeje trajetos com paradas; tempos de direção e horários de chegada se recalculam sozinhos',
   'admin.addons.catalog.mcp.name': 'MCP',
   'admin.addons.catalog.mcp.description': 'Model Context Protocol para integração com assistentes de IA',
   'admin.addons.subtitleBefore': 'Ative ou desative recursos para personalizar sua ',
   'admin.addons.subtitleAfter': ' experiência.',
+  'admin.addons.catalog.naver_list_import.name': 'Naver List Import',
+  'admin.addons.catalog.naver_list_import.description': 'Importe lugares de uma lista compartilhada do Naver Maps',
+  'admin.addons.catalog.airtrail.name': 'AirTrail',
+  'admin.addons.catalog.airtrail.description': 'Sincronize voos da sua instância AirTrail',
+  'admin.addons.catalog.dawarich.name': 'Dawarich',
+  'admin.addons.catalog.dawarich.description':
+    'Leia visitas e rotas gravadas de uma instância do Dawarich que cada leitor conecta por conta própria',
+  'admin.addons.catalog.llm_parsing.name': 'Análise por IA',
+  'admin.addons.catalog.llm_parsing.description': 'Lê reservas que o analisador integrado não entende, usando um modelo de IA à sua escolha',
   'admin.addons.enabled': 'Ativado',
   'admin.addons.disabled': 'Desativado',
   'admin.addons.type.trip': 'Viagem',
@@ -363,6 +622,7 @@ const admin: TranslationStrings = {
   'admin.addons.globalHint': 'Disponível como seção própria na navegação principal',
   'admin.addons.toast.updated': 'Complemento atualizado',
   'admin.addons.toast.error': 'Falha ao atualizar complemento',
+  'admin.addons.group.count': '{enabled} de {total} ativados',
   'admin.addons.noAddons': 'Nenhum complemento disponível',
   'admin.addons.integrationHint': 'Serviços de backend e integrações de API sem página dedicada',
   'admin.weather.title': 'Dados meteorológicos',
@@ -498,8 +758,7 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.journey.description':
     'Rastreamento de viagens e diário de viajante com check-ins, fotos e histórias diárias',
   'admin.addons.catalog.collections.name': 'Coleções',
-  'admin.addons.catalog.collections.description':
-    'Biblioteca pessoal de lugares — salve lugares entre viagens em listas nomeadas, copie para qualquer viagem, compartilhe com outras pessoas',
+  'admin.addons.catalog.collections.description': 'Reúna lugares de qualquer viagem em listas nomeadas e reutilize-os',
   'admin.passkey.title': 'Login com passkey',
   'admin.passkey.cardHint': 'Permite que os usuários entrem com passkeys (WebAuthn). Desativado por padrão.',
   'admin.passkey.login': 'Ativar login com passkey',
@@ -531,6 +790,9 @@ const admin: TranslationStrings = {
   'admin.defaultSettings.mapboxStylePlaceholder': 'Escolha um estilo…',
   'admin.defaultSettings.mapbox3d': 'Edifícios & relevo em 3D',
   'admin.defaultSettings.mapboxQuality': 'Modo de alta qualidade',
+  'admin.defaultSettings.cartoKey': 'Chave CARTO compartilhada',
+  'admin.defaultSettings.cartoKeyHint':
+    "Usada para todos os usuários que não inseriram a própria chave, assim toda a instância recebe blocos do CARTO sem marca d'água. Armazenada de forma criptografada.",
   'admin.group.users': 'Users',
   'admin.group.config': 'Configuration',
   'admin.group.integration': 'Integrations',
@@ -539,5 +801,9 @@ const admin: TranslationStrings = {
   'admin.invite.tripNone': 'Nenhuma viagem',
   'admin.invite.tripHint': 'O novo usuário é adicionado automaticamente a esta viagem ao se registrar pelo link.',
   'admin.invite.boundTo': 'adiciona a {trip}',
+  'admin.placesUsageTitle': 'Para que a chave é usada',
+  'admin.mapsKeyHintShort': 'Adiciona fotos, avaliações e horários. Cada consulta passa então pelo Google.',
+  'admin.amapKeyHintShort': 'Para busca de lugares na China continental. Precisa de uma chave de serviço web, não de API JS.',
+  'admin.collab.links.subtitle': 'Ligações partilhadas e marcadores',
 };
 export default admin;

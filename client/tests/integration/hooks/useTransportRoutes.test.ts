@@ -62,6 +62,33 @@ describe('useTransportRoutes (#1425 real road routes)', () => {
     expect(calculateRouteWithLegs).not.toHaveBeenCalled()
   })
 
+  it('routes a road trip whose stops add up past the cap, because no single leg does (#1797)', async () => {
+    // Paris → Munich → Vienna → Budapest: ~1800 km end to end, every leg well under
+    // the cap. Before the cap moved to the leg, the sum alone dropped the whole drive.
+    const res = [{
+      id: 20,
+      type: 'car',
+      status: 'confirmed',
+      endpoints: [
+        { role: 'from', sequence: 0, name: 'Paris', code: null, lat: 48.8566, lng: 2.3522, timezone: null, local_time: null, local_date: null },
+        { role: 'stop', sequence: 1, name: 'Munich', code: null, lat: 48.1351, lng: 11.582, timezone: null, local_time: null, local_date: null },
+        { role: 'stop', sequence: 2, name: 'Vienna', code: null, lat: 48.2082, lng: 16.3738, timezone: null, local_time: null, local_date: null },
+        { role: 'to', sequence: 3, name: 'Budapest', code: null, lat: 47.4979, lng: 19.0402, timezone: null, local_time: null, local_date: null },
+      ],
+    } as unknown as Reservation]
+    const { result } = renderHook(() => useTransportRoutes(res))
+    await waitFor(() => expect(result.current.get(20)).toBeTruthy())
+    expect(calculateRouteWithLegs).toHaveBeenCalledWith(
+      [
+        { lat: 48.8566, lng: 2.3522 },
+        { lat: 48.1351, lng: 11.582 },
+        { lat: 48.2082, lng: 16.3738 },
+        { lat: 47.4979, lng: 19.0402 },
+      ],
+      expect.objectContaining({ profile: 'driving' }),
+    )
+  })
+
   it('falls back silently (no entry) when routing throws', async () => {
     calculateRouteWithLegs.mockRejectedValueOnce(new Error('OSRM down'))
     const res = [booking(7, 'taxi', PARIS, VERSAILLES)]
@@ -79,5 +106,36 @@ describe('useTransportRoutes (#1425 real road routes)', () => {
     rerender({ r: [booking(8, 'car', PARIS, VERSAILLES)] })
     await new Promise(r => setTimeout(r, 20))
     expect(calculateRouteWithLegs).toHaveBeenCalledTimes(1)
+  })
+
+  it('retries a booking whose in-flight request was cancelled before completing, instead of leaving it permanently unrouted', async () => {
+    // A realistic fetch-like mock: the first call only settles when its signal
+    // fires 'abort' — this lets the test control exactly when the in-flight
+    // request is cancelled, the way React StrictMode's dev-only
+    // mount->cleanup->remount cycle cancels the first attempt before it
+    // settles (both are "this render's request got cancelled" from the
+    // hook's point of view; only the trigger differs).
+    calculateRouteWithLegs.mockImplementationOnce((_points, opts) => new Promise((_resolve, reject) => {
+      opts.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+    }))
+    calculateRouteWithLegs.mockResolvedValueOnce({ coordinates: [PARIS, [48.83, 2.24], VERSAILLES], distance: 20000, duration: 1500, legs: [] })
+
+    const carRes = booking(9, 'car', PARIS, VERSAILLES)
+    const unrelated = [booking(10, 'flight', PARIS, VERSAILLES)] // no routable type -> next effect run cancels the pending request and attempts nothing new
+    const { rerender, result } = renderHook(({ r }) => useTransportRoutes(r), { initialProps: { r: [carRes] } })
+    await waitFor(() => expect(calculateRouteWithLegs).toHaveBeenCalledTimes(1))
+
+    // Deps change while the request is still in flight -> the effect's cleanup
+    // must cancel it (same hook instance, same attemptedRef, so this is a
+    // deterministic stand-in for StrictMode's fake unmount).
+    rerender({ r: unrelated })
+    await new Promise(r => setTimeout(r, 10))
+
+    // The same car booking comes back -> it must be retried, not silently
+    // skipped as "already attempted".
+    rerender({ r: [carRes] })
+    await waitFor(() => expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(result.current.get(9)).toBeTruthy())
+    expect(result.current.get(9)).toHaveLength(3)
   })
 })

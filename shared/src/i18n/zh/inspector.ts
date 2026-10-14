@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': '添加到当天',
   'inspector.confirmedRes': '已确认预订',
   'inspector.pendingRes': '待确认预订',
-  'inspector.google': '导航',
-  'inspector.openStreetMap': '查看',
+  'inspector.google': 'Google 地图',
+  'inspector.navigation': '导航',
+  'inspector.openWith': '打开方式',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': '打开网站',
   'inspector.saveToCollection': '保存到收藏',
   'inspector.savedToCollection': '已保存',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': '编辑预订',
   'inspector.participants': '参与者',
   'inspector.trackStats': '轨迹数据',
+  'inspector.trackColor': '轨迹颜色',
+  'inspector.trackColorAuto': '自动颜色',
+  'inspector.trackColorCustom': '选择自定义颜色',
 };
 export default inspector;

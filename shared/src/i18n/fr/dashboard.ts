@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} archivés',
   'dashboard.newTrip': 'Nouveau voyage',
   'dashboard.newTripSub': 'Planifiez un nouveau voyage à partir de zéro',
+  'dashboard.subscribeAllTrips': "S'abonner à tous les voyages",
+  'dashboard.subscribeAllTripsDesc':
+    'Un flux de calendrier unique pour tous vos voyages actifs, synchronisé automatiquement. Exclut les voyages archivés et les voyages terminés il y a plus de 90 jours.',
   'dashboard.gridView': 'Vue en grille',
   'dashboard.listView': 'Vue en liste',
   'dashboard.currency': 'Devise',
@@ -86,6 +89,35 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Utiliser la photo Unsplash de {photographer}',
   'dashboard.titleRequired': 'Le titre est obligatoire',
   'dashboard.endDateError': 'La date de fin doit être postérieure à la date de début',
+  'dashboard.tripTooLong': 'Un voyage ne peut pas dépasser {days} jours',
+  'dashboard.dateShiftTitle': 'Nouvelle date de début',
+  'dashboard.dateShiftIntro':
+    'Vous avez modifié la date de début de ce voyage. Comment vos plans doivent-ils suivre les nouvelles dates ?',
+  'dashboard.dateShiftKeepBookings': 'Conserver les réservations à leurs dates',
+  'dashboard.dateShiftKeepBookingsDesc':
+    "Les plans journaliers suivent les nouvelles dates, tandis que les réservations et hébergements restent à leurs dates d'origine tant que celles-ci font toujours partie du voyage.",
+  'dashboard.dateShiftAll': 'Tout décaler',
+  'dashboard.dateShiftAllDesc':
+    "L'itinéraire entier suit les nouvelles dates, y compris les réservations et hébergements.",
+  'dashboard.dateShiftHint':
+    "Astuce : pour ne décaler qu'une partie de votre itinéraire, ouvrez « Réorganiser les jours » dans le planificateur, ajoutez le jour qui suit la fin du voyage avec le bouton qui affiche sa date, puis placez ce jour là où l'écart doit se créer.",
+  'dashboard.shrinkTitle': 'Retirer des jours ?',
+  'dashboard.shrinkIntro': 'En enregistrant les nouvelles dates, ces jours sont retirés :',
+  'dashboard.shrinkMoreDays': '+{count} de plus',
+  'dashboard.shrinkLastDays': 'Ce sont les derniers jours qui partent, pas les premiers',
+  'dashboard.shrinkLastDaysHint':
+    'Les programmes des jours suivent les nouvelles dates : ce sont donc toujours les derniers jours de votre plan qui sont retirés, même quand le début a changé.',
+  'dashboard.shrinkBookingsHint':
+    'Elles restent dans Réservations. Celles dont la date fait encore partie du voyage reviennent sur ce jour.',
+  'dashboard.shrinkBookingsShiftHint': 'Elles restent dans Réservations, sans jour.',
+  'dashboard.shrinkStayHint': "L'arrivée ou le départ tombe un jour retiré, le séjour entier est donc retiré.",
+  'dashboard.shrinkStayBookedHint':
+    "L'arrivée ou le départ tombe un jour retiré, le séjour entier est donc retiré. Sa réservation « {booking} » et sa dépense restent dans Réservations.",
+  'dashboard.shrinkStayBookingHint':
+    "L'arrivée ou le départ tombe un jour retiré, le séjour entier est donc retiré. Sa réservation « {booking} » reste dans Réservations.",
+  'dashboard.shrinkConfirm': 'Retirer les jours et enregistrer',
+  'dashboard.shrinkUnknown':
+    "Les jours de ce voyage n'ont pas pu être vérifiés. Si les nouvelles dates comptent moins de jours, l'enregistrement retire les derniers jours et tout ce qui y est prévu.",
   'dashboard.greeting.morning': 'Bonjour,',
   'dashboard.greeting.afternoon': 'Bon après-midi,',
   'dashboard.greeting.evening': 'Bonsoir,',
@@ -95,6 +127,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Lieux',
   'dashboard.mobile.buddies': 'Compagnons',
   'dashboard.mobile.newTrip': 'Nouveau voyage',
+  'dashboard.mobile.addCoverImage': 'Ajouter une couverture',
   'dashboard.mobile.currency': 'Devise',
   'dashboard.mobile.timezone': 'Fuseau horaire',
   'dashboard.mobile.upcomingTrips': 'Voyages à venir',
@@ -109,6 +142,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Demain',
   'dashboard.mobile.inDays': 'Dans {count} jours',
   'dashboard.mobile.inMonths': 'Dans {count} mois',
+  'dashboard.mobile.spotlightDayOf': 'Jour {day} sur {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} jour',
+  'dashboard.mobile.spotlightDaysMany': '{count} jours',
   'dashboard.mobile.completed': 'Terminé',
   'dashboard.mobile.currencyConverter': 'Convertisseur de devises',
   'dashboard.filter.planned': 'Planifiés',

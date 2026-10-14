@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': 'Ajouter au jour',
   'inspector.confirmedRes': 'Réservation confirmée',
   'inspector.pendingRes': 'Réservation en attente',
-  'inspector.google': 'Naviguer',
-  'inspector.openStreetMap': 'Voir',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'Navigation',
+  'inspector.openWith': 'Ouvrir avec',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': 'Ouvrir le site web',
   'inspector.saveToCollection': 'Enregistrer dans une collection',
   'inspector.savedToCollection': 'Enregistré',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': 'Modifier la réservation',
   'inspector.participants': 'Participants',
   'inspector.trackStats': 'Données du parcours',
+  'inspector.trackColor': 'Couleur du parcours',
+  'inspector.trackColorAuto': 'Couleur automatique',
+  'inspector.trackColorCustom': 'Choisir une couleur personnalisée',
 };
 export default inspector;

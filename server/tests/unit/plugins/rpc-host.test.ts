@@ -1,543 +1,215 @@
 /**
- * The capability router is the plugin permission boundary (#plugins, M1). These
- * tests prove that an ungranted method is never reachable, a granted method
- * works, a granted trip read is still membership-checked against the acting
- * user, and bad params / unknown methods are rejected — without ever spawning a
- * child (the router runs in the host).
+ * The capability router is the plugin permission boundary (#plugins, M1).
+ *
+ * Every handler now lives on a decorated *.rpc.ts class in its own domain, and each of
+ * those has its own suite. What is left here is the router itself: an ungranted method
+ * is never reachable, an unknown one is told apart from a denied one, a thrown error
+ * maps to the right wire code, and the audit sink sees the call — without ever
+ * spawning a child (the router runs in the host).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PluginRpcHost, type HostDeps } from '../../../src/nest/plugins/host/rpc-host';
+import { describe, it, expect, vi } from 'vitest';
+import { PluginRpcHost, BadParams, ForbiddenResource, type HostDeps } from '../../../src/nest/plugins/host/rpc-host';
+import { PluginController, PluginMethod, PluginOpenMethod } from '../../../src/nest/plugins/host/rpc-kit/decorators';
+import { createTestPluginRegistry } from '../../../src/nest/plugins/host/rpc-kit/testing';
+import type { PluginRpcContext } from '../../../src/nest/plugins/host/rpc-kit/types';
 import type { RpcRequest, RpcResponse, RpcError } from '../../../src/nest/plugins/protocol/envelope';
-
-function makeDeps(): HostDeps {
-  return {
-    data: {
-      query: vi.fn(() => [{ n: 1 }]),
-      exec: vi.fn(() => ({ changes: 1 })),
-      migrate: vi.fn(() => ({ applied: true })),
-      close: vi.fn(),
-    } as unknown as HostDeps['data'],
-    db: {
-      prepare: vi.fn((sql: string) => ({
-        all: () => [{ id: 7, name: 'Place' }],
-        get: () =>
-          sql.includes('FROM trips')
-            ? { id: 1, title: 'Japan', start_date: '2027-01-01' }
-            : { id: 3, username: 'ada', display_name: 'Ada', avatar: null },
-      })),
-    },
-    // trip 1 is accessible to user 42; everything else is not
-    canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1 } : undefined)),
-    // user 42 may see user 3 (they share a trip); nobody else
-    canSeeUser: vi.fn((actingUserId: number, targetUserId: number) => actingUserId === 42 && targetUserId === 3),
-    broadcastToTrip: vi.fn(),
-    broadcastToUser: vi.fn(),
-    // Costs (budget) — addon on; user 42 may edit trip 1's costs.
-    budgetAddonEnabled: vi.fn(() => true),
-    canEditCosts: vi.fn((tripId: number, userId: number) => tripId === 1 && userId === 42),
-    listPackingItems: vi.fn((tripId: number, _userId: number) => [{ id: 1, trip_id: tripId, name: 'Socks' }]),
-    listTripFiles: vi.fn((tripId: number) => [{ id: 2, trip_id: tripId, filename: 'visa.pdf' }]),
-    listCostsForTrip: vi.fn((tripId: number) => [{ id: 5, trip_id: tripId, name: 'Hotel', total_price: 100 }]),
-    listCostsForUser: vi.fn(() => [
-      { id: 5, trip_id: 1, name: 'Hotel' },
-      { id: 6, trip_id: 2, name: 'Food' },
-    ]),
-    createCost: vi.fn((tripId: number, input: unknown) => ({ id: 9, trip_id: tripId, ...(input as object) })),
-    updateCost: vi.fn((tripId: number, itemId: number, input: unknown) => ({ id: itemId, trip_id: tripId, ...(input as object) })),
-    deleteCost: vi.fn(() => ({ deleted: true })),
-    // Planner writes — user 42 may edit trip 1 only (mirrors canAccessTrip).
-    canEditPlaces: vi.fn((tripId: number, userId: number) => tripId === 1 && userId === 42),
-    createPlace: vi.fn((tripId: number, input: unknown) => ({ id: 10, trip_id: tripId, ...(input as object) })),
-    updatePlace: vi.fn((tripId: number, placeId: number, input: unknown) => ({ id: placeId, trip_id: tripId, ...(input as object) })),
-    deletePlace: vi.fn(() => ({ deleted: true })),
-    canEditDays: vi.fn((tripId: number, userId: number) => tripId === 1 && userId === 42),
-    createDay: vi.fn((tripId: number, input: unknown) => ({ id: 20, trip_id: tripId, ...(input as object) })),
-    updateDay: vi.fn((tripId: number, dayId: number, input: unknown) => ({ id: dayId, trip_id: tripId, ...(input as object) })),
-    deleteDay: vi.fn(() => ({ deleted: true })),
-    assignPlaceToDay: vi.fn((tripId: number, dayId: number, placeId: number, notes: string | null) => ({ id: 30, day_id: dayId, place_id: placeId, notes })),
-    unassignPlace: vi.fn(() => ({ deleted: true })),
-    canEditTrip: vi.fn((tripId: number, userId: number) => tripId === 1 && userId === 42),
-    updateTrip: vi.fn((tripId: number, _userId: number, input: unknown) => ({ id: tripId, ...(input as object) })),
-    // Metadata — trip 1 and place 7 resolve to trip 1 (accessible to 42); else undefined.
-    metaEntityTrip: vi.fn((entityType: string, entityId: number) =>
-      (entityType === 'trip' && entityId === 1) || (entityType === 'place' && entityId === 7) || (entityType === 'day' && entityId === 3) ? 1 : undefined),
-    metaGet: vi.fn(() => ({ hello: 'world' })),
-    metaSet: vi.fn((_et: string, _eid: number, key: string, value: unknown) => ({ key, value })),
-    metaList: vi.fn(() => ({ a: 1 })),
-    metaDelete: vi.fn(() => ({ deleted: true })),
-  };
-}
+import { makeDeps } from '../../helpers/rpc-host-deps';
 
 const req = (method: string, params: Record<string, unknown> = {}): RpcRequest => ({ k: 'req', id: 'x', method, params });
+/**
+ * A request as it arrives when the child never set `params`: the IPC hop is JSON, which
+ * drops an undefined field, so the key is genuinely absent by the time the router sees
+ * it. `RpcRequest` declares `params` as required, so leaving it out only type-checks
+ * through this cast — writing `params: undefined` instead would put the key back and
+ * stop covering the case the host's `req.params ?? {}` exists for.
+ */
+const reqWithoutParams = (method: string): RpcRequest => ({ k: 'req', id: 'x', method }) as RpcRequest;
 const ok = (r: RpcResponse | RpcError): r is RpcResponse => r.ok === true;
+const code = (r: RpcResponse | RpcError): string => (r as RpcError).error.code;
+
+/**
+ * A throwaway controller over two real wire methods, so the router can be exercised
+ * without dragging a domain's services in. `tags.list` and `tags.create` are used
+ * because their permissions differ, which is what the split-grant cases need.
+ */
+@PluginController()
+class ProbeRpc {
+  constructor(private readonly behaviour: (params: Record<string, unknown>, ctx: PluginRpcContext) => unknown) {}
+
+  @PluginMethod('tags.list', { permission: 'db:read:tags' })
+  read(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+    return this.behaviour(params, ctx);
+  }
+
+  @PluginMethod('tags.create', { permission: 'db:write:tags' })
+  write(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+    return this.behaviour(params, ctx);
+  }
+
+  @PluginOpenMethod('events.emit')
+  open(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+    return this.behaviour(params, ctx);
+  }
+}
+
+const makeHost = (
+  granted: string[],
+  behaviour: (params: Record<string, unknown>, ctx: PluginRpcContext) => unknown = () => ({ done: true }),
+  deps: HostDeps = makeDeps(),
+): PluginRpcHost =>
+  new PluginRpcHost('p', new Set(granted), deps, createTestPluginRegistry([new ProbeRpc(behaviour)]));
 
 describe('PluginRpcHost — capability enforcement', () => {
-  let deps: HostDeps;
-  beforeEach(() => { deps = makeDeps(); });
-
-  it('registers only granted methods; an ungranted method is PERMISSION_DENIED', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:own']), deps);
-    const denied = await host.dispatch(req('trips.getById', { tripId: 1, asUserId: 42 }));
-    expect(denied.ok).toBe(false);
-    expect((denied as RpcError).error.code).toBe('PERMISSION_DENIED');
-    expect(deps.canAccessTrip).not.toHaveBeenCalled();
+  it('RPCHOST-001 registers only granted methods; an ungranted one is PERMISSION_DENIED', async () => {
+    const seen = vi.fn(() => ({ done: true }));
+    const host = makeHost(['db:read:tags'], seen);
+    expect(ok(await host.dispatch(req('tags.list'), 42))).toBe(true);
+    expect(code(await host.dispatch(req('tags.create'), 42))).toBe('PERMISSION_DENIED');
+    // The refusal happens before the handler, so the domain never runs at all.
+    expect(seen).toHaveBeenCalledTimes(1);
   });
 
-  it('a granted db:own method runs against the plugin db', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:own']), deps);
-    const res = await host.dispatch(req('db.query', { sql: 'SELECT 1', args: [] }));
-    expect(ok(res)).toBe(true);
-    expect((res as RpcResponse).result).toEqual([{ n: 1 }]);
-    expect(deps.data.query).toHaveBeenCalledWith('SELECT 1', []);
-  });
-
-  it('an unknown method is UNKNOWN_METHOD, not PERMISSION_DENIED', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:own']), deps);
+  it('RPCHOST-002 an unknown method is UNKNOWN_METHOD, not PERMISSION_DENIED', async () => {
+    const host = makeHost(['db:read:tags']);
     const res = await host.dispatch(req('fs.readFile', { path: '/etc/passwd' }));
-    expect((res as RpcError).error.code).toBe('UNKNOWN_METHOD');
+    expect(code(res)).toBe('UNKNOWN_METHOD');
+    expect((res as RpcError).error.message).toBe('unknown method fs.readFile');
   });
 
-  it('db:read:trips reads a trip the acting user can access', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    // The acting user is bound by the HOST (2nd dispatch arg), never from params.
-    const res = await host.dispatch(req('trips.getById', { tripId: 1 }), 42);
-    expect(ok(res)).toBe(true);
-    // returns the ACTUAL trip row (title/start_date), not the access-check object
-    expect((res as RpcResponse).result).toMatchObject({ id: 1, title: 'Japan', start_date: '2027-01-01' });
-    expect(deps.db.prepare).toHaveBeenCalledWith(expect.stringContaining('FROM trips'));
+  it('RPCHOST-003 a denied known method names the missing permission AND the plugin', async () => {
+    // The old template interpolated the plugin id where the permission belonged
+    // ('tags.list requires a permission "p" was not granted'), so an operator read
+    // their plugin's NAME as an unknown permission. The message must name both.
+    const res = await makeHost([]).dispatch(req('tags.list'), 42);
+    expect((res as RpcError).error.message).toBe(
+      'tags.list requires the "db:read:tags" permission, which was not granted to plugin "p"',
+    );
   });
 
-  it('db:read:trips is still RESOURCE_FORBIDDEN when the user is not a member', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    const res = await host.dispatch(req('trips.getById', { tripId: 1 }), 99);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-  });
-
-  it('a trip read with NO bound acting user is RESOURCE_FORBIDDEN (jobs / forged calls)', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    // A plugin-supplied asUserId is ignored; without a host-bound user, deny.
-    const res = await host.dispatch(req('trips.getById', { tripId: 1, asUserId: 42 }), undefined);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.canAccessTrip).not.toHaveBeenCalled();
-  });
-
-  it('trips.getPlaces is membership-checked before the core read', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    const forbidden = await host.dispatch(req('trips.getPlaces', { tripId: 2 }), 42);
-    expect((forbidden as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.db.prepare).not.toHaveBeenCalled();
-
-    const allowed = await host.dispatch(req('trips.getPlaces', { tripId: 1 }), 42);
-    expect(ok(allowed)).toBe(true);
-    expect((allowed as RpcResponse).result).toEqual([{ id: 7, name: 'Place' }]);
-  });
-
-  it('db:read:packing / db:read:files delegate to the service, membership-checked, and stay separate scopes', async () => {
-    const packing = new PluginRpcHost('p', new Set(['db:read:packing']), deps);
-    // no access to trip 2 → refused before the service is called
-    expect(((await packing.dispatch(req('packing.list', { tripId: 2 }), 42)) as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.listPackingItems).not.toHaveBeenCalled();
-    const okP = await packing.dispatch(req('packing.list', { tripId: 1 }), 42);
-    expect(ok(okP)).toBe(true);
-    // the acting user is threaded through so packing's #858 private-item filter applies
-    expect(deps.listPackingItems).toHaveBeenCalledWith(1, 42);
-    // the packing scope does NOT unlock files
-    expect(((await packing.dispatch(req('files.list', { tripId: 1 }), 42)) as RpcError).error.code).toBe('PERMISSION_DENIED');
-
-    const files = new PluginRpcHost('p', new Set(['db:read:files']), deps);
-    const okF = await files.dispatch(req('files.list', { tripId: 1 }), 42);
-    expect((okF as RpcResponse).result).toEqual([{ id: 2, trip_id: 1, filename: 'visa.pdf' }]);
-  });
-
-  it('db:read:users returns only the public projection for a visible user', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:users']), deps);
-    const res = await host.dispatch(req('users.getById', { id: 3 }), 42);
-    expect(ok(res)).toBe(true);
-    expect((res as RpcResponse).result).toEqual({ id: 3, username: 'ada', display_name: 'Ada', avatar: null });
-    // the SELECT column list is host-controlled — no password/token columns
-    expect(deps.db.prepare).toHaveBeenCalledWith(expect.stringContaining('id, username, display_name, avatar'));
-  });
-
-  it('db:read:users is RESOURCE_FORBIDDEN for a user the acting user cannot see (no enumeration)', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:users']), deps);
-    const forbidden = await host.dispatch(req('users.getById', { id: 999 }), 42);
-    expect((forbidden as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    // and with no bound acting user (job / forged call), also denied
-    const noUser = await host.dispatch(req('users.getById', { id: 3 }), undefined);
-    expect((noUser as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-  });
-
-  it('ws:broadcast:trip forwards to the (namespaced) broadcaster for a member', async () => {
-    const host = new PluginRpcHost('p', new Set(['ws:broadcast:trip']), deps);
-    const res = await host.dispatch(req('ws.broadcastToTrip', { tripId: 1, event: 'ping', data: { a: 1 } }), 42);
-    expect(ok(res)).toBe(true);
-    expect(deps.broadcastToTrip).toHaveBeenCalledWith(1, 'ping', { a: 1 });
-  });
-
-  it('ws:broadcast:trip is RESOURCE_FORBIDDEN for a non-member trip (no cross-tenant push)', async () => {
-    const host = new PluginRpcHost('p', new Set(['ws:broadcast:trip']), deps);
-    const forbidden = await host.dispatch(req('ws.broadcastToTrip', { tripId: 999, event: 'x', data: {} }), 42);
-    expect((forbidden as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.broadcastToTrip).not.toHaveBeenCalled();
-    // and a broadcast with no bound acting user is denied too
-    const noUser = await host.dispatch(req('ws.broadcastToTrip', { tripId: 1, event: 'x', data: {} }), undefined);
-    expect((noUser as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-  });
-
-  it('bad params are BAD_PARAMS', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:own']), deps);
-    const res = await host.dispatch(req('db.query', { args: [] }));
-    expect((res as RpcError).error.code).toBe('BAD_PARAMS');
-  });
-
-  it('with no permissions, every real method is denied', async () => {
-    const host = new PluginRpcHost('p', new Set<string>(), deps);
-    for (const m of ['db.query', 'trips.getById', 'users.getById', 'ws.broadcastToTrip']) {
-      const res = await host.dispatch(req(m, { tripId: 1, asUserId: 42, id: 3, event: 'x', sql: 'SELECT 1' }));
-      expect((res as RpcError).error.code).toBe('PERMISSION_DENIED');
+  it('RPCHOST-004 with no permissions at all, every permissioned method is denied', async () => {
+    const host = makeHost([]);
+    for (const method of ['tags.list', 'tags.create']) {
+      expect(code(await host.dispatch(req(method), 42))).toBe('PERMISSION_DENIED');
     }
   });
 
-  it('ws:broadcast:user forwards only to the acting user (never an arbitrary one)', async () => {
-    const host = new PluginRpcHost('p', new Set(['ws:broadcast:user']), deps);
-    const res = await host.dispatch(req('ws.broadcastToUser', { userId: 42, event: 'poke', data: { x: 2 } }), 42);
-    expect(ok(res)).toBe(true);
-    expect(deps.broadcastToUser).toHaveBeenCalledWith(42, { event: 'poke', x: 2 });
-    // broadcasting to a DIFFERENT user is refused
-    const forbidden = await host.dispatch(req('ws.broadcastToUser', { userId: 9, event: 'poke', data: {} }), 42);
-    expect((forbidden as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
+  it('RPCHOST-005 an unconditional method needs no grant', async () => {
+    expect(ok(await makeHost([]).dispatch(req('events.emit'), 42))).toBe(true);
   });
 
-  it('non-array db args are BAD_PARAMS; a primitive ws payload is wrapped', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:own', 'ws:broadcast:trip']), deps);
-    const bad = await host.dispatch(req('db.query', { sql: 'SELECT 1', args: 'nope' }));
-    expect((bad as RpcError).error.code).toBe('BAD_PARAMS');
-
-    await host.dispatch(req('ws.broadcastToTrip', { tripId: 1, event: 'ping', data: 'primitive' }), 42);
-    expect(deps.broadcastToTrip).toHaveBeenCalledWith(1, 'ping', { value: 'primitive' });
-  });
-
-  it('dispose() closes the plugin data db', () => {
-    const host = new PluginRpcHost('p', new Set(['db:own']), deps);
-    host.dispose();
-    expect(deps.data.close).toHaveBeenCalled();
-  });
-
-  it('trips.getReservations is membership-checked and reads reservations', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    const res = await host.dispatch(req('trips.getReservations', { tripId: 1 }), 42);
-    expect(ok(res)).toBe(true);
-    expect(deps.db.prepare).toHaveBeenCalledWith(expect.stringContaining('FROM reservations'));
-  });
-
-  it('an error thrown by a handler becomes HOST_ERROR', async () => {
-    (deps.data.query as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      throw new Error('disk gone');
+  it('RPCHOST-006 the host-bound acting user reaches the handler, never a params field', async () => {
+    let seen: PluginRpcContext | undefined;
+    const host = makeHost(['db:read:tags'], (_p, ctx) => {
+      seen = ctx;
+      return null;
     });
-    const host = new PluginRpcHost('p', new Set(['db:own']), deps);
-    const res = await host.dispatch(req('db.query', { sql: 'SELECT 1', args: [] }));
-    expect((res as RpcError).error.code).toBe('HOST_ERROR');
+    await host.dispatch(req('tags.list', { asUserId: 999 }), 42);
+    expect(seen?.actingUserId).toBe(42);
+    expect(seen?.pluginId).toBe('p');
+    await host.dispatch(req('tags.list'), undefined);
+    expect(seen?.actingUserId).toBeUndefined();
+  });
+
+  it('RPCHOST-007 the context exposes the plugin db handle and the inter-plugin peers', async () => {
+    const deps = makeDeps();
+    let seen: PluginRpcContext | undefined;
+    const host = makeHost(['db:read:tags'], (_p, ctx) => {
+      seen = ctx;
+      return null;
+    }, deps);
+    await host.dispatch(req('tags.list'), 42);
+    expect(seen?.data).toBe(deps.data);
+    await seen?.plugins.call('other', 'sum', [1], 42);
+    expect(deps.callPlugin).toHaveBeenCalledWith('other', 'sum', [1], 42);
+    seen?.plugins.emit('ping', { a: 1 });
+    expect(deps.emitPluginEvent).toHaveBeenCalledWith('ping', { a: 1 });
+  });
+
+  it('RPCHOST-008 BadParams and ForbiddenResource map to their own wire codes', async () => {
+    expect(code(await makeHost(['db:read:tags'], () => {
+      throw new BadParams('sql must be a string');
+    }).dispatch(req('tags.list'), 42))).toBe('BAD_PARAMS');
+    expect(code(await makeHost(['db:read:tags'], () => {
+      throw new ForbiddenResource('no access to trip 9');
+    }).dispatch(req('tags.list'), 42))).toBe('RESOURCE_FORBIDDEN');
+  });
+
+  it('RPCHOST-009 any other error becomes HOST_ERROR with its message', async () => {
+    const res = await makeHost(['db:read:tags'], () => {
+      throw new Error('disk gone');
+    }).dispatch(req('tags.list'), 42);
+    expect(code(res)).toBe('HOST_ERROR');
     expect((res as RpcError).error.message).toBe('disk gone');
   });
 
-  it('a non-Error thrown by a handler still maps to HOST_ERROR', async () => {
-    (deps.data.query as ReturnType<typeof vi.fn>).mockImplementation(() => {
+  it('RPCHOST-010 a non-Error throw still maps to HOST_ERROR, with a generic message', async () => {
+    const res = await makeHost(['db:read:tags'], () => {
       throw 'raw string';
-    });
-    const host = new PluginRpcHost('p', new Set(['db:own']), deps);
-    const res = await host.dispatch(req('db.query', { sql: 'SELECT 1' }));
-    expect((res as RpcError).error.code).toBe('HOST_ERROR');
+    }).dispatch(req('tags.list'), 42);
+    expect(code(res)).toBe('HOST_ERROR');
     expect((res as RpcError).error.message).toBe('internal error');
   });
 
-  it('coerces numeric string params and tolerates a missing params object', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips', 'db:own']), deps);
-    // tripId as a string -> coerced to a number; acting user is the bound host arg
-    const res = await host.dispatch(req('trips.getById', { tripId: '1' }), 42);
-    expect(ok(res)).toBe(true);
-    // a request with no params object at all -> BAD_PARAMS (sql missing), not a crash
-    const noParams = await host.dispatch({ k: 'req', id: 'y', method: 'db.query', params: undefined });
-    expect((noParams as RpcError).error.code).toBe('BAD_PARAMS');
+  it('RPCHOST-011 an async handler is awaited before the response is built', async () => {
+    const host = makeHost(['db:read:tags'], async () => {
+      await Promise.resolve();
+      return { late: true };
+    });
+    expect(((await host.dispatch(req('tags.list'), 42)) as RpcResponse).result).toEqual({ late: true });
   });
 
-  // ── Costs (budget items): db:read:costs / db:write:costs ────────────────────
-
-  it('db:read:costs reads a trip the acting user can access', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.getByTrip', { tripId: 1 }), 42);
-    expect(ok(res)).toBe(true);
-    expect((res as RpcResponse).result).toEqual([{ id: 5, trip_id: 1, name: 'Hotel', total_price: 100 }]);
-    expect(deps.listCostsForTrip).toHaveBeenCalledWith(1);
+  it('RPCHOST-012 a rejected promise is mapped like a throw', async () => {
+    const host = makeHost(['db:read:tags'], async () => {
+      throw new BadParams('async refusal');
+    });
+    expect(code(await host.dispatch(req('tags.list'), 42))).toBe('BAD_PARAMS');
   });
 
-  it('db:read:costs is membership-checked before the read (non-member → RESOURCE_FORBIDDEN)', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.getByTrip', { tripId: 1 }), 99);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.listCostsForTrip).not.toHaveBeenCalled();
+  it('RPCHOST-013 missing params are treated as an empty object, not a crash', async () => {
+    let seen: Record<string, unknown> | undefined;
+    const host = makeHost(['db:read:tags'], (params) => {
+      seen = params;
+      return null;
+    });
+    expect(ok(await host.dispatch(reqWithoutParams('tags.list'), 42))).toBe(true);
+    expect(seen).toEqual({});
   });
 
-  it('costs are RESOURCE_FORBIDDEN when the Costs addon is disabled', async () => {
-    (deps.budgetAddonEnabled as ReturnType<typeof vi.fn>).mockReturnValue(false);
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.getByTrip', { tripId: 1 }), 42);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.listCostsForTrip).not.toHaveBeenCalled();
+  it('RPCHOST-014 the audit sink sees the outcome of an auditable call, denials included', async () => {
+    const audit = vi.fn();
+    const deps = { ...makeDeps(), audit };
+    expect(ok(await makeHost(['db:read:tags'], () => null, deps).dispatch(req('tags.list'), 42))).toBe(true);
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ pluginId: 'p', actingUserId: 42, method: 'tags.list', code: 'ok' }));
+    audit.mockClear();
+    await makeHost([], () => null, deps).dispatch(req('tags.list'), 42);
+    expect(audit).toHaveBeenCalledWith(expect.objectContaining({ method: 'tags.list', code: 'PERMISSION_DENIED' }));
   });
 
-  it('costs.listMine returns costs across every accessible trip', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.listMine', {}), 42);
-    expect(ok(res)).toBe(true);
-    expect((res as RpcResponse).result).toEqual([
-      { id: 5, trip_id: 1, name: 'Hotel' },
-      { id: 6, trip_id: 2, name: 'Food' },
-    ]);
-    expect(deps.listCostsForUser).toHaveBeenCalledWith(42);
+  it('RPCHOST-015 a throwing audit sink never breaks the call it was auditing', async () => {
+    const audit = vi.fn(() => {
+      throw new Error('audit table is gone');
+    });
+    const host = makeHost(['db:read:tags'], () => ({ done: true }), { ...makeDeps(), audit });
+    expect(ok(await host.dispatch(req('tags.list'), 42))).toBe(true);
   });
 
-  it('costs.listMine with no bound acting user is RESOURCE_FORBIDDEN (jobs / forged calls)', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.listMine', {}), undefined);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.listCostsForUser).not.toHaveBeenCalled();
+  it('RPCHOST-016 dispose() closes the plugin data db, and a second close is harmless', () => {
+    const deps = makeDeps();
+    const host = makeHost(['db:read:tags'], () => null, deps);
+    host.dispose();
+    expect(deps.data.close).toHaveBeenCalled();
+    (deps.data.close as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      throw new Error('already closed');
+    });
+    expect(() => host.dispose()).not.toThrow();
   });
 
-  it('costs.getByTrip is PERMISSION_DENIED without db:read:costs', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    const res = await host.dispatch(req('costs.getByTrip', { tripId: 1 }), 42);
-    expect((res as RpcError).error.code).toBe('PERMISSION_DENIED');
-  });
-
-  it('db:write:costs creates a cost when the user may edit the trip', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.create', { tripId: 1, input: { name: 'Hotel', total_price: 120 } }), 42);
-    expect(ok(res)).toBe(true);
-    expect((res as RpcResponse).result).toMatchObject({ id: 9, trip_id: 1, name: 'Hotel', total_price: 120 });
-    expect(deps.createCost).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Hotel', total_price: 120 }));
-  });
-
-  it('db:write:costs is RESOURCE_FORBIDDEN without the budget_edit permission', async () => {
-    (deps.canEditCosts as ReturnType<typeof vi.fn>).mockReturnValue(false);
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.create', { tripId: 1, input: { name: 'Hotel' } }), 42);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.createCost).not.toHaveBeenCalled();
-  });
-
-  it('db:write:costs on a trip the user cannot access is RESOURCE_FORBIDDEN', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.create', { tripId: 1, input: { name: 'Hotel' } }), 99);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.createCost).not.toHaveBeenCalled();
-  });
-
-  it('db:write:costs with an invalid payload is BAD_PARAMS', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    // name is required (min length 1) by budgetCreateItemRequestSchema
-    const res = await host.dispatch(req('costs.create', { tripId: 1, input: { total_price: 5 } }), 42);
-    expect((res as RpcError).error.code).toBe('BAD_PARAMS');
-    expect(deps.createCost).not.toHaveBeenCalled();
-  });
-
-  it('db:write:costs with no bound acting user is RESOURCE_FORBIDDEN', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.create', { tripId: 1, input: { name: 'Hotel' } }), undefined);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.createCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.create is PERMISSION_DENIED without db:write:costs', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.create', { tripId: 1, input: { name: 'Hotel' } }), 42);
-    expect((res as RpcError).error.code).toBe('PERMISSION_DENIED');
-  });
-
-  it('db:write:costs updates a cost when the user may edit the trip', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.update', { tripId: 1, itemId: 5, input: { name: 'Hostel' } }), 42);
-    expect(ok(res)).toBe(true);
-    expect((res as RpcResponse).result).toMatchObject({ id: 5, trip_id: 1, name: 'Hostel' });
-    expect(deps.updateCost).toHaveBeenCalledWith(1, 5, expect.objectContaining({ name: 'Hostel' }));
-  });
-
-  it('costs.update is RESOURCE_FORBIDDEN without the budget_edit permission', async () => {
-    (deps.canEditCosts as ReturnType<typeof vi.fn>).mockReturnValue(false);
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.update', { tripId: 1, itemId: 5, input: { name: 'X' } }), 42);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.updateCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.update on a trip the user cannot access is RESOURCE_FORBIDDEN', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.update', { tripId: 1, itemId: 5, input: { name: 'X' } }), 99);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.updateCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.update with an invalid payload is BAD_PARAMS', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    // total_price must be a number per budgetUpdateItemRequestSchema.
-    const res = await host.dispatch(req('costs.update', { tripId: 1, itemId: 5, input: { total_price: 'nope' } }), 42);
-    expect((res as RpcError).error.code).toBe('BAD_PARAMS');
-    expect(deps.updateCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.update with no bound acting user is RESOURCE_FORBIDDEN', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.update', { tripId: 1, itemId: 5, input: { name: 'X' } }), undefined);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.updateCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.update is PERMISSION_DENIED without db:write:costs', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.update', { tripId: 1, itemId: 5, input: { name: 'X' } }), 42);
-    expect((res as RpcError).error.code).toBe('PERMISSION_DENIED');
-  });
-
-  it('db:write:costs deletes a cost when the user may edit the trip', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.delete', { tripId: 1, itemId: 5 }), 42);
-    expect(ok(res)).toBe(true);
-    expect((res as RpcResponse).result).toMatchObject({ deleted: true });
-    expect(deps.deleteCost).toHaveBeenCalledWith(1, 5);
-  });
-
-  it('costs.delete is RESOURCE_FORBIDDEN without the budget_edit permission', async () => {
-    (deps.canEditCosts as ReturnType<typeof vi.fn>).mockReturnValue(false);
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.delete', { tripId: 1, itemId: 5 }), 42);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.deleteCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.delete on a trip the user cannot access is RESOURCE_FORBIDDEN', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.delete', { tripId: 1, itemId: 5 }), 99);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.deleteCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.delete with no bound acting user is RESOURCE_FORBIDDEN', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:costs']), deps);
-    const res = await host.dispatch(req('costs.delete', { tripId: 1, itemId: 5 }), undefined);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.deleteCost).not.toHaveBeenCalled();
-  });
-
-  it('costs.delete is PERMISSION_DENIED without db:write:costs', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:costs']), deps);
-    const res = await host.dispatch(req('costs.delete', { tripId: 1, itemId: 5 }), 42);
-    expect((res as RpcError).error.code).toBe('PERMISSION_DENIED');
-  });
-
-  // --- Planner writes (#1429) ---
-  it('db:write:places creates a place on a trip the acting user may edit', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:places']), deps);
-    const res = await host.dispatch(req('places.create', { tripId: 1, input: { name: 'Fushimi Inari' } }), 42);
-    expect(ok(res)).toBe(true);
-    expect(deps.createPlace).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Fushimi Inari' }));
-  });
-
-  it('places.create rejects an over-long string field (mirrors the REST STRING_LIMITS)', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:places']), deps);
-    const res = await host.dispatch(req('places.create', { tripId: 1, input: { name: 'A'.repeat(201) } }), 42);
-    expect((res as RpcError).error.code).toBe('BAD_PARAMS');
-    expect(deps.createPlace).not.toHaveBeenCalled();
-  });
-
-  it('places.create is PERMISSION_DENIED without db:write:places', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    const res = await host.dispatch(req('places.create', { tripId: 1, input: { name: 'X' } }), 42);
-    expect((res as RpcError).error.code).toBe('PERMISSION_DENIED');
-  });
-
-  it('places.create is RESOURCE_FORBIDDEN on a trip the acting user cannot edit', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:places']), deps);
-    const res = await host.dispatch(req('places.create', { tripId: 2, input: { name: 'X' } }), 42);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.createPlace).not.toHaveBeenCalled();
-  });
-
-  it('places.create with no bound acting user is RESOURCE_FORBIDDEN (jobs / forged calls)', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:places']), deps);
-    const res = await host.dispatch(req('places.create', { tripId: 1, input: { name: 'X' } }), undefined);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-  });
-
-  it('places.create with an invalid payload (no name) is BAD_PARAMS', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:places']), deps);
-    const res = await host.dispatch(req('places.create', { tripId: 1, input: {} }), 42);
-    expect((res as RpcError).error.code).toBe('BAD_PARAMS');
-    expect(deps.createPlace).not.toHaveBeenCalled();
-  });
-
-  it('db:write:itinerary assigns a place to a day (day_edit gated)', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:itinerary']), deps);
-    const res = await host.dispatch(req('itinerary.assign', { tripId: 1, dayId: 3, placeId: 10 }), 42);
-    expect(ok(res)).toBe(true);
-    expect(deps.assignPlaceToDay).toHaveBeenCalledWith(1, 3, 10, null);
-  });
-
-  it('db:write:trips updates a trip the acting user may edit', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:write:trips']), deps);
-    const res = await host.dispatch(req('trips.update', { tripId: 1, input: { title: 'Renamed' } }), 42);
-    expect(ok(res)).toBe(true);
-    expect(deps.updateTrip).toHaveBeenCalledWith(1, 42, expect.objectContaining({ title: 'Renamed' }));
-  });
-
-  // --- Plugin metadata (db:meta) ---
-  it('db:meta stores and reads namespaced metadata on an accessible entity', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:meta']), deps);
-    const set = await host.dispatch(req('meta.set', { entityType: 'trip', entityId: 1, key: 'rating', value: 5 }), 42);
-    expect(ok(set)).toBe(true);
-    expect(deps.metaSet).toHaveBeenCalledWith('trip', 1, 'rating', 5);
-    const placeOk = await host.dispatch(req('meta.get', { entityType: 'place', entityId: 7, key: 'x' }), 42);
-    expect(ok(placeOk)).toBe(true); // place 7 resolves to accessible trip 1
-  });
-
-  it('meta.set is PERMISSION_DENIED without db:meta', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:read:trips']), deps);
-    const res = await host.dispatch(req('meta.set', { entityType: 'trip', entityId: 1, key: 'x', value: 1 }), 42);
-    expect((res as RpcError).error.code).toBe('PERMISSION_DENIED');
-  });
-
-  it('meta is RESOURCE_FORBIDDEN on an entity the acting user cannot access', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:meta']), deps);
-    const res = await host.dispatch(req('meta.set', { entityType: 'trip', entityId: 2, key: 'x', value: 1 }), 42);
-    expect((res as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.metaSet).not.toHaveBeenCalled();
-  });
-
-  it('meta with an unknown entityType is BAD_PARAMS', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:meta']), deps);
-    const res = await host.dispatch(req('meta.set', { entityType: 'user', entityId: 1, key: 'x', value: 1 }), 42);
-    expect((res as RpcError).error.code).toBe('BAD_PARAMS');
-  });
-
-  it('meta writes resolve the entity edit permission per type (place→place_edit, day→day_edit) and refuse no-user', async () => {
-    const host = new PluginRpcHost('p', new Set(['db:meta']), deps);
-    expect(ok(await host.dispatch(req('meta.set', { entityType: 'place', entityId: 7, key: 'k', value: 1 }), 42))).toBe(true);
-    expect(deps.canEditPlaces).toHaveBeenCalled();
-    expect(ok(await host.dispatch(req('meta.set', { entityType: 'day', entityId: 3, key: 'k', value: 1 }), 42))).toBe(true);
-    expect(deps.canEditDays).toHaveBeenCalled();
-    // no host-bound acting user (a job / forged call) → refused
-    const noUser = await host.dispatch(req('meta.get', { entityType: 'trip', entityId: 1, key: 'k' }), undefined);
-    expect((noUser as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-  });
-
-  it('meta WRITES need the entity edit permission — a read-only member is RESOURCE_FORBIDDEN', async () => {
-    // Member can access the trip but not edit it (viewer role).
-    (deps.canEditTrip as ReturnType<typeof vi.fn>).mockReturnValue(false);
-    const host = new PluginRpcHost('p', new Set(['db:meta']), deps);
-    const write = await host.dispatch(req('meta.set', { entityType: 'trip', entityId: 1, key: 'x', value: 1 }), 42);
-    expect((write as RpcError).error.code).toBe('RESOURCE_FORBIDDEN');
-    expect(deps.metaSet).not.toHaveBeenCalled();
-    // …but a READ is only access-gated, so it still works.
-    const read = await host.dispatch(req('meta.get', { entityType: 'trip', entityId: 1, key: 'x' }), 42);
-    expect(ok(read)).toBe(true);
-    expect(deps.metaGet).toHaveBeenCalled();
+  it('RPCHOST-017 a method the registry does not own is rejected, not silently answered', async () => {
+    // The registry is the ONLY source of handlers now, so a class that was never
+    // listed in its module makes every one of its methods PERMISSION_DENIED. This is
+    // the failure mode that has no other symptom, which is why each domain suite also
+    // asserts its class is in the module providers.
+    const bare = new PluginRpcHost('p', new Set(['db:read:tags']), makeDeps(), createTestPluginRegistry([]));
+    expect(code(await bare.dispatch(req('tags.list'), 42))).toBe('PERMISSION_DENIED');
   });
 });

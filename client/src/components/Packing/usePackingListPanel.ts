@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import type { ChangeEvent } from 'react'
 import { useTripStore } from '../../store/tripStore'
 import { useCanDo } from '../../store/permissionsStore'
@@ -7,6 +7,8 @@ import { useToast } from '../shared/Toast'
 import { useTranslation } from '../../i18n'
 import { packingApi, tripsApi } from '../../api/client'
 import { useAddonStore } from '../../store/addonStore'
+import { useNetworkMode } from '../../hooks/useNetworkMode'
+import { useBagTotalsPing } from './useBagTotalsPing'
 import type { PackingItem, PackingBag } from '../../types'
 import { BAG_COLORS, PACKING_PLACEHOLDER_NAME } from './packingListPanel.constants'
 import { parseImportLines } from './packingListPanel.helpers'
@@ -33,6 +35,9 @@ export interface PackingListPanelProps {
   clearCheckedSignal?: number
   saveTemplateSignal?: number
   inlineHeader?: boolean
+  // Lifted so an out-of-panel Apply Template button knows the active view (#1565).
+  view?: 'common' | 'personal'
+  onViewChange?: (view: 'common' | 'personal') => void
 }
 
 /**
@@ -42,11 +47,13 @@ export interface PackingListPanelProps {
  * sections below render header, filters, the grouped list, the bag sidebar/
  * modal and the import dialog.
  */
-export function usePackingList({ tripId, items, openImportSignal = 0, clearCheckedSignal = 0, saveTemplateSignal = 0, inlineHeader = true }: PackingListPanelProps) {
+export function usePackingList({ tripId, items, openImportSignal = 0, clearCheckedSignal = 0, saveTemplateSignal = 0, inlineHeader = true, view: viewProp, onViewChange }: PackingListPanelProps) {
   const [filter, setFilter] = useState('alle') // 'alle' | 'offen' | 'erledigt'
   // Three-tier sharing (#858): 'common' = the group pool (where existing items
   // live — non-breaking), 'personal' = my own list (private + shared-to-me).
-  const [view, setView] = useState<'common' | 'personal'>('common')
+  const [ownView, setOwnView] = useState<'common' | 'personal'>('common')
+  const view = viewProp ?? ownView
+  const setView = onViewChange ?? setOwnView
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const { addPackingItem, updatePackingItem, deletePackingItem, togglePackingItem, reorderPackingItems,
@@ -205,6 +212,8 @@ export function usePackingList({ tripId, items, openImportSignal = 0, clearCheck
   const addonsLoaded = useAddonStore(s => s.loaded)
   const loadAddons = useAddonStore(s => s.loadAddons)
   const [bags, setBags] = useState<PackingBag[]>([])
+  /** Server-summed weight of everything in no bag (#2191); null until the first load. */
+  const [unassignedWeightGrams, setUnassignedWeightGrams] = useState<number | null>(null)
   const [newBagName, setNewBagName] = useState('')
   const [showAddBag, setShowAddBag] = useState(false)
   const [showBagModal, setShowBagModal] = useState(false)
@@ -213,9 +222,34 @@ export function usePackingList({ tripId, items, openImportSignal = 0, clearCheck
     if (!addonsLoaded) loadAddons()
   }, [addonsLoaded, loadAddons])
 
-  useEffect(() => {
-    if (bagTrackingEnabled) packingApi.listBags(tripId).then(r => setBags(r.bags || [])).catch(() => {})
+  const reloadBags = useCallback(async () => {
+    if (!bagTrackingEnabled) return
+    try {
+      const r = await packingApi.listBags(tripId)
+      setBags(r.bags || [])
+      setUnassignedWeightGrams(r.unassigned_weight_grams ?? null)
+    } catch {
+      // Offline or a failed read: the surfaces fall back to the local sum
+      // (see `serverWeightsFresh` below), so there is nothing to roll back.
+    }
   }, [tripId, bagTrackingEnabled])
+
+  useEffect(() => { void reloadBags() }, [reloadBags])
+
+  // Bag weights are summed server-side across every member (#2191), so an item
+  // this viewer may not even see still moves them. The item events cannot carry
+  // that — a private item is delivered only to its owner, which is the very rule
+  // that made the totals wrong — so the server pings the room content-free and
+  // we re-read the numbers.
+  useBagTotalsPing(bagTrackingEnabled, reloadBags)
+
+  // Bags are not part of the offline cache (no repo, no Dexie table), so while
+  // offline the server totals are frozen at the last online read and cannot see
+  // the optimistic item writes the mutation queue is holding. A stale absolute
+  // number measured against an airline limit is worse than an honest partial
+  // one, so offline the surfaces sum what they can see instead (#2191).
+  const { offline } = useNetworkMode()
+  const serverWeightsFresh = !offline
 
   const handleCreateBag = async () => {
     if (!newBagName.trim()) return
@@ -307,7 +341,7 @@ export function usePackingList({ tripId, items, openImportSignal = 0, clearCheck
   const handleApplyTemplate = async (templateId: number) => {
     setApplyingTemplate(true)
     try {
-      const data = await packingApi.applyTemplate(tripId, templateId)
+      const data = await packingApi.applyTemplate(tripId, templateId, view)
       useTripStore.setState(s => ({ packingItems: [...s.packingItems, ...(data.items || [])] }))
       toast.success(t('packing.templateApplied', { count: data.count }))
       setShowTemplateDropdown(false)
@@ -368,7 +402,7 @@ export function usePackingList({ tripId, items, openImportSignal = 0, clearCheck
     filter, setFilter, addingCategory, setAddingCategory, newCatName, setNewCatName,
     tripMembers, categoryAssignees, handleSetAssignees, allCategories, gruppiert, abgehakt, fortschritt,
     handleAddItemToCategory, handleAddNewCategory, handleRenameCategory, handleDeleteCategory, handleDeleteItem, handleClearChecked,
-    bagTrackingEnabled, bags, newBagName, setNewBagName, showAddBag, setShowAddBag, showBagModal, setShowBagModal,
+    bagTrackingEnabled, bags, unassignedWeightGrams, serverWeightsFresh, newBagName, setNewBagName, showAddBag, setShowAddBag, showBagModal, setShowBagModal,
     handleCreateBag, handleCreateBagByName, handleDeleteBag, handleUpdateBag, handleSetBagMembers,
     availableTemplates, showTemplateDropdown, setShowTemplateDropdown, applyingTemplate,
     showSaveTemplate, setShowSaveTemplate, saveTemplateName, setSaveTemplateName,

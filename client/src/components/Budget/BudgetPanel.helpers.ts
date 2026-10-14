@@ -48,12 +48,12 @@ export function hexLighten(hex: string, amount: number): string {
   const m = hex.replace('#', '').match(/.{2}/g)
   if (!m || m.length !== 3) return hex
   const mix = (c: number) => Math.min(255, Math.round(c + (255 - c) * amount))
-  const [r, g, b] = m.map(x => parseInt(x, 16))
+  const [r, g, b] = m.map(x => Number.parseInt(x, 16))
   return `#${[mix(r), mix(g), mix(b)].map(v => v.toString(16).padStart(2, '0')).join('')}`
 }
 
 export const fmtNum = (v: number | null | undefined, locale: string, cur: string) => {
-  if (v == null || isNaN(v)) return '-'
+  if (v == null || Number.isNaN(v)) return '-'
   const d = currencyDecimals(cur)
   return Number(v).toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d }) + ' ' + (SYMBOLS[cur] || cur)
 }
@@ -64,10 +64,29 @@ export const calcPP = (p: NumOrNull, n: NumOrNull) => (n! > 0 ? (p as number) / 
 export const calcPD = (p: NumOrNull, d: NumOrNull) => (d! > 0 ? (p as number) / (d as number) : null)
 export const calcPPD = (p: NumOrNull, n: NumOrNull, d: NumOrNull) => (n! > 0 && d! > 0 ? (p as number) / ((n as number) * (d as number)) : null)
 
+// A custom (uneven) split has no single "per person" figure — one member's share
+// differs from another's — so the averaged per-person columns are meaningless for it
+// (the per-member amounts are shown via the member chips instead). #1458
+export const hasCustomMemberSplit = (item: { members?: { amount?: number | null }[] }) =>
+  (item.members || []).some(m => m.amount != null)
+
 export function splitColorFor(userId: number, order: number) {
   return SPLIT_COLORS[order % SPLIT_COLORS.length]
 }
 
 export function colorForUserId(userId: number) {
-  return SPLIT_COLORS[((userId | 0) - 1 + SPLIT_COLORS.length * 1000) % SPLIT_COLORS.length]
+  const id = Number.isFinite(userId) ? Math.trunc(userId) : 0
+  return SPLIT_COLORS[(id - 1 + SPLIT_COLORS.length * 1000) % SPLIT_COLORS.length]
+}
+
+/**
+ * Normalises a pasted amount to a plain `1234.56` string: drops currency
+ * symbols and spaces, treats the last comma/dot as the decimal separator and
+ * removes every thousand separator before it.
+ */
+export function normalizePastedAmount(raw: string): string {
+  const text = raw.trim().replace(/[^\d.,-]/g, '')
+  const decimalPos = Math.max(text.lastIndexOf(','), text.lastIndexOf('.'))
+  if (decimalPos === -1) return text.replace(/[.,]/g, '')
+  return text.substring(0, decimalPos).replace(/[.,]/g, '') + '.' + text.substring(decimalPos + 1)
 }

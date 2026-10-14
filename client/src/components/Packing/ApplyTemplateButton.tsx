@@ -13,13 +13,14 @@ interface Template {
 
 interface ApplyTemplateButtonProps {
   tripId: number
+  visibility: 'common' | 'personal'
   style: React.CSSProperties
   className?: string
 }
 
 // Dropdown-Button um ein Packing-Template auf den aktuellen Trip anzuwenden.
 // Rendert nichts wenn keine Templates existieren.
-export default function ApplyTemplateButton({ tripId, style, className }: ApplyTemplateButtonProps): React.ReactElement | null {
+export default function ApplyTemplateButton({ tripId, visibility, style, className }: ApplyTemplateButtonProps): React.ReactElement | null {
   const [templates, setTemplates] = useState<Template[]>([])
   const [open, setOpen] = useState(false)
   const [applying, setApplying] = useState(false)
@@ -43,7 +44,7 @@ export default function ApplyTemplateButton({ tripId, style, className }: ApplyT
   const handleApply = async (templateId: number) => {
     setApplying(true)
     try {
-      const data = await packingApi.applyTemplate(tripId, templateId)
+      const data = await packingApi.applyTemplate(tripId, templateId, visibility)
       useTripStore.setState(s => ({ packingItems: [...s.packingItems, ...(data.items || [])] }))
       toast.success(t('packing.templateApplied', { count: data.count }))
       setOpen(false)
@@ -58,7 +59,7 @@ export default function ApplyTemplateButton({ tripId, style, className }: ApplyT
 
   return (
     <div ref={dropRef} style={{ position: 'relative' }}>
-      <button
+      <button type="button"
         onClick={() => setOpen(v => !v)}
         disabled={applying}
         className={className ?? 'hover:opacity-[0.88]'}
@@ -78,7 +79,7 @@ export default function ApplyTemplateButton({ tripId, style, className }: ApplyT
           }}
         >
           {templates.map(tmpl => (
-            <button key={tmpl.id} onClick={() => handleApply(tmpl.id)}
+            <button type="button" key={tmpl.id} onClick={() => handleApply(tmpl.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                 padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',

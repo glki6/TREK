@@ -1,56 +1,36 @@
 import type { AssignmentPlace, Place } from '../../types'
 
-type PlaceLike = Pick<Place | AssignmentPlace, 'lat' | 'lng' | 'google_place_id'>
+type PlaceLike = Pick<Place | AssignmentPlace, 'name' | 'address' | 'lat' | 'lng' | 'google_place_id' | 'google_ftid' | 'google_cid'>
+const GOOGLE_FTID_RE = /^0x[0-9a-f]+:0x[0-9a-f]+$/i
 
-/** URL pair returned by the map helpers: native app scheme + HTTPS fallback*/
-export interface MapsUrlPair {
-  native: string
-  https: string
-}
-
-/** Build a Google Maps URL pair (native comgooglemaps:// + HTTPS fallback).*/
-export function getGoogleMapsUrlForPlace(place: PlaceLike | null | undefined): MapsUrlPair | null {
+export function getGoogleMapsUrlForPlace(place: PlaceLike | null | undefined, detailsUrl?: string | null): string | null {
   if (!place) return null
+  // Fork: the customer id opens the rich place page and, unlike the place-id
+  // links below, is not swallowed by iOS universal links.
+  const cid = place.google_cid?.trim()
+  if (cid) return `https://maps.google.com/?cid=${encodeURIComponent(cid)}`
+  const ftid = place.google_ftid?.trim()
+  if (ftid && GOOGLE_FTID_RE.test(ftid)) {
+    return `https://www.google.com/maps/place/?q=${encodeURIComponent(place.name)}&ftid=${ftid}`
+  }
+  const placeId = place.google_place_id?.trim()
+  if (placeId) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${encodeURIComponent(placeId)}`
+  }
+  if (detailsUrl) return detailsUrl
+
+  // No Google identifier of any kind. Coordinates alone drop a pin on a spot
+  // with no name attached, which is what #1278 reported: the map opens, but not
+  // the place. Google documents `query=PLACE_NAME,ADDRESS` for exactly this
+  // case, and an address is specific enough that the name cannot match the
+  // wrong "Central Station" three cities over.
+  const name = place.name?.trim()
+  const address = place.address?.trim()
+  if (name && address) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${address}`)}`
+  }
   if (place.lat == null || place.lng == null) return null
-  return {
-    native: `comgooglemaps://?daddr=${place.lat},${place.lng}`,
-    https: `https://www.google.com/maps?q=${place.lat},${place.lng}&z=15`,
-  }
-}
-
-/**
- * Try opening the native Maps URL; if the page is still alive after
- * `timeoutMs` (meaning no native handler intercepted), open the HTTPS
- * fallback in a new tab instead.
-*/
-export function openMapsFallback(
-  pair: MapsUrlPair | null,
-  timeoutMs = 1500,
-  open = window.open,
-  location = window.location,
-  document = globalThis.document,
-): void {
-  if (!pair) return
-
-  let cleared = false
-  const handler = () => {
-    if (document.visibilityState !== 'visible') {
-      cleared = true
-      document.removeEventListener('visibilitychange', handler)
-    }
-  }
-
-  document.addEventListener('visibilitychange', handler)
-
-  const tid = setTimeout(() => {
-    if (!cleared) {
-      document.removeEventListener('visibilitychange', handler)
-      open(pair.https, '_blank')
-    }
-  }, timeoutMs)
-
-  location.href = pair.native
-
-  // Safety: if the page navigates away, the timeout is abandoned.
-  // If it stays (no handler), the timeout fires and opens the fallback.
+  // A name without an address is not safe to search on its own, so the position
+  // wins: a pin in the right spot beats a confident link to the wrong place.
+  return `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
 }

@@ -28,6 +28,10 @@ const nl: NotificationLocale = {
       title: 'Vacay Fusion uitnodiging',
       body: `${p.actor} nodigt je uit om vakantieplannen te fuseren. Open TREK om te accepteren of af te wijzen.`,
     }),
+    vacay_share: (p) => ({
+      title: 'Vacay-kalender gedeeld',
+      body: `${p.actor} heeft zijn/haar vakantiekalender met je gedeeld. Open TREK om deze te bekijken.`,
+    }),
     collection_invite: (p) => ({
       title: 'Collectie-uitnodiging',
       body: `${p.actor} nodigt je uit om een collectie te delen. Open TREK om te accepteren of af te wijzen.`,
@@ -48,10 +52,17 @@ const nl: NotificationLocale = {
       title: 'Nieuwe TREK-versie beschikbaar',
       body: `TREK ${p.version} is nu beschikbaar. Bezoek het beheerderspaneel om bij te werken.`,
     }),
+    replica_failure: (p) => ({
+      title: 'Opslagreplica mislukt',
+      body:
+        `Schrijven naar replica '${p.backend}' is mislukt: ${p.op} van ${p.key} — ${p.error}.` +
+        (p.suppressed !== '0' ? ` ${p.suppressed} extra fout(en) zijn onderdrukt sinds de laatste melding.` : ''),
+    }),
     synology_session_cleared: () => ({
       title: 'Synology-sessie gewist',
       body: 'Je Synology-account of URL is gewijzigd. Je bent uitgelogd bij Synology Photos.',
     }),
+    plugin_notification: (p) => ({ title: p.title ?? '', body: p.body ?? '' }),
   },
   passwordReset: {
     subject: 'Reset je wachtwoord',

@@ -7,13 +7,21 @@ import { catMeta } from '../Budget/costsCategories'
 import type { BudgetItem } from '../../types'
 
 /**
- * The Costs block inside a booking modal. Replaces the old inline price + budget
- * category fields: when no expense is linked yet it offers a "create expense"
- * button (the modal saves the booking first, then opens the full Costs editor);
- * once linked it shows the expense with edit / remove actions.
+ * The Costs block inside a booking modal — and, since #1298, inside the place
+ * form, which links its expense the same way. Replaces the old inline price +
+ * budget category fields: when no expense is linked yet it offers a "create
+ * expense" button (the modal saves its own record first, then opens the full
+ * Costs editor); once linked it shows the expense with edit / remove actions.
+ *
+ * Exactly one of reservationId / placeId is set — they are the two sides of the
+ * same link, and the block behaves identically on both.
  */
-export function BookingCostsSection({ reservationId, pendingExpense, onCreate, onEdit, onRemove }: {
+export function BookingCostsSection({ reservationId, placeId = null, hintKey = 'reservations.createExpenseHint', pendingExpense, onCreate, onEdit, onRemove }: {
   reservationId: number | null
+  /** Set instead of reservationId when the block sits in the place form (#1298). */
+  placeId?: number | null
+  /** What gets saved before the editor opens — "the booking" or "the place". */
+  hintKey?: string
   /** A cost parsed from an import that will be linked on save — previewed before the booking exists. */
   pendingExpense?: { total_price: number; currency?: string | null; category: string } | null
   onCreate: () => void
@@ -25,7 +33,15 @@ export function BookingCostsSection({ reservationId, pendingExpense, onCreate, o
   const trip = useTripStore(s => s.trip)
   const displayCurrency = useSettingsStore(s => s.settings.default_currency)
   const base = (displayCurrency || trip?.currency || 'EUR').toUpperCase()
-  const linked = reservationId ? budgetItems.find(i => i.reservation_id === reservationId) : null
+  // An amount is printed in its own currency, unconverted. One saved without a
+  // currency is in the trip's own (#2525), which is how Costs reads it; labelling
+  // it with the display currency turned a 120 EUR deposit into $120.00.
+  const ownCurrency = (currency: string | null | undefined) => currency || trip?.currency || base
+  const linked = reservationId
+    ? budgetItems.find(i => i.reservation_id === reservationId)
+    : placeId
+      ? budgetItems.find(i => i.place_id === placeId)
+      : null
 
   const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.08em] text-content-faint mb-[6px]'
 
@@ -40,9 +56,9 @@ export function BookingCostsSection({ reservationId, pendingExpense, onCreate, o
           <span style={{ width: 26, height: 26, borderRadius: 7, display: 'grid', placeItems: 'center', background: meta.color + '22', color: meta.color, flexShrink: 0 }}><Icon size={14} /></span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="text-content" style={{ fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 600 }}>{t(meta.labelKey)}</div>
-            <div className="text-content-faint" style={{ fontSize: 'calc(12px * var(--fs-scale-body, 1))' }}>{t('reservations.createExpenseHint')}</div>
+            <div className="text-content-faint" style={{ fontSize: 'calc(12px * var(--fs-scale-body, 1))' }}>{t(hintKey)}</div>
           </div>
-          <span className="text-content" style={{ fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 700, flexShrink: 0 }}>{formatMoney(pendingExpense.total_price, pendingExpense.currency || base, locale)}</span>
+          <span className="text-content" style={{ fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 700, flexShrink: 0 }}>{formatMoney(pendingExpense.total_price, ownCurrency(pendingExpense.currency), locale)}</span>
         </div>
       </div>
     )
@@ -60,7 +76,7 @@ export function BookingCostsSection({ reservationId, pendingExpense, onCreate, o
             <div className="text-content" style={{ fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{linked.name}</div>
             <div className="text-content-faint" style={{ fontSize: 'calc(12px * var(--fs-scale-body, 1))' }}>{t(meta.labelKey)}</div>
           </div>
-          <span className="text-content" style={{ fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 700, flexShrink: 0 }}>{formatMoney(linked.total_price, linked.currency || base, locale)}</span>
+          <span className="text-content" style={{ fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 700, flexShrink: 0 }}>{formatMoney(linked.total_price, ownCurrency(linked.currency), locale)}</span>
           <button type="button" onClick={() => onEdit(linked)} title={t('common.edit')} className="text-content-muted border border-edge bg-surface-card" style={{ display: 'inline-flex', padding: 7, borderRadius: 8, cursor: 'pointer' }}><Pencil size={13} /></button>
           <button type="button" onClick={() => onRemove(linked)} title={t('reservations.removeExpense')} className="text-content-muted border border-edge bg-surface-card" style={{ display: 'inline-flex', padding: 7, borderRadius: 8, cursor: 'pointer' }}><Trash2 size={13} /></button>
         </div>
@@ -76,7 +92,7 @@ export function BookingCostsSection({ reservationId, pendingExpense, onCreate, o
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 13px', borderRadius: 10, fontSize: 'calc(13.5px * var(--fs-scale-body, 1))', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
         <Plus size={15} /> {t('reservations.createExpense')}
       </button>
-      <div className="text-content-faint" style={{ fontSize: 'calc(11px * var(--fs-scale-caption, 1))', marginTop: 6 }}>{t('reservations.createExpenseHint')}</div>
+      <div className="text-content-faint" style={{ fontSize: 'calc(11px * var(--fs-scale-caption, 1))', marginTop: 6 }}>{t(hintKey)}</div>
     </div>
   )
 }

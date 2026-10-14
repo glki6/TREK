@@ -6,6 +6,12 @@ metadata:
     app: {{ include "trek.name" . }}
 spec:
   replicas: 1
+  # TREK is a single-writer SQLite app on a ReadWriteOnce PVC, so the default
+  # RollingUpdate would start a second pod holding the same volume before the old one
+  # exits — a Multi-Attach deadlock, or two processes on one travel.db. Recreate tears
+  # the old pod down first. Override to RollingUpdate only with a ReadWriteMany volume.
+  strategy:
+    type: {{ .Values.updateStrategy | default "Recreate" }}
   selector:
     matchLabels:
       app: {{ include "trek.name" . }}
@@ -69,23 +75,31 @@ spec:
                   name: {{ default (printf "%s-secret" (include "trek.fullname" .)) .Values.existingSecret }}
                   key: UNSPLASH_ACCESS_KEY
                   optional: true
+            - name: AMAP_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secret" (include "trek.fullname" .)) .Values.existingSecret }}
+                  key: AMAP_API_KEY
+                  optional: true
+            - name: AMAP_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secret" (include "trek.fullname" .)) .Values.existingSecret }}
+                  key: AMAP_API_SECRET
+                  optional: true
           volumeMounts:
             - name: data
               mountPath: /app/data
             - name: uploads
               mountPath: /app/uploads
+          {{- with (default dict .Values.probes).liveness }}
           livenessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 15
-            periodSeconds: 30
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (default dict .Values.probes).readiness }}
           readinessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}

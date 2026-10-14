@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} zarchiwizowanych',
   'dashboard.newTrip': 'Nowa podróż',
   'dashboard.newTripSub': 'Zaplanuj nową podróż od zera',
+  'dashboard.subscribeAllTrips': 'Subskrybuj wszystkie podróże',
+  'dashboard.subscribeAllTripsDesc':
+    'Jeden kanał kalendarza dla wszystkich Twoich aktywnych podróży, automatycznie synchronizowany. Nie obejmuje zarchiwizowanych podróży ani podróży zakończonych ponad 90 dni temu.',
   'dashboard.gridView': 'Widok siatki',
   'dashboard.listView': 'Widok listy',
   'dashboard.currency': 'Waluta',
@@ -80,6 +83,34 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Użyj zdjęcia z Unsplash autorstwa {photographer}',
   'dashboard.titleRequired': 'Nazwa podróży jest wymagana',
   'dashboard.endDateError': 'Data zakończenia musi być po dacie rozpoczęcia',
+  'dashboard.tripTooLong': 'Podróż może trwać maksymalnie {days} dni',
+  'dashboard.dateShiftTitle': 'Nowa data rozpoczęcia',
+  'dashboard.dateShiftIntro':
+    'Data rozpoczęcia podróży została zmieniona. Jak plany mają dostosować się do nowych dat?',
+  'dashboard.dateShiftKeepBookings': 'Zachowaj rezerwacje w ich terminach',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Plany dnia przesuną się wraz z nowymi datami, a rezerwacje i noclegi pozostaną w swoich pierwotnych terminach, o ile nadal mieszczą się one w ramach podróży.',
+  'dashboard.dateShiftAll': 'Przesuń wszystko',
+  'dashboard.dateShiftAllDesc': 'Cały plan podróży przesunie się wraz z nowymi datami, w tym rezerwacje i noclegi.',
+  'dashboard.dateShiftHint':
+    'Wskazówka: aby przesunąć tylko część planu podróży, otwórz w planerze „Zmień kolejność dni”, dodaj dzień po zakończeniu podróży przyciskiem z jego datą i przenieś ten dzień tam, gdzie ma powstać przerwa.',
+  'dashboard.shrinkTitle': 'Usunąć dni?',
+  'dashboard.shrinkIntro': 'Zapisanie nowych dat usunie te dni:',
+  'dashboard.shrinkMoreDays': '+{count} więcej',
+  'dashboard.shrinkLastDays': 'Usuwane są ostatnie dni, nie pierwsze',
+  'dashboard.shrinkLastDaysHint':
+    'Plany dni przesuwają się razem z nowymi datami, więc zawsze usuwane są ostatnie dni planu, także gdy zmienił się początek.',
+  'dashboard.shrinkBookingsHint':
+    'Pozostają w Rezerwacjach. Rezerwacja, której data nadal mieści się w podróży, wraca na ten dzień.',
+  'dashboard.shrinkBookingsShiftHint': 'Pozostają w Rezerwacjach, bez dnia.',
+  'dashboard.shrinkStayHint': 'Zameldowanie lub wymeldowanie przypada na usuwany dzień, więc usuwany jest cały nocleg.',
+  'dashboard.shrinkStayBookedHint':
+    'Zameldowanie lub wymeldowanie przypada na usuwany dzień, więc usuwany jest cały nocleg. Jego rezerwacja „{booking}” i jej wydatek pozostają w Rezerwacjach.',
+  'dashboard.shrinkStayBookingHint':
+    'Zameldowanie lub wymeldowanie przypada na usuwany dzień, więc usuwany jest cały nocleg. Jego rezerwacja „{booking}” pozostaje w Rezerwacjach.',
+  'dashboard.shrinkConfirm': 'Usuń dni i zapisz',
+  'dashboard.shrinkUnknown':
+    'Nie udało się sprawdzić dni tej podróży. Jeśli nowe daty obejmują mniej dni, zapisanie usunie ostatnie dni i wszystko, co na nie zaplanowano.',
   'dashboard.members': 'Współpodróżnicy',
   'dashboard.copyTrip': 'Kopiuj',
   'dashboard.copySuffix': 'kopia',
@@ -94,6 +125,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Miejsca',
   'dashboard.mobile.buddies': 'Współpodróżnicy',
   'dashboard.mobile.newTrip': 'Nowa podróż',
+  'dashboard.mobile.addCoverImage': 'Dodaj okładkę',
   'dashboard.mobile.currency': 'Waluta',
   'dashboard.mobile.timezone': 'Strefa czasowa',
   'dashboard.mobile.upcomingTrips': 'Nadchodzące podróże',
@@ -108,6 +140,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Jutro',
   'dashboard.mobile.inDays': 'Za {count} dni',
   'dashboard.mobile.inMonths': 'Za {count} miesięcy',
+  'dashboard.mobile.spotlightDayOf': 'Dzień {day} z {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} dzień',
+  'dashboard.mobile.spotlightDaysMany': '{count} dni',
   'dashboard.mobile.completed': 'Zakończone',
   'dashboard.mobile.currencyConverter': 'Przelicznik walut',
   'dashboard.filter.planned': 'Zaplanowane',

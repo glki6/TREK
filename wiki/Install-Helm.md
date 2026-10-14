@@ -5,9 +5,21 @@ Deploy TREK on Kubernetes using the official Helm chart.
 ## Add the Chart Repository
 
 ```bash
-helm repo add trek https://mauriceboe.github.io/TREK
+helm repo add trek https://chart.liketrek.com
 helm repo update
 ```
+
+> **Note:** `chart.liketrek.com` is a custom domain (CNAME) for the GitHub Pages site at `https://liketrek.github.io/TREK` — both serve the same chart repository. Using the custom domain keeps your setup working even if the GitHub repository moves again.
+
+> **⚠️ Repository moved:** The chart is no longer served at `https://mauriceboe.github.io/TREK` (the project moved from a personal repo to the `liketrek` organization). If you added the repo from the old URL, switch to the new one:
+>
+> ```bash
+> helm repo remove trek
+> helm repo add trek https://chart.liketrek.com
+> helm repo update
+> ```
+>
+> Existing releases keep working — only the repo URL changes; future `helm repo update` / `helm upgrade` runs require the new URL. (`https://liketrek.github.io/TREK` also works — it redirects to `chart.liketrek.com`.)
 
 ## Basic Install
 
@@ -97,10 +109,10 @@ env:
   PORT: 3000
   # TZ: "Europe/Berlin"          # timezone for logs, reminders, cron jobs
   # LOG_LEVEL: "info"            # "info" = concise, "debug" = verbose
-  # DEFAULT_LANGUAGE: "en"       # fallback language on login page; supported: de, en, es, fr, hu, nl, br, cs, pl, ru, zh, zh-TW, it, tr, ar, id, ja, ko, uk, gr
+  # TREK_WIKI_DIR: "/app/wiki"   # where /help reads its docs from; leave unset (the image ships them)
   # ALLOWED_ORIGINS: "https://trek.example.com"
   # APP_URL: "https://trek.example.com"
-  # FORCE_HTTPS: "false"         # enable HTTPS redirect + HSTS; requires TRUST_PROXY
+  # FORCE_HTTPS: "false"         # enable HTTPS redirect + HSTS; set TRUST_PROXY for correct client IPs
   # TRUST_PROXY: "1"             # proxy hops for X-Forwarded-For/Proto; defaults to 1 in production
   # COOKIE_SECURE: "true"        # auto-derived; set "false" only for local HTTP testing
   # ALLOW_INTERNAL_NETWORK: "false"  # set "true" if Immich or other services are on a private network
@@ -116,6 +128,8 @@ env:
   # OIDC_DISCOVERY_URL: ""       # override for providers with non-standard discovery paths (e.g. Authentik)
 ```
 
+> **Note:** `DEFAULT_LANGUAGE` is not declared in the chart's ConfigMap, so a value under `env:` is dropped and the fallback stays `en`. Patch it onto the Deployment if you need it. See [Environment-Variables](Environment-Variables#default_language--supported-codes) for the codes.
+
 ### Sensitive Variables (`secretEnv`)
 
 These are stored in a Kubernetes Secret and injected as environment variables:
@@ -126,9 +140,12 @@ secretEnv:
   ADMIN_EMAIL: ""           # initial admin email (first boot only)
   ADMIN_PASSWORD: ""        # initial admin password (first boot only)
   OIDC_CLIENT_SECRET: ""    # set if using OIDC
+  UNSPLASH_ACCESS_KEY: ""   # optional; free key from unsplash.com/developers
 ```
 
 Alternatively, use `generateEncryptionKey: true` to let the chart generate and manage the encryption key, or point `existingSecret` / `existingSecretKey` at an existing Kubernetes Secret.
+
+> **Note:** Without `UNSPLASH_ACCESS_KEY` the server queries Unsplash's unauthenticated endpoint, which many datacenter and VPS IP ranges — including a lot of Kubernetes clusters — are blocked or rate-limited on. Trip-cover and place-image search then fail with **"Unsplash search unavailable"**. A free Access Key switches the server to Unsplash's authenticated API (`api.unsplash.com`), which is not subject to that block. The key can also be set in **Admin → Settings → API Keys**; this value takes priority over that one. See [Environment-Variables](Environment-Variables#image-search-unsplash).
 
 ### Persistent Storage
 
@@ -152,6 +169,18 @@ resources:
     cpu: 500m
     memory: 512Mi
 ```
+
+### Health Probes
+
+Liveness and readiness probes are configurable under `probes`. The defaults hit `/api/health` on port 3000 and match what the chart shipped before, so an existing install renders the same manifest.
+
+```bash
+helm install trek trek/trek   --set probes.liveness.initialDelaySeconds=60   --set probes.readiness.periodSeconds=20
+```
+
+Raise `initialDelaySeconds` on slow storage or after a large migration, where the first start can outlast the default and leave the pod restarting in a loop. Overrides are merged over the defaults, so setting one key keeps the rest. To switch a probe to `exec` or `tcpSocket`, clear the shipped handler in the same override (`--set probes.liveness.httpGet=null`), otherwise Kubernetes rejects the pod with "may not specify more than 1 handler type". Set `probes.liveness=null` to drop a probe entirely.
+
+Leave `env.PORT` at `3000`. The chart passes it to the server, but `containerPort` in `deployment.yaml` and `targetPort` in `service.yaml` are fixed at 3000, so a different value makes the server listen where nothing routes to it. Changing it means patching both templates as well as `service.port` and `probes.*.httpGet.port`; `service.port` alone is not enough.
 
 ### Ingress
 
@@ -187,7 +216,7 @@ helm upgrade trek trek/trek
 
 ## Full Values Reference
 
-See the [`charts/README.md`](https://github.com/mauriceboe/TREK/blob/main/charts/README.md) for all available values.
+See the [`charts/README.md`](https://github.com/liketrek/TREK/blob/main/charts/README.md) for all available values.
 
 ## Next Steps
 

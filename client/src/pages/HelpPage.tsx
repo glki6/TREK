@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Children, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Search, ChevronRight, Loader2, AlertCircle, BookOpen, PanelLeft, X } from 'lucide-react'
@@ -71,7 +72,7 @@ export default function HelpPage() {
         {/* Content */}
         <main className="flex-1 min-w-0" ref={contentRef}>
           {/* Mobile nav toggle */}
-          <button
+          <button type="button"
             onClick={() => setNavOpen(true)}
             className="lg:hidden inline-flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-surface-card border border-edge text-[13px] font-medium text-content"
           >
@@ -98,17 +99,18 @@ export default function HelpPage() {
 
       {/* Mobile sidebar drawer */}
       {navOpen && (
-        <div className="lg:hidden fixed inset-0 z-[120]" onClick={() => setNavOpen(false)}>
+        <div className="lg:hidden fixed inset-0 z-[120]" role="presentation" onClick={() => setNavOpen(false)}>
           <div className="absolute inset-0 bg-black/40" />
           <div
             className="absolute left-0 top-0 bottom-0 w-[280px] bg-surface-card p-5 overflow-y-auto shadow-xl"
+            role="presentation"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <span className="text-[14px] font-bold text-content flex items-center gap-2">
                 <BookOpen size={16} className="text-accent" /> {t('help.title')}
               </span>
-              <button onClick={() => setNavOpen(false)} className="text-content-faint">
+              <button type="button" onClick={() => setNavOpen(false)} className="text-content-faint">
                 <X size={18} />
               </button>
             </div>
@@ -120,6 +122,23 @@ export default function HelpPage() {
   )
 }
 
+/**
+ * GitHub's heading-anchor slug: lowercase, punctuation dropped, spaces to
+ * hyphens. Wiki pages link to their own sections with `](#some-heading)`, and
+ * those hrefs are written against GitHub's scheme — so ours has to match it, or
+ * in-app anchors point at nothing.
+ */
+function headingId(children: ReactNode): string {
+  const text = Children.toArray(children)
+    .map(c => (typeof c === 'string' || typeof c === 'number' ? String(c) : ''))
+    .join('')
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
 /** Markdown renderer with TREK-styled elements and SPA-internal links. */
 function WikiContent({ markdown }: { markdown: string }) {
   return (
@@ -127,15 +146,15 @@ function WikiContent({ markdown }: { markdown: string }) {
       remarkPlugins={[remarkGfm]}
       components={{
         h1: ({ children }) => (
-          <h1 className="text-[26px] font-bold text-content mt-1 mb-4 leading-tight">{children}</h1>
+          <h1 id={headingId(children)} className="text-[26px] font-bold text-content mt-1 mb-4 leading-tight">{children}</h1>
         ),
         h2: ({ children }) => (
-          <h2 className="text-[19px] font-bold text-content mt-8 mb-3 pb-1.5 border-b border-edge-secondary">
+          <h2 id={headingId(children)} className="text-[19px] font-bold text-content mt-8 mb-3 pb-1.5 border-b border-edge-secondary scroll-mt-24">
             {children}
           </h2>
         ),
-        h3: ({ children }) => <h3 className="text-[15.5px] font-semibold text-content mt-6 mb-2">{children}</h3>,
-        h4: ({ children }) => <h4 className="text-[14px] font-semibold text-content mt-5 mb-2">{children}</h4>,
+        h3: ({ children }) => <h3 id={headingId(children)} className="text-[15.5px] font-semibold text-content mt-6 mb-2 scroll-mt-24">{children}</h3>,
+        h4: ({ children }) => <h4 id={headingId(children)} className="text-[14px] font-semibold text-content mt-5 mb-2 scroll-mt-24">{children}</h4>,
         p: ({ children }) => <p className="text-[14px] text-content-secondary leading-[1.7] my-3">{children}</p>,
         ul: ({ children }) => <ul className="list-disc pl-5 my-3 space-y-1.5 text-[14px] text-content-secondary">{children}</ul>,
         ol: ({ children }) => <ol className="list-decimal pl-5 my-3 space-y-1.5 text-[14px] text-content-secondary">{children}</ol>,

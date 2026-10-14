@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} в архиве',
   'dashboard.newTrip': 'Новая поездка',
   'dashboard.newTripSub': 'Спланируйте новую поездку с нуля',
+  'dashboard.subscribeAllTrips': 'Подписаться на все поездки',
+  'dashboard.subscribeAllTripsDesc':
+    'Единый календарь для всех ваших активных поездок, автоматически синхронизируемый. Архивные поездки и поездки, завершившиеся более 90 дней назад, не включаются.',
   'dashboard.gridView': 'Плитка',
   'dashboard.listView': 'Список',
   'dashboard.currency': 'Валюта',
@@ -84,6 +87,33 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Использовать фото Unsplash от {photographer}',
   'dashboard.titleRequired': 'Название обязательно',
   'dashboard.endDateError': 'Дата окончания должна быть позже даты начала',
+  'dashboard.tripTooLong': 'Поездка может длиться не более {days} дней',
+  'dashboard.dateShiftTitle': 'Новая дата начала',
+  'dashboard.dateShiftIntro': 'Вы изменили дату начала поездки. Как перенести ваши планы на новые даты?',
+  'dashboard.dateShiftKeepBookings': 'Оставить бронирования на своих датах',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Планы дней переносятся на новые даты, а бронирования и жильё остаются на исходных датах, пока те входят в поездку.',
+  'dashboard.dateShiftAll': 'Перенести всё',
+  'dashboard.dateShiftAllDesc': 'Весь маршрут переносится на новые даты, включая бронирования и жильё.',
+  'dashboard.dateShiftHint':
+    'Совет: чтобы сдвинуть только часть маршрута, откройте в планировщике «Изменить порядок дней», добавьте день после окончания поездки кнопкой с его датой и переместите этот день туда, где должен появиться промежуток.',
+  'dashboard.shrinkTitle': 'Удалить дни?',
+  'dashboard.shrinkIntro': 'При сохранении новых дат будут удалены эти дни:',
+  'dashboard.shrinkMoreDays': 'ещё +{count}',
+  'dashboard.shrinkLastDays': 'Удаляются последние дни, а не первые',
+  'dashboard.shrinkLastDaysHint':
+    'Планы дней переносятся вместе с новыми датами, поэтому удаляются всегда последние дни плана, даже если сдвинулось начало.',
+  'dashboard.shrinkBookingsHint':
+    'Они останутся в Бронированиях. Бронирование, дата которого ещё входит в поездку, вернётся на этот день.',
+  'dashboard.shrinkBookingsShiftHint': 'Они останутся в Бронированиях, без дня.',
+  'dashboard.shrinkStayHint': 'Заезд или выезд приходится на удаляемый день, поэтому проживание удаляется целиком.',
+  'dashboard.shrinkStayBookedHint':
+    'Заезд или выезд приходится на удаляемый день, поэтому проживание удаляется целиком. Его бронирование «{booking}» и расход по нему останутся в Бронированиях.',
+  'dashboard.shrinkStayBookingHint':
+    'Заезд или выезд приходится на удаляемый день, поэтому проживание удаляется целиком. Его бронирование «{booking}» останется в Бронированиях.',
+  'dashboard.shrinkConfirm': 'Удалить дни и сохранить',
+  'dashboard.shrinkUnknown':
+    'Не удалось проверить дни этой поездки. Если в новых датах меньше дней, при сохранении будут удалены последние дни и всё, что на них запланировано.',
   'dashboard.greeting.morning': 'Доброе утро,',
   'dashboard.greeting.afternoon': 'Добрый день,',
   'dashboard.greeting.evening': 'Добрый вечер,',
@@ -93,6 +123,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Места',
   'dashboard.mobile.buddies': 'Попутчики',
   'dashboard.mobile.newTrip': 'Новая поездка',
+  'dashboard.mobile.addCoverImage': 'Добавить обложку',
   'dashboard.mobile.currency': 'Валюта',
   'dashboard.mobile.timezone': 'Часовой пояс',
   'dashboard.mobile.upcomingTrips': 'Предстоящие поездки',
@@ -107,6 +138,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Завтра',
   'dashboard.mobile.inDays': 'Через {count} дн.',
   'dashboard.mobile.inMonths': 'Через {count} мес.',
+  'dashboard.mobile.spotlightDayOf': 'День {day} из {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} день',
+  'dashboard.mobile.spotlightDaysMany': '{count} дней',
   'dashboard.mobile.completed': 'Завершено',
   'dashboard.mobile.currencyConverter': 'Конвертер валют',
   'dashboard.filter.planned': 'Запланированные',

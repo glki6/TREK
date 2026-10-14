@@ -28,6 +28,10 @@ const en: NotificationLocale = {
       title: 'Lời mời kết hợp kì nghỉ',
       body: `${p.actor} đã mời bạn kết hợp kế hoạch kỳ nghỉ. Mở TREK để chấp nhận hoặc từ chối.`,
     }),
+    vacay_share: (p) => ({
+      title: 'Đã chia sẻ lịch Vacay',
+      body: `${p.actor} đã chia sẻ lịch nghỉ phép của họ với bạn. Mở TREK để xem.`,
+    }),
     collection_invite: (p) => ({
       title: 'Lời mời bộ sưu tập',
       body: `${p.actor} đã mời bạn chia sẻ một bộ sưu tập. Mở TREK để chấp nhận hoặc từ chối.`,
@@ -48,10 +52,17 @@ const en: NotificationLocale = {
       title: 'Đã có phiên bản TREK mới',
       body: `TREK ${p.version} có bản mới. Vui lòng truy cập bảng điều khiển quản trị để cập nhật.`,
     }),
+    replica_failure: (p) => ({
+      title: 'Lỗi bản sao lưu trữ',
+      body:
+        `Ghi vào bản sao '${p.backend}' thất bại: ${p.op} của ${p.key} — ${p.error}.` +
+        (p.suppressed !== '0' ? ` ${p.suppressed} lỗi khác đã bị bỏ qua kể từ thông báo trước đó.` : ''),
+    }),
     synology_session_cleared: () => ({
       title: 'Đã xóa phiên Synology',
       body: 'Tài khoản Synology của bạn hoặc URL đã thay đổi. Bạn đã đăng xuất khỏi Synology Photos.',
     }),
+    plugin_notification: (p) => ({ title: p.title ?? '', body: p.body ?? '' }),
   },
   passwordReset: {
     subject: 'Đặt lại mật khẩu của bạn',

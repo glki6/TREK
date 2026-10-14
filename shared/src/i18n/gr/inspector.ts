@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': 'Προσθήκη στην Ημέρα',
   'inspector.confirmedRes': 'Επιβεβαιωμένη Κράτηση',
   'inspector.pendingRes': 'Εκκρεμής Κράτηση',
-  'inspector.google': 'Πλοήγηση',
-  'inspector.openStreetMap': 'Προβολή',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'Πλοήγηση',
+  'inspector.openWith': 'Άνοιγμα με',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.saveToCollection': 'Αποθήκευση στη Συλλογή',
   'inspector.savedToCollection': 'Αποθηκεύτηκε',
   'inspector.website': 'Άνοιγμα Ιστοσελίδας',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': 'Επεξεργασία Κράτησης',
   'inspector.participants': 'Συμμετέχοντες',
   'inspector.trackStats': 'Στατιστικά Διαδρομής',
+  'inspector.trackColor': 'Χρώμα διαδρομής',
+  'inspector.trackColorAuto': 'Αυτόματο χρώμα',
+  'inspector.trackColorCustom': 'Επιλογή προσαρμοσμένου χρώματος',
 };
 export default inspector;

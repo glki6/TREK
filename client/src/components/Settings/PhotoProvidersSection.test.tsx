@@ -1,4 +1,4 @@
-// FE-COMP-PHOTOPROVIDERS-001 to FE-COMP-PHOTOPROVIDERS-018
+// FE-COMP-PHOTOPROVIDERS-001 to FE-COMP-PHOTOPROVIDERS-026
 import { render, screen, waitFor } from '../../../tests/helpers/render';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -15,12 +15,13 @@ const fakeProvider = {
   name: 'Immich',
   type: 'photo_provider',
   enabled: true,
+  // Widened so per-test overrides can swap test_post for test_get.
   config: {
     settings_get: '/addons/immich/settings',
     settings_put: '/addons/immich/settings',
     status_get: '/addons/immich/status',
     test_post: '/addons/immich/test',
-  },
+  } as Record<string, string>,
   fields: [
     { key: 'url', label: 'url', input_type: 'text', placeholder: 'https://...', required: true, secret: false, settings_key: 'url', payload_key: 'url', sort_order: 0 },
     { key: 'api_key', label: 'api_key', input_type: 'text', placeholder: null, required: true, secret: true, settings_key: 'api_key', payload_key: 'api_key', sort_order: 1 },
@@ -80,7 +81,7 @@ describe('PhotoProvidersSection', () => {
   it('FE-COMP-PHOTOPROVIDERS-003: renders a section card for each active provider', async () => {
     seedMemoriesEnabled();
     render(<PhotoProvidersSection />);
-    await screen.findByText('Immich');
+    expect(await screen.findByText('Immich')).toBeInTheDocument();
   });
 
   it('FE-COMP-PHOTOPROVIDERS-004: renders field inputs for each provider field', async () => {
@@ -94,7 +95,7 @@ describe('PhotoProvidersSection', () => {
   it('FE-COMP-PHOTOPROVIDERS-005: non-secret field is prefilled with value from settings API', async () => {
     seedMemoriesEnabled();
     render(<PhotoProvidersSection />);
-    await screen.findByDisplayValue('https://photos.example.com');
+    expect(await screen.findByDisplayValue('https://photos.example.com')).toBeInTheDocument();
   });
 
   it('FE-COMP-PHOTOPROVIDERS-006: secret field is NOT prefilled (blank value)', async () => {
@@ -239,7 +240,9 @@ describe('PhotoProvidersSection', () => {
     await screen.findByText('Immich');
     const testBtn = screen.getByRole('button', { name: /test connection/i });
     await user.click(testBtn);
-    await screen.findByText(/connected/i);
+    // Exact text on purpose: the badge always renders, and a loose /connected/i
+    // also matches the "Not connected" it starts out as.
+    expect(await screen.findByText('Connected')).toBeInTheDocument();
   });
 
   it('FE-COMP-PHOTOPROVIDERS-015: failed test shows error toast', async () => {
@@ -257,7 +260,7 @@ describe('PhotoProvidersSection', () => {
     await screen.findByText('Immich');
     const testBtn = screen.getByRole('button', { name: /test connection/i });
     await user.click(testBtn);
-    await screen.findByText(/Auth failed/i);
+    expect(await screen.findByText(/Auth failed/i)).toBeInTheDocument();
   });
 
   it('FE-COMP-PHOTOPROVIDERS-016: Test button is disabled while test is in progress', async () => {
@@ -326,6 +329,197 @@ describe('PhotoProvidersSection', () => {
     seedMemoriesEnabled([fakeProvider, secondProvider]);
     render(<PhotoProvidersSection />);
     await screen.findByText('Immich');
-    await screen.findByText('Piwigo');
+    expect(await screen.findByText('Piwigo')).toBeInTheDocument();
+  });
+});
+
+// ── Checkbox fields, missing values and failing probes (019–023) ──────────────
+
+const providerWithCheckbox = {
+  ...fakeProvider,
+  fields: [
+    fakeProvider.fields[0],
+    {
+      key: 'verify_ssl',
+      label: 'verify_ssl',
+      input_type: 'checkbox',
+      placeholder: null,
+      required: false,
+      secret: false,
+      settings_key: 'verify_ssl',
+      payload_key: 'verify_ssl',
+      sort_order: 1,
+    },
+  ],
+};
+
+/** The ToggleSwitch rendered for a checkbox-typed provider field. */
+function checkboxToggle(): HTMLElement {
+  return screen.getAllByRole('button').find(b => b.hasAttribute('aria-pressed')) as HTMLElement;
+}
+
+describe('PhotoProvidersSection – checkbox fields and failures', () => {
+  it('FE-COMP-PHOTOPROVIDERS-019: a checkbox field starts off and is sent as a boolean', async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> | null = null;
+    server.use(
+      http.put('/api/addons/immich/settings', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ success: true });
+      }),
+    );
+    seedMemoriesEnabled([providerWithCheckbox]);
+    render(<PhotoProvidersSection />);
+
+    await screen.findByDisplayValue('https://photos.example.com');
+    expect(checkboxToggle()).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(checkboxToggle());
+    expect(checkboxToggle()).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(body).toEqual({ url: 'https://photos.example.com', verify_ssl: true }));
+  });
+
+  it('FE-COMP-PHOTOPROVIDERS-020: a stored checkbox value hydrates the toggle', async () => {
+    server.use(
+      http.get('/api/addons/immich/settings', () =>
+        HttpResponse.json({ url: 'https://photos.example.com', verify_ssl: true, connected: false }),
+      ),
+    );
+    seedMemoriesEnabled([providerWithCheckbox]);
+    render(<PhotoProvidersSection />);
+
+    await screen.findByDisplayValue('https://photos.example.com');
+    await waitFor(() => expect(checkboxToggle()).toHaveAttribute('aria-pressed', 'true'));
+  });
+
+  it('FE-COMP-PHOTOPROVIDERS-021: a settings payload without the field leaves the input empty', async () => {
+    server.use(
+      http.get('/api/addons/immich/settings', () => HttpResponse.json({ connected: false })),
+    );
+    seedMemoriesEnabled([fakeProviderSimple]);
+    render(<PhotoProvidersSection />);
+
+    await screen.findByText('Immich');
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue(''));
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+  });
+
+  it('FE-COMP-PHOTOPROVIDERS-022: a failing status probe leaves the provider disconnected', async () => {
+    server.use(
+      http.get('/api/addons/immich/settings', () => HttpResponse.json({ url: 'https://photos.example.com' })),
+      http.get('/api/addons/immich/status', () => HttpResponse.json({ error: 'down' }, { status: 500 })),
+    );
+    seedMemoriesEnabled([fakeProviderSimple]);
+    render(<PhotoProvidersSection />);
+
+    await screen.findByText('Immich');
+    await waitFor(() => expect(screen.getByText('Not connected')).toBeInTheDocument());
+  });
+
+  it('FE-COMP-PHOTOPROVIDERS-023: a test request that errors out falls back to the plain error', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('/api/addons/immich/test', () => HttpResponse.json({ error: 'boom' }, { status: 500 })),
+    );
+    seedMemoriesEnabled([fakeProviderSimple]);
+    render(
+      <>
+        <ToastContainer />
+        <PhotoProvidersSection />
+      </>,
+    );
+
+    await screen.findByText('Immich');
+    await user.click(screen.getByRole('button', { name: /test connection/i }));
+
+    expect(await screen.findByText('Could not connect to Immich')).toBeInTheDocument();
+  });
+
+  it('FE-COMP-PHOTOPROVIDERS-024: a provider without a test POST route probes over GET instead', async () => {
+    const user = userEvent.setup();
+    let probed = false;
+    server.use(
+      http.get('/api/addons/immich/probe', () => {
+        probed = true;
+        return HttpResponse.json({ connected: true });
+      }),
+    );
+    seedMemoriesEnabled([{
+      ...fakeProviderSimple,
+      config: {
+        settings_get: '/addons/immich/settings',
+        settings_put: '/addons/immich/settings',
+        status_get: '/addons/immich/status',
+        test_get: '/addons/immich/probe',
+      },
+    }]);
+    render(
+      <>
+        <ToastContainer />
+        <PhotoProvidersSection />
+      </>,
+    );
+
+    await screen.findByText('Immich');
+    await user.click(screen.getByRole('button', { name: /test connection/i }));
+
+    await waitFor(() => expect(probed).toBe(true));
+    await screen.findByText('Connected to Immich');
+  });
+});
+
+// ── The Immich self-signed switch, as the server describes it (025, 026) ─────
+
+/** The Immich card exactly as the provider rows seed it (#2475). */
+const immichProvider = {
+  ...fakeProvider,
+  fields: [
+    { key: 'immich_url', label: 'providerUrl', input_type: 'url', placeholder: 'https://immich.example.com', required: true, secret: false, settings_key: 'immich_url', payload_key: 'immich_url', sort_order: 0 },
+    { key: 'immich_api_key', label: 'providerApiKey', input_type: 'password', placeholder: 'API Key', required: true, secret: true, settings_key: null, payload_key: 'immich_api_key', sort_order: 1 },
+    { key: 'immich_allow_insecure_tls', label: 'skipSSLVerification', input_type: 'checkbox', placeholder: null, required: false, secret: false, settings_key: 'allow_insecure_tls', payload_key: 'allow_insecure_tls', sort_order: 2 },
+  ],
+};
+
+describe('PhotoProvidersSection: Immich self-signed certificates', () => {
+  it('FE-COMP-PHOTOPROVIDERS-025: a stored switch shows as on under its Synology wording', async () => {
+    server.use(
+      http.get('/api/addons/immich/settings', () =>
+        HttpResponse.json({ immich_url: 'https://immich.lan', connected: true, auto_upload: false, allow_insecure_tls: true }),
+      ),
+    );
+    seedMemoriesEnabled([immichProvider]);
+    render(<PhotoProvidersSection />);
+
+    expect(await screen.findByText('Skip SSL certificate verification')).toBeInTheDocument();
+    await waitFor(() => expect(checkboxToggle()).toHaveAttribute('aria-pressed', 'true'));
+  });
+
+  it('FE-COMP-PHOTOPROVIDERS-026: turning it on sends it with the connection test, as a boolean', async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> | null = null;
+    server.use(
+      http.get('/api/addons/immich/settings', () =>
+        HttpResponse.json({ immich_url: 'https://immich.lan', connected: false, auto_upload: false, allow_insecure_tls: false }),
+      ),
+      http.post('/api/addons/immich/test', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ connected: true });
+      }),
+    );
+    seedMemoriesEnabled([immichProvider]);
+    render(<PhotoProvidersSection />);
+
+    await screen.findByDisplayValue('https://immich.lan');
+    await waitFor(() => expect(checkboxToggle()).toHaveAttribute('aria-pressed', 'false'));
+    await user.type(screen.getByPlaceholderText('API Key'), 'secret-key');
+    await user.click(checkboxToggle());
+    await user.click(screen.getByRole('button', { name: /test connection/i }));
+
+    await waitFor(() =>
+      expect(body).toEqual({ immich_url: 'https://immich.lan', immich_api_key: 'secret-key', allow_insecure_tls: true }),
+    );
   });
 });

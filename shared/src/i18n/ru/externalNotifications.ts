@@ -28,6 +28,10 @@ const ru: NotificationLocale = {
       title: 'Приглашение Vacay Fusion',
       body: `${p.actor} приглашает вас объединить планы отпуска. Откройте TREK для подтверждения.`,
     }),
+    vacay_share: (p) => ({
+      title: 'Календарь Vacay предоставлен',
+      body: `${p.actor} поделился с вами своим календарём отпусков. Откройте TREK, чтобы посмотреть.`,
+    }),
     collection_invite: (p) => ({
       title: 'Приглашение в коллекцию',
       body: `${p.actor} приглашает вас поделиться коллекцией. Откройте TREK для подтверждения.`,
@@ -48,10 +52,17 @@ const ru: NotificationLocale = {
       title: 'Доступна новая версия TREK',
       body: `TREK ${p.version} теперь доступен. Перейдите в панель администратора для обновления.`,
     }),
+    replica_failure: (p) => ({
+      title: 'Сбой реплики хранилища',
+      body:
+        `Ошибка записи в реплику '${p.backend}': ${p.op} для ${p.key} — ${p.error}.` +
+        (p.suppressed !== '0' ? ` С момента последнего уведомления подавлено ещё ${p.suppressed} ошибок.` : ''),
+    }),
     synology_session_cleared: () => ({
       title: 'Сессия Synology сброшена',
       body: 'Ваш аккаунт или URL Synology изменился. Вы вышли из Synology Photos.',
     }),
+    plugin_notification: (p) => ({ title: p.title ?? '', body: p.body ?? '' }),
   },
   passwordReset: {
     subject: 'Сброс пароля',

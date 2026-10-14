@@ -29,8 +29,12 @@ describe('createPluginContext', () => {
     await ctx.trips.getById(1);
     expect(rpc).toHaveBeenCalledWith('trips.getById', { tripId: 1, _inv: 'inv-1' });
 
+    await ctx.journal.addEntryPhoto(5, { name: 'a.jpg', content_base64: 'eA==' });
+    expect(rpc).toHaveBeenCalledWith('journal.addEntryPhoto', { entryId: 5, input: { name: 'a.jpg', content_base64: 'eA==' }, _inv: 'inv-1' });
+
     await ctx.ws.broadcastToTrip(1, 'ping', { a: 1 });
-    expect(rpc).toHaveBeenCalledWith('ws.broadcastToTrip', { tripId: 1, event: 'ping', data: { a: 1 } });
+    // carries _inv so the host can bind the acting user — without it the broadcast was refused
+    expect(rpc).toHaveBeenCalledWith('ws.broadcastToTrip', { tripId: 1, event: 'ping', data: { a: 1 }, _inv: 'inv-1' });
 
     await ctx.users.getById(3);
     expect(rpc).toHaveBeenCalledWith('users.getById', { id: 3, _inv: 'inv-1' });
@@ -60,7 +64,7 @@ describe('createPluginContext', () => {
     expect(rpc).toHaveBeenCalledWith('costs.delete', { tripId: 1, itemId: 5, _inv: 'inv-1' });
 
     await ctx.ws.broadcastToUser(9, 'poke', { x: 2 });
-    expect(rpc).toHaveBeenCalledWith('ws.broadcastToUser', { userId: 9, event: 'poke', data: { x: 2 } });
+    expect(rpc).toHaveBeenCalledWith('ws.broadcastToUser', { userId: 9, event: 'poke', data: { x: 2 }, _inv: 'inv-1' });
   });
 
   it('log warn and error also emit events', () => {

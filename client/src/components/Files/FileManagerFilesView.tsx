@@ -1,12 +1,16 @@
-import { Upload, FileText, Star } from 'lucide-react'
+import { Fragment } from 'react'
+import { Upload, Star } from 'lucide-react'
 import type { FileManagerState } from './useFileManager'
 import { FileRow } from './FileManagerRow'
+import { usePluginViewContributions, PluginCardFooter } from '../Plugins/PluginContributions'
+import EmptyState from '../shared/EmptyState'
 
 export function FilesView(S: FileManagerState) {
   const {
     can, trip, getRootProps, getInputProps, isDragActive, uploading, t, allowedFileTypes,
     files, filterType, setFilterType, filteredFiles,
   } = S
+  const contribFor = usePluginViewContributions('files', S.tripId)
   return (
     <>
       {/* Upload zone */}
@@ -47,7 +51,7 @@ export function FilesView(S: FileManagerState) {
           { id: 'doc', label: t('files.filterDocs') },
           ...(files.some(f => f.note_id) ? [{ id: 'collab', label: t('files.filterCollab') || 'Collab' }] : []),
         ].map(tab => (
-          <button key={tab.id} onClick={() => setFilterType(tab.id)} style={{
+          <button type="button" key={tab.id} onClick={() => setFilterType(tab.id)} style={{
             padding: '4px 12px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: 'calc(12px * var(--fs-scale-body, 1))',
             fontFamily: 'inherit', transition: 'all 0.12s',
             background: filterType === tab.id ? 'var(--accent)' : 'transparent',
@@ -63,14 +67,18 @@ export function FilesView(S: FileManagerState) {
       {/* File list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 28px 16px' }} className="max-md:!px-4">
         {filteredFiles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-faint)' }}>
-            <FileText size={40} style={{ color: 'var(--text-faint)', display: 'block', margin: '0 auto 12px' }} />
-            <p style={{ fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>{t('files.empty')}</p>
-            <p style={{ fontSize: 'calc(13px * var(--fs-scale-body, 1))', color: 'var(--text-faint)', margin: 0 }}>{t('files.emptyHint')}</p>
-          </div>
+          <EmptyState scene="files" title={t('files.empty')} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {filteredFiles.map(file => <FileRow key={file.id} {...S} file={file} />)}
+            {filteredFiles.map(file => {
+              const contributions = contribFor(file.id)
+              return (
+                <Fragment key={file.id}>
+                  <FileRow {...S} file={file} />
+                  {contributions.length > 0 && <div style={{ padding: '0 4px' }}><PluginCardFooter items={contributions} tripId={S.tripId} /></div>}
+                </Fragment>
+              )
+            })}
           </div>
         )}
       </div>

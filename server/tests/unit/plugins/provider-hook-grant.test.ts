@@ -10,7 +10,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import { PluginSupervisor } from '../../../src/nest/plugins/supervisor/plugin-supervisor';
-import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
+import { createPluginRuntime } from '../../helpers/plugin-host';
+import { DatabaseService } from '../../../src/nest/database/database.service';
+import { db } from '../../../src/db/database';
 
 function makeSupervisor(): PluginSupervisor {
   // createRpcHost is never called on the providersOf path (no spawn).
@@ -38,11 +40,68 @@ describe('providersOf enforces the hook:* grant', () => {
     put(s, 'x', 'active', ['mysteryProvider'], ['hook:mystery', 'db:own']);
     expect(s.providersOf('mysteryProvider')).toEqual([]);
   });
+
+  it('maps the pdf-section / atlas-layer / journal-entry hooks to their grants', () => {
+    const s = makeSupervisor();
+    put(s, 'pdf', 'active', ['pdfSectionProvider'], ['hook:pdf-section-provider']);
+    put(s, 'atlas', 'active', ['atlasLayerProvider'], ['hook:atlas-layer-provider']);
+    put(s, 'journal', 'active', ['journalEntryProvider'], ['hook:journal-entry-provider']);
+    put(s, 'crossed', 'active', ['pdfSectionProvider'], ['hook:atlas-layer-provider']); // wrong grant
+    expect(s.providersOf('pdfSectionProvider')).toEqual(['pdf']);
+    expect(s.providersOf('atlasLayerProvider')).toEqual(['atlas']);
+    expect(s.providersOf('journalEntryProvider')).toEqual(['journal']);
+  });
+
+  it('maps mapLayerProvider to hook:map-layer-provider (not the marker grant)', () => {
+    const s = makeSupervisor();
+    put(s, 'layers', 'active', ['mapLayerProvider'], ['hook:map-layer-provider']);
+    // The marker grant must not bleed into the layer hook — they are separate consents.
+    put(s, 'markersOnly', 'active', ['mapLayerProvider'], ['hook:map-marker-provider']);
+    expect(s.providersOf('mapLayerProvider')).toEqual(['layers']);
+  });
+
+  it('maps routeProvider to hook:route-provider', () => {
+    const s = makeSupervisor();
+    put(s, 'ev', 'active', ['routeProvider'], ['hook:route-provider']);
+    put(s, 'ungranted', 'active', ['routeProvider'], ['hook:map-layer-provider']); // wrong grant
+    expect(s.providersOf('routeProvider')).toEqual(['ev']);
+  });
+
+  it('maps dayScheduleProvider to hook:day-schedule-provider', () => {
+    const s = makeSupervisor();
+    put(s, 'times', 'active', ['dayScheduleProvider'], ['hook:day-schedule-provider']);
+    put(s, 'ungranted', 'active', ['dayScheduleProvider'], ['hook:route-provider']); // wrong grant
+    expect(s.providersOf('dayScheduleProvider')).toEqual(['times']);
+  });
+
+  it('maps dayTintProvider to hook:day-tint-provider', () => {
+    const s = makeSupervisor();
+    put(s, 'segments', 'active', ['dayTintProvider'], ['hook:day-tint-provider']);
+    put(s, 'ungranted', 'active', ['dayTintProvider'], ['hook:day-schedule-provider']); // wrong grant
+    expect(s.providersOf('dayTintProvider')).toEqual(['segments']);
+  });
+
+  it('returns tint providers in insertion order — the controller lets the first win a contested day', () => {
+    const s = makeSupervisor();
+    put(s, 'first', 'active', ['dayTintProvider'], ['hook:day-tint-provider']);
+    put(s, 'second', 'active', ['dayTintProvider'], ['hook:day-tint-provider']);
+    expect(s.providersOf('dayTintProvider')).toEqual(['first', 'second']);
+  });
+
+  it('maps notificationChannel to hook:notification-channel', () => {
+    const s = makeSupervisor();
+    put(s, 'gotify', 'active', ['notificationChannel'], ['hook:notification-channel']);
+    // Implements the hook but was never granted it — must not become a channel.
+    put(s, 'sneaky', 'active', ['notificationChannel'], ['notify:send', 'http:outbound']);
+    // Granted, but disabled — a channel must not survive being turned off.
+    put(s, 'off', 'stopped', ['notificationChannel'], ['hook:notification-channel']);
+    expect(s.providersOf('notificationChannel')).toEqual(['gotify']);
+  });
 });
 
 describe('runtime.invokeHook defense-in-depth', () => {
   it('refuses a plugin id that is not a granted provider of the hook, even if passed directly', async () => {
-    const rt = new PluginRuntimeService();
+    const rt = createPluginRuntime(new DatabaseService(db));
     // one legitimate granted provider exists, so providersOf('placeDetailProvider') = ['ok']
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (rt as any).supervisor.running.set('ok', { id: 'ok', status: 'active', hooks: ['placeDetailProvider'], events: [], granted: new Set(['hook:place-detail-provider']) });

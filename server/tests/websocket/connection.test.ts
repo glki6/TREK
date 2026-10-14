@@ -6,6 +6,8 @@
  */
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import http from 'http';
+import net from 'node:net';
+import crypto from 'node:crypto';
 import request from 'supertest';
 import WebSocket from 'ws';
 import { broadcastToUser, getOnlineUserIds } from '../../src/websocket';
@@ -46,15 +48,23 @@ vi.mock('../../src/config', () => ({
 }));
 
 import type { INestApplication } from '@nestjs/common';
-import { buildApp } from '../../src/bootstrap';
+import { buildApp, getHttpServer } from '../../src/bootstrap';
 import { createTables } from '../../src/db/schema';
 import { runMigrations } from '../../src/db/migrations';
 import { resetTestDb, resetRateLimits } from '../helpers/test-db';
 import { createUser, createTrip } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
-import { setupWebSocket } from '../../src/websocket';
-import { createEphemeralToken } from '../../src/services/ephemeralTokens';
-import { createWsToken } from '../../src/services/authService';
+import { createEphemeralToken } from '../../src/nest/auth/ephemeral-tokens';
+import { TokenService } from '../../src/nest/tokens/token.service';
+import { DatabaseService } from '../../src/nest/database/database.service';
+import { EphemeralTokenService } from '../../src/nest/auth/ephemeral-token.service';
+
+// The gateway consumes ws-tokens through its injected TokenService; the
+// ephemeral store is module-scoped on purpose, so a directly-constructed
+// instance mints tokens the app under test accepts (TokenService is a leaf —
+// its own unit suite constructs it the same way).
+const tokenService = new TokenService(new DatabaseService(testDb), new EphemeralTokenService());
+const createWsToken = tokenService.createWsToken.bind(tokenService);
 
 let server: http.Server;
 let wsUrl: string;
@@ -67,8 +77,9 @@ beforeAll(async () => {
   // Real WebSocket against the unified NestJS app (Express is gone). buildApp owns
   // the same composition production uses; we attach the real ws server to it.
   nestApp = await buildApp();
-  server = http.createServer(nestApp.getHttpAdapter().getInstance());
-  setupWebSocket(server);
+  // buildApp owns the server now, because the ws gateway is bound to it before
+  // app.init(). Creating a second one here would leave /ws unreachable.
+  server = getHttpServer();
 
   await new Promise<void>(resolve => server.listen(0, resolve));
   const addr = server.address() as { port: number };
@@ -576,6 +587,54 @@ describe('WS message processing edge cases', () => {
     expect(errors).toHaveLength(0);
 
     rawWs.close();
+  });
+
+  it('WS-015d — a close frame with a reserved status code does not crash the server (#1576)', async () => {
+    // The `ws` client cannot send an invalid close code, so craft the frame over a raw
+    // socket. Reserved code 1006 makes ws emit an 'error' event on the socket; with no
+    // listener attached in setupWebSocket, Node rethrows it as an uncaughtException and the
+    // process dies in production. In-process under vitest that surfaces as an uncaught
+    // WS_ERR_INVALID_CLOSE_CODE, so capture uncaughtException for the duration and assert
+    // none fired — then confirm the server is still serving.
+    const uncaught: Error[] = [];
+    const onUncaught = (err: Error): void => { uncaught.push(err); };
+    process.on('uncaughtException', onUncaught);
+
+    try {
+      const port = (server.address() as { port: number }).port;
+      await new Promise<void>((resolve, reject) => {
+        const key = crypto.randomBytes(16).toString('base64');
+        const sock = net.connect(port, '127.0.0.1');
+        sock.on('error', reject);
+        sock.write(
+          `GET /ws HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nUpgrade: websocket\r\n` +
+          `Connection: Upgrade\r\nSec-WebSocket-Key: ${key}\r\nSec-WebSocket-Version: 13\r\n\r\n`
+        );
+        sock.once('data', (buf) => {
+          if (!buf.toString('latin1').includes('101 Switching Protocols')) return reject(new Error('no upgrade'));
+          const mask = crypto.randomBytes(4);
+          const payload = Buffer.alloc(2);
+          payload.writeUInt16BE(1006, 0); // reserved — MUST NOT appear in a close frame (RFC 6455)
+          const masked = Buffer.from(payload.map((b, i) => b ^ mask[i % 4]));
+          sock.write(Buffer.concat([Buffer.from([0x88, 0x82]), mask, masked])); // FIN|close, MASK|len2
+          setTimeout(() => { sock.destroy(); resolve(); }, 200);
+        });
+      });
+
+      expect(uncaught.map(e => (e as { code?: string }).code)).not.toContain('WS_ERR_INVALID_CLOSE_CODE');
+
+      // And the server is still serving: a fresh connection still gets a welcome.
+      const { user } = createUser(testDb);
+      const token = createEphemeralToken(user.id, 'ws')!;
+      const client = await connectWs(token);
+      try {
+        expect((await client.next()).type).toBe('welcome');
+      } finally {
+        client.close();
+      }
+    } finally {
+      process.off('uncaughtException', onUncaught);
+    }
   });
 
   it('WS-016 — rate-limit window resets: after limit hit, next window accepts messages again', async () => {

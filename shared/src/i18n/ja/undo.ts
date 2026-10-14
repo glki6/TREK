@@ -14,10 +14,12 @@ const undo: TranslationStrings = {
   'undo.lock': '場所のロックを切り替え',
   'undo.importGpx': 'GPXをインポート',
   'undo.importKeyholeMarkup': 'KMZ/KMLをインポート',
+  'undo.importFiles': 'ファイルインポート',
   'undo.importGoogleList': 'Googleマップをインポート',
   'undo.importNaverList': 'Naverマップをインポート',
   'undo.addPlace': '場所を追加',
   'undo.done': '元に戻しました: {action}',
+  'undo.failed': '元に戻せませんでした: {action}',
   'undo.importBooking': '予約確認書インポート',
 };
 export default undo;

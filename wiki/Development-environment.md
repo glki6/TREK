@@ -7,13 +7,14 @@
 - Node.js 22+
 - npm
 - Git
+- Python 3 and a C++ toolchain (`build-essential` on Debian/Ubuntu, the Xcode Command Line Tools on macOS, the Visual Studio Build Tools on Windows). better-sqlite3 ships prebuilt binaries, but a lockfile-driven `npm install` still runs node-gyp against them and stops without these (npm/cli#9837).
 - A GitHub account
 
 ---
 
 ## 1. Fork & Clone the Repository
 
-Go to the [TREK repository](https://github.com/mauriceboe/TREK) and click **Fork** to create your own copy.
+Go to the [TREK repository](https://github.com/liketrek/TREK) and click **Fork** to create your own copy.
 
 Then clone your fork locally:
 
@@ -30,7 +31,7 @@ cd TREK
 Add the original repository as `upstream` so you can pull in future updates:
 
 ```bash
-git remote add upstream git@github.com:mauriceboe/TREK.git
+git remote add upstream git@github.com:liketrek/TREK.git
 ```
 
 You should now have two remotes:
@@ -38,7 +39,7 @@ You should now have two remotes:
 | Remote     | URL                                          | Purpose                        |
 |------------|----------------------------------------------|--------------------------------|
 | `origin`   | `git@github.com:your-username/TREK.git`      | Your fork — push changes here  |
-| `upstream` | `git@github.com:mauriceboe/TREK.git`         | Main repo — pull updates from here |
+| `upstream` | `git@github.com:liketrek/TREK.git`         | Main repo — pull updates from here |
 
 ---
 
@@ -71,10 +72,16 @@ Branch naming conventions:
 
 ## 5. Install Dependencies
 
-The repo is an npm workspace monorepo. One command at the root installs everything:
+The repo is an npm workspace monorepo with three workspaces — `shared`, `server`, and `client`. One command at the root installs all three:
 
 ```bash
 npm ci
+```
+
+`plugin-sdk/` is **not** a root workspace: it has its own lockfile and is published to npm independently, so a root `npm ci` never touches it. If you are working on the SDK, install and run its commands from that directory:
+
+```bash
+cd plugin-sdk && npm ci
 ```
 
 ---
@@ -94,17 +101,17 @@ sudo apt-get install -y libkitinerary-bin
 Add these to your local `.env` (or export them before starting the server):
 
 ```bash
-# Required: path to the extractor binary
-KITINERARY_EXTRACTOR_PATH=/usr/local/bin/kitinerary-extractor
-
 # Prevent Qt from probing for a display in headless/server environments
 QT_QPA_PLATFORM=offscreen
 
 # KDE cache directory (avoids writing to $HOME)
 XDG_CACHE_HOME=/tmp/kf6-cache
+
+# Optional: only needed when the binary is not found on its own
+# KITINERARY_EXTRACTOR_PATH=/usr/lib/x86_64-linux-gnu/libexec/kf6/kitinerary-extractor
 ```
 
-You can override `KITINERARY_EXTRACTOR_PATH` if you installed the binary to a different location.
+`KITINERARY_EXTRACTOR_PATH` is optional. Left unset, the server looks for the Debian/Ubuntu location `/usr/lib/<triplet>/libexec/kf6/kitinerary-extractor` and then for `kitinerary-extractor` on `PATH` — one of which is what `libkitinerary-bin` gives you. Set it only if the binary ended up somewhere neither lookup reaches, and make sure the path exists: a value that does not resolve logs a warning and stops the lookup instead of falling back, which turns the import feature off. The Docker image sets it to `/usr/local/bin/kitinerary-extractor`, a symlink created at image build; that path does not exist on a plain apt install.
 
 ---
 
@@ -119,7 +126,7 @@ These commands run across all workspaces at once and are the recommended way to 
 | `npm run dev`        | Build shared, then start shared (watch), server, and client together via `concurrently` |
 | `npm run build`      | Build shared → server → client in order                            |
 | `npm test`           | Run tests in shared, server, and client                            |
-| `npm run test:cov`   | Run coverage for server and client                                 |
+| `npm run test:cov`   | Run coverage for shared, server, client and plugin-sdk             |
 | `npm run test:e2e`   | Run end-to-end tests (server)                                      |
 | `npm run lint`       | Lint shared, server, and client                                    |
 | `npm run format`     | Format shared, server, and client                                  |
@@ -133,7 +140,7 @@ The `@trek/shared` package is the single source of truth for code shared between
 
 | Command                     | Description                          |
 |-----------------------------|--------------------------------------|
-| `npm run build`             | Compile shared package (tsup)        |
+| `npm run build`             | Compile shared package (tsdown)      |
 | `npm run build:watch`       | Compile in watch mode                |
 | `npm test`                  | Run tests                            |
 | `npm run test:watch`        | Run tests in watch mode              |
@@ -146,21 +153,26 @@ The `@trek/shared` package is the single source of truth for code shared between
 
 ### Server (`/server`)
 
-| Command                    | Description                              |
-|----------------------------|------------------------------------------|
-| `npm start`                | Start the server (production)            |
-| `npm run dev`              | Start the server in watch mode           |
-| `npm run build`            | Compile server                           |
-| `npm run typecheck`        | Type-check without emitting              |
-| `npm test`                 | Run all tests                            |
-| `npm run test:unit`        | Run unit tests only                      |
-| `npm run test:integration` | Run integration tests                    |
-| `npm run test:ws`          | Run WebSocket tests                      |
-| `npm run test:e2e`         | Run end-to-end tests                     |
-| `npm run test:watch`       | Run tests in watch mode                  |
-| `npm run test:coverage`    | Run tests with coverage report           |
-| `npm run lint`             | Lint source                              |
-| `npm run format`           | Format source                            |
+> **Tip:** `tests/` sits outside the build `tsconfig.json`, so `npm run typecheck` skips it — `npm run typecheck:tests` is the only step that catches a broken test call site. CI runs both.
+
+| Command                      | Description                              |
+|------------------------------|------------------------------------------|
+| `npm start`                  | Start the server (production)            |
+| `npm run dev`                | Start the server in watch mode           |
+| `npm run build`              | Compile server                           |
+| `npm run typecheck`          | Type-check without emitting              |
+| `npm run typecheck:tests`    | Type-check `tests/` too (CI gate)        |
+| `npm test`                   | Run all tests                            |
+| `npm run test:unit`          | Run unit tests only                      |
+| `npm run test:integration`   | Run integration tests                    |
+| `npm run test:ws`            | Run WebSocket tests                      |
+| `npm run test:e2e`           | Run end-to-end tests                     |
+| `npm run test:watch`         | Run tests in watch mode                  |
+| `npm run test:coverage`      | Run tests with coverage report           |
+| `npm run lint`               | Lint source                              |
+| `npm run lint:check`         | Lint everything, no `--fix` (CI gate)    |
+| `npm run check:plugin-facts` | Verify generated plugin facts (CI gate)  |
+| `npm run format`             | Format source                            |
 
 ### Client (`/client`)
 
@@ -169,12 +181,16 @@ The `@trek/shared` package is the single source of truth for code shared between
 | `npm run dev`              | Start the Vite dev server                            |
 | `npm run build`            | Build for production (runs icon generation first)    |
 | `npm run preview`          | Preview the production build locally                 |
+| `npm run typecheck`        | Type-check without emitting (CI gate)                |
 | `npm test`                 | Run all tests                                        |
 | `npm run test:unit`        | Run unit tests only                                  |
 | `npm run test:integration` | Run integration tests                                |
 | `npm run test:watch`       | Run tests in watch mode                              |
 | `npm run test:coverage`    | Run tests with coverage report                       |
 | `npm run lint`             | Lint source                                          |
+| `npm run lint:check`       | Same command as `npm run lint` — the name CI uses    |
+| `npm run lint:pages`       | Enforce the Page pattern (CI gate)                   |
+| `npm run theme:lint`       | Flag styling that bypasses the appearance tokens     |
 | `npm run format`           | Format source                                        |
 
 ---
@@ -192,12 +208,12 @@ git push origin fix/my-changes
 git push origin dev
 ```
 
-Then open a Pull Request from your fork to `mauriceboe/TREK` targeting the `dev` branch. If your PR only modifies files under `wiki/`, it is exempt from branch enforcement and may target any branch.
+Then open a Pull Request from your fork to `liketrek/TREK` targeting the `dev` branch. If your PR only modifies files under `wiki/`, it is exempt from branch enforcement and may target any branch.
 
 ---
 
 ## Tips
 
 - Always branch off from an up-to-date `dev` — run `git fetch upstream && git rebase upstream/dev` before starting new work.
-- Run tests before pushing: `npm test` at the repo root runs all workspaces.
+- Run tests before pushing: `npm test` at the repo root runs all workspaces. That alone is not the full CI gate — also run `npm run typecheck && npm run typecheck:tests && npm run lint:check && npm run check:plugin-facts` in `server/`, `npm run typecheck && npm run lint:check && npm run lint:pages` in `client/`, and `npm run i18n:parity:strict --workspace=shared` at the root if you touched translations.
 - Follow the commit message conventions described in the [[Contributing]] guidelines.

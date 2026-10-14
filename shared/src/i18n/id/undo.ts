@@ -14,10 +14,12 @@ const undo: TranslationStrings = {
   'undo.lock': 'Kunci tempat diubah',
   'undo.importGpx': 'Impor GPX',
   'undo.importKeyholeMarkup': 'Impor KMZ/KML',
+  'undo.importFiles': 'Impor file',
   'undo.importGoogleList': 'Impor Google Maps',
   'undo.importNaverList': 'Impor Naver Maps',
   'undo.addPlace': 'Tempat ditambahkan',
   'undo.done': 'Dibatalkan: {action}',
+  'undo.failed': 'Tidak dapat membatalkan: {action}',
   'undo.importBooking': 'Impor konfirmasi pemesanan',
 };
 export default undo;

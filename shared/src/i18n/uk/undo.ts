@@ -14,10 +14,12 @@ const undo: TranslationStrings = {
   'undo.lock': 'Блокування місця змінено',
   'undo.importGpx': 'Імпорт GPX',
   'undo.importKeyholeMarkup': 'Імпорт KMZ/KML',
+  'undo.importFiles': 'Імпорт файлів',
   'undo.importGoogleList': 'Імпорт з Google Maps',
   'undo.importNaverList': 'Імпорт з Naver Maps',
   'undo.addPlace': 'Місце додано',
   'undo.done': 'Відмінено: {action}',
+  'undo.failed': 'Не вдалося відмінити: {action}',
   'undo.importBooking': 'Імпорт підтвердження бронювання',
 };
 export default undo;

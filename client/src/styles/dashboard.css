@@ -187,15 +187,20 @@
 .trek-dash .hero-content {
   position: absolute; inset: 0; z-index: 2; padding: 32px 32px 26px;
   display: grid; grid-template-rows: auto 1fr auto; color: #fff;
+  /* The one column may not grow past the hero. An auto track takes the title's
+     min-content width, and a title that is one long word made the track, the tools
+     row and the boarding pass as wide as that word, with the tools off the card. */
+  grid-template-columns: minmax(0, 1fr);
 }
 .trek-dash .hero-top { display: flex; justify-content: space-between; align-items: start; }
 .trek-dash .hero-badge {
   display: inline-flex; align-items: center; gap: 8px;
-  background: oklch(1 0 0 / .14);
+  background: oklch(0.22 0.01 260 / .5);
   backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid oklch(1 0 0 / .2); padding: 8px 14px 8px 12px;
+  border: 1px solid oklch(1 0 0 / .32); padding: 8px 14px 8px 12px;
   border-radius: 999px; font-size: 12px; font-weight: 500;
   letter-spacing: 0.06em; text-transform: uppercase;
+  box-shadow: 0 2px 8px oklch(0 0 0 / .26);
 }
 .trek-dash .hero-badge .pulse {
   width: 7px; height: 7px; border-radius: 50%;
@@ -208,26 +213,58 @@
   100% { box-shadow: 0 0 0 0 oklch(0.84 0.18 85 / 0); }
 }
 .trek-dash .hero-tools { display: flex; gap: 8px; }
+/* Same story as .trip-action-btn: a dark scrim instead of a white .14 fill, so
+   the tools read against a bright hero photo too. */
 .trek-dash .hero-tool {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: oklch(1 0 0 / .14);
+  width: 40px; height: 40px; border-radius: 50%;
+  background: oklch(0.22 0.01 260 / .5);
   backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid oklch(1 0 0 / .2); color: #fff;
+  border: 1px solid oklch(1 0 0 / .32); color: #fff;
+  box-shadow: 0 2px 8px oklch(0 0 0 / .26);
   display: grid; place-items: center; transition: background .15s, transform .12s;
 }
-.trek-dash .hero-tool:hover { background: oklch(1 0 0 / .26); transform: scale(1.05); }
-.trek-dash .hero-tool svg { width: 16px; height: 16px; }
-.trek-dash .hero-title-block { align-self: end; padding-bottom: 24px; }
+.trek-dash .hero-tool:hover { background: oklch(0.22 0.01 260 / .78); transform: scale(1.05); }
+.trek-dash .hero-tool svg { width: 17px; height: 17px; }
+.trek-dash .hero-title-block { align-self: end; padding-bottom: 24px; min-width: 0; }
 .trek-dash .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 10px;
   font-size: 11.5px; letter-spacing: 0.22em; text-transform: uppercase;
   opacity: .88; margin-bottom: 16px; font-weight: 500;
 }
 .trek-dash .hero-eyebrow::before { content: ""; width: 28px; height: 1px; background: oklch(1 0 0 / .6); }
-.trek-dash .hero-title { font-size: 104px; font-weight: 600; line-height: 0.9; letter-spacing: -0.045em; margin: 0; text-shadow: 0 1px 12px oklch(0 0 0 / .32), 0 1px 3px oklch(0 0 0 / .4); }
+.trek-dash .hero-title {
+  font-size: 104px; font-weight: 600; line-height: 1.12; letter-spacing: -0.045em; margin: 0;
+  text-shadow: 0 1px 12px oklch(0 0 0 / .32), 0 1px 3px oklch(0 0 0 / .4);
+  /* Two lines at most, a word longer than the card broken inside it: the rows above
+     and below have a fixed budget and a third line would run into the badge row. */
+  overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  /* The clamp clips at the line boxes and Poppins paints past them (ascender 1.05em,
+     descender 0.35em): at 0.9 every y, g and p on the last line lost its tail and
+     É and Å on the first their accent. The padding makes room for the ink and the
+     margin takes it back, so the title sits where it did. At 1.12 a clipped third
+     line keeps its plain ascenders under that padding; an accented capital on it
+     still leaves a sliver, as it does on dev today, and only a much looser title
+     would hide that. */
+  padding-block: .1em; margin-block: -.1em;
+}
 
 /* ----------------- boarding pass ----------------- */
+/* The pass is split into an outer wrapper (left notch) and an inner glass panel
+   (right notch). Each element carries a SINGLE-layer radial-gradient mask so we
+   never rely on multi-layer `mask-composite: intersect` — Safari mis-composites
+   that path and hides the whole bar (issue #1459). */
 .trek-dash .hero-pass {
+  position: relative;
+  /* Match the inner panel's radius: the mask + translateZ promotes this wrapper to
+     its own compositing layer whose bounds are otherwise square, which showed as a
+     square edge over the rounded glass panel (regression from the #1459 mask split). */
+  border-radius: 24px;
+  -webkit-mask-image: radial-gradient(circle 8px at 0 50%, transparent 8px, black 8px);
+          mask-image: radial-gradient(circle 8px at 0 50%, transparent 8px, black 8px);
+  transform: translateZ(0);
+}
+.trek-dash .hero-pass-inner {
   background: linear-gradient(135deg,
     oklch(0.99 0.006 75 / .75) 0%, oklch(0.985 0.008 70 / .85) 50%, oklch(0.98 0.01 65 / .8) 100%);
   backdrop-filter: blur(40px) saturate(1.8) brightness(1.1);
@@ -239,24 +276,17 @@
     0 2px 8px -2px oklch(0 0 0 / .08), 0 8px 24px -6px oklch(0 0 0 / .12),
     0 20px 60px -16px oklch(0 0 0 / .35), inset 0 1px 1px 0 oklch(1 0 0 / .5);
   color: var(--ink); position: relative; overflow: hidden;
-  mask-image:
-    radial-gradient(circle 8px at 0 50%, transparent 8px, black 8px),
-    radial-gradient(circle 8px at 100% 50%, transparent 8px, black 8px);
-  mask-composite: intersect;
-  -webkit-mask-image:
-    radial-gradient(circle 8px at 0 50%, transparent 8px, black 8px),
-    radial-gradient(circle 8px at 100% 50%, transparent 8px, black 8px);
-  -webkit-mask-composite: source-in;
-  transform: translateZ(0);
+  -webkit-mask-image: radial-gradient(circle 8px at 100% 50%, transparent 8px, black 8px);
+          mask-image: radial-gradient(circle 8px at 100% 50%, transparent 8px, black 8px);
 }
-.dark .trek-dash .hero-pass {
+.dark .trek-dash .hero-pass-inner {
   background: linear-gradient(135deg, oklch(0.28 0 0 / .8) 0%, oklch(0.25 0 0 / .85) 50%, oklch(0.23 0 0 / .8) 100%);
   border: 1px solid oklch(1 0 0 / .1);
   box-shadow:
     0 2px 8px -2px oklch(0 0 0 / .3), 0 8px 24px -6px oklch(0 0 0 / .4),
     0 20px 60px -16px oklch(0 0 0 / .6), inset 0 1px 1px 0 oklch(1 0 0 / .08);
 }
-.trek-dash .hero-pass::before {
+.trek-dash .hero-pass-inner::before {
   content: ""; position: absolute; inset: 0; border-radius: 24px; padding: 1px;
   background: linear-gradient(135deg, oklch(1 0 0 / .25) 0%, oklch(1 0 0 / .08) 40%, oklch(1 0 0 / .02) 70%, oklch(1 0 0 / .15) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -377,7 +407,15 @@
 .trek-dash .flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .trek-dash .flag:first-child { margin-left: 0; }
 .trek-dash .flag.more { background: oklch(1 0 0 / .15); color: #fff; font-size: 10px; border: 2px solid oklch(0.28 0.04 50); }
-.trek-dash .spark { position: absolute; right: 18px; bottom: 18px; opacity: .55; }
+/* Behind the text, not over it (#1787). The sparkline is positioned and comes
+   after the label/value/delta in the DOM, so without a stacking order of its own
+   it painted on top of them — and on a narrow status card (the atlas row is
+   1.5fr 1fr 1fr 1fr next to a 400px sidebar) the 80px graphic covers more than
+   half the line. Decoration, so it also stops swallowing pointer events. */
+.trek-dash .spark { position: absolute; right: 18px; bottom: 18px; opacity: .55; z-index: 0; pointer-events: none; }
+.trek-dash .atlas-card .label,
+.trek-dash .atlas-card .value,
+.trek-dash .atlas-card .delta { position: relative; z-index: 1; }
 .trek-dash .spark polyline,
 .trek-dash .spark path,
 .trek-dash .spark circle:not([stroke]) { stroke: var(--ink); }
@@ -397,6 +435,11 @@
 .trek-dash .trips.list-view { grid-template-columns: 1fr; gap: 12px; }
 .trek-dash .trips.list-view .trip-card { display: grid; grid-template-columns: 520px 1fr; gap: 0; height: auto; }
 .trek-dash .trips.list-view .trip-cover { border-radius: var(--r-lg) 0 0 var(--r-lg); height: 100px; aspect-ratio: unset; }
+/* The row's cover is 100px and the title hangs from its bottom edge, so every
+   line it gains grows upwards: at 26px a second one starts above the status
+   badge at top 16px and runs through the pill. The row has 484px of text to
+   itself, one line is the whole title either way. */
+.trek-dash .trips.list-view .trip-name { -webkit-line-clamp: 1; }
 .trek-dash .trips.list-view .trip-body { display: flex; align-items: center; justify-content: flex-end; padding: 16px 36px; gap: 28px; }
 /* Date rendered as a peer of the counts, set off by a vertical divider rather than
    floating alone at the far left. */
@@ -420,28 +463,46 @@
 .trek-dash .trip-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
 .trek-dash .trip-card:hover .trip-cover img { transform: scale(1.04); }
 .trek-dash .trip-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, oklch(0 0 0 / 0) 40%, oklch(0 0 0 / .55) 100%); }
+/* Shares the dark scrim of .trip-action-btn so both overlays on the cover read
+   as one set, and the label survives a bright photo behind it. */
 .trek-dash .trip-status {
   position: absolute; top: 16px; left: 16px; z-index: 1;
   display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px 6px 9px;
   border-radius: 999px; font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em;
-  background: oklch(1 0 0 / .18); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid oklch(1 0 0 / .22); color: #fff; text-transform: uppercase;
+  background: oklch(0.22 0.01 260 / .58); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid oklch(1 0 0 / .34); color: #fff; text-transform: uppercase;
+  box-shadow: 0 2px 8px oklch(0 0 0 / .28);
 }
 .trek-dash .trip-status .indicator { width: 6px; height: 6px; border-radius: 50%; background: oklch(0.84 0.16 145); }
 .trek-dash .trip-status.completed .indicator { background: oklch(0.75 0.02 220); }
 .trek-dash .trip-status.upcoming .indicator { background: oklch(0.84 0.18 85); }
 .trek-dash .trip-status.idea .indicator { background: oklch(0.78 0.14 280); }
-.trek-dash .trip-actions { position: absolute; top: 14px; right: 14px; z-index: 1; display: flex; gap: 6px; opacity: 0; transition: opacity .2s; }
+/* The actions used to sit at opacity 0 until the card was hovered, over a white
+   .18 glass fill. Two people in a row reported they never found the archive and
+   rename buttons — invisible at rest, and on a light cover the white-on-white
+   fill hid them even while hovering. They stay on the card now, and the fill is
+   a dark scrim so the white icons carry against any photo. */
+.trek-dash .trip-actions { position: absolute; top: 14px; right: 14px; z-index: 1; display: flex; gap: 6px; opacity: .92; transition: opacity .2s; }
 .trek-dash .trip-card:hover .trip-actions { opacity: 1; }
 .trek-dash .trip-action-btn {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: oklch(1 0 0 / .18); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border: 1px solid oklch(1 0 0 / .22); color: #fff; display: grid; place-items: center; transition: background .15s;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: oklch(0.22 0.01 260 / .58); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid oklch(1 0 0 / .34); color: #fff; display: grid; place-items: center;
+  box-shadow: 0 2px 8px oklch(0 0 0 / .28);
+  transition: background .15s, transform .12s;
 }
-.trek-dash .trip-action-btn:hover { background: oklch(1 0 0 / .3); }
-.trek-dash .trip-action-btn svg { width: 16px; height: 16px; }
+.trek-dash .trip-action-btn:hover { background: oklch(0.22 0.01 260 / .82); transform: scale(1.06); }
+.trek-dash .trip-action-btn svg { width: 17px; height: 17px; }
 .trek-dash .trip-cover-content { position: absolute; left: 18px; right: 18px; bottom: 16px; z-index: 1; color: #fff; }
-.trek-dash .trip-name { font-size: 26px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.05; margin: 0; text-shadow: 0 1px 7px oklch(0 0 0 / .3), 0 1px 2px oklch(0 0 0 / .38); }
+.trek-dash .trip-name {
+  font-size: 26px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.12; margin: 0;
+  text-shadow: 0 1px 7px oklch(0 0 0 / .3), 0 1px 2px oklch(0 0 0 / .38);
+  /* The cover is a fixed width and clipped, so the same clamp and ink room as
+     .hero-title: one long word used to run off the card edge as a single line. */
+  overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  padding-block: .1em; margin-block: -.1em;
+}
 .trek-dash .trip-where { margin-top: 4px; font-size: 13px; opacity: .85; display: flex; align-items: center; gap: 6px; }
 .trek-dash .trip-where svg { width: 12px; height: 12px; opacity: .8; }
 .trek-dash .trip-body { padding: 18px 20px 20px; }
@@ -453,6 +514,22 @@
 .trek-dash .trip-meta div { display: flex; flex-direction: column; gap: 3px; text-align: center; }
 .trek-dash .trip-meta .n { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
 .trek-dash .trip-meta .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); font-weight: 500; }
+/* Plugin-contributed badges (tripCardProvider hook) — small text chips under the meta row. */
+.trek-dash .trip-plugin-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.trek-dash .trip-plugin-badge {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 500; line-height: 1.4;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); text-decoration: none;
+}
+.trek-dash a.trip-plugin-badge:hover { border-color: var(--ink-3); }
+.trek-dash .trip-plugin-badge .badge-label { color: var(--ink); font-weight: 600; }
+.trek-dash .trip-plugin-badge .badge-value { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trek-dash .trip-plugin-badge.tone-success { border-color: color-mix(in oklch, var(--success) 40%, var(--line)); }
+.trek-dash .trip-plugin-badge.tone-success .badge-label { color: var(--success); }
+.trek-dash .trip-plugin-badge.tone-warn { border-color: color-mix(in oklch, var(--warn) 45%, var(--line)); }
+.trek-dash .trip-plugin-badge.tone-warn .badge-label { color: var(--warn); }
+.trek-dash .trip-plugin-badge.tone-danger { border-color: color-mix(in oklch, oklch(0.6 0.2 25) 45%, var(--line)); }
+.trek-dash .trip-plugin-badge.tone-danger .badge-label { color: oklch(0.6 0.2 25); }
 .trek-dash .add-trip-card {
   border-radius: var(--r-xl); border: 1.5px dashed var(--line-2);
   background: var(--glass-bg); display: grid; place-items: center;
@@ -548,6 +625,9 @@
 .trek-dash .upc-date .d { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
 .trek-dash .upc-date .m { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-3); margin-top: 4px; font-weight: 500; }
 .trek-dash .upc-info .t { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+.trek-dash .upc-info .t { display: flex; align-items: center; gap: 7px; }
+/* An unconfirmed booking looked exactly like a confirmed one here (#1934). */
+.trek-dash .upc-pending { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 999px; background: var(--bg-2); color: var(--ink-3); }
 .trek-dash .upc-info .s { font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
 .trek-dash .upc-info .s svg { width: 11px; height: 11px; }
 .trek-dash .upc-type { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; }
@@ -655,8 +735,8 @@
   .trek-dash .trips { grid-template-columns: 1fr; gap: 16px; margin-bottom: 28px; }
   .trek-dash .add-trip-card { min-height: 180px; }
 
-  /* Touch devices have no hover — keep the edit/copy/archive/delete actions
-     visible at all times instead of revealing them on hover. */
+  /* Touch devices have no hover state to lift the actions to full strength, so
+     skip the resting dim entirely. */
   .trek-dash .trip-actions { opacity: 1; }
 
   /* Compact list row on mobile — keeps the list view distinct from the grid. The
@@ -671,10 +751,9 @@
   .trek-dash .trips.list-view .trip-card { grid-template-columns: 1fr; min-height: 0; }
   .trek-dash .trips.list-view .trip-cover { height: 110px; aspect-ratio: unset; border-radius: 0; }
   .trek-dash .trips.list-view .trip-cover-content { left: 16px; right: 16px; bottom: 11px; }
-  .trek-dash .trips.list-view .trip-name {
-    font-size: 18px; overflow: hidden; text-overflow: ellipsis;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  }
+  /* Taller banner (110px), smaller type and the title 11px off the bottom: two
+     lines end below the badge here, so the phone row keeps them. */
+  .trek-dash .trips.list-view .trip-name { font-size: 18px; -webkit-line-clamp: 2; }
   .trek-dash .trips.list-view .trip-body { display: flex; align-items: center; justify-content: center; padding: 10px 16px; }
   .trek-dash .trips.list-view .trip-dates { margin-bottom: 0; justify-content: center; font-size: 12.5px; }
   .trek-dash .trips.list-view .trip-dates .date-num { font-size: 12.5px; }

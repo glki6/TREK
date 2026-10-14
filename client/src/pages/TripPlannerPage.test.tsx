@@ -1,18 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor, act, fireEvent } from '../../tests/helpers/render';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router';
 import { resetAllStores, seedStore } from '../../tests/helpers/store';
-import { buildUser, buildTrip, buildDay, buildPlace, buildAssignment } from '../../tests/helpers/factories';
+import { buildUser, buildTrip, buildDay, buildPlace, buildAssignment, buildReservation } from '../../tests/helpers/factories';
 import { useAuthStore } from '../store/authStore';
 import { useTripStore } from '../store/tripStore';
+import { usePluginStore } from '../store/pluginStore';
+import { useSettingsStore } from '../store/settingsStore';
 import TripPlannerPage from './TripPlannerPage';
 import { server } from '../../tests/helpers/msw/server';
 import { http, HttpResponse } from 'msw';
 
 // Mock Leaflet-dependent components
+const capturedMapViewProps: { current: Record<string, any> } = { current: {} };
 vi.mock('../components/Map/MapView', () => ({
-  MapView: () => React.createElement('div', { 'data-testid': 'map-view' }),
+  MapView: (props: Record<string, any>) => {
+    capturedMapViewProps.current = props;
+    return React.createElement('div', { 'data-testid': 'map-view' });
+  },
 }));
 
 vi.mock('react-leaflet', () => ({
@@ -89,6 +95,15 @@ vi.mock('../components/Collab/CollabPanel', () => ({
   default: () => React.createElement('div', { 'data-testid': 'collab-panel' }),
 }));
 
+// The trip-open splash cycles its mascot scenes on an infinite setInterval. Under
+// fake timers that interval never settles, so vi.runAllTimers() aborts with
+// "assuming an infinite loop". The animation is irrelevant to page wiring — stub it
+// to a lightweight status node (like the other heavy sub-components here).
+vi.mock('../components/shared/TripLoadingSplash', () => ({
+  default: ({ title }: { title?: string }) =>
+    React.createElement('div', { 'data-testid': 'trip-loading-splash', role: 'status' }, title || 'TREK'),
+}));
+
 const capturedFileManagerProps: { current: Record<string, any> } = { current: {} };
 vi.mock('../components/Files/FileManager', () => ({
   default: (props: Record<string, any>) => {
@@ -135,10 +150,21 @@ vi.mock('../components/Planner/ReservationModal', () => ({
 }));
 
 const capturedConfirmDialogProps: { current: Record<string, any> } = { current: {} };
+// Every dialog the page renders, by title: the page holds several, and the last
+// one rendered is not always the one a case is about. An open one draws its
+// extra content, so a case can read the list it carries.
+interface ConfirmDialogStub {
+  isOpen?: boolean
+  message?: string
+  confirmLabel?: string
+  onConfirm?: () => unknown
+}
+const capturedConfirmDialogsByTitle: { current: Record<string, ConfirmDialogStub> } = { current: {} };
 vi.mock('../components/shared/ConfirmDialog', () => ({
   default: (props: Record<string, any>) => {
     capturedConfirmDialogProps.current = props;
-    return null;
+    capturedConfirmDialogsByTitle.current[String(props.title)] = props as ConfirmDialogStub;
+    return props.isOpen ? React.createElement('div', { 'data-testid': 'confirm-dialog' }, props.children) : null;
   },
 }));
 
@@ -156,6 +182,34 @@ vi.mock('../components/Trips/TripMembersModal', () => ({
     capturedTripMembersModalProps.current = props;
     return null;
   },
+}));
+
+// The road-trip rail and the booking dialog it brings along (#2428). Both capture their
+// props so a case can drive the rail's handlers and read what the page did with them.
+type RoadtripSidebarStubProps = { onOpenBooking?: (reservationId: number) => void; canEditBookings?: boolean };
+const capturedRoadtripSidebarProps: { current: RoadtripSidebarStubProps } = { current: {} };
+vi.mock('../components/Roadtrip/RoadtripSidebar', () => ({
+  default: (props: RoadtripSidebarStubProps) => {
+    capturedRoadtripSidebarProps.current = props;
+    return React.createElement('div', { 'data-testid': 'roadtrip-sidebar' });
+  },
+}));
+
+type TransportDetailStubProps = { transportDetail?: { id: number } | null };
+const capturedTransportDetailModalProps: { current: TransportDetailStubProps } = { current: {} };
+vi.mock('../components/Planner/DayPlanSidebarTransportDetailModal', () => ({
+  DayPlanSidebarTransportDetailModal: (props: TransportDetailStubProps) => {
+    capturedTransportDetailModalProps.current = props;
+    return null;
+  },
+}));
+
+vi.mock('../components/Roadtrip/RoadtripCorridorPanel', () => ({
+  default: () => React.createElement('div', { 'data-testid': 'roadtrip-corridor-panel' }),
+}));
+
+vi.mock('../components/Roadtrip/RoadtripLimitsCard', () => ({
+  default: () => null,
 }));
 
 // Configurable usePlaceSelection mock — lets tests set a specific selected place
@@ -226,17 +280,21 @@ beforeEach(() => {
   mockSelectAssignment.mockReset();
   mockPlaceSelectionState.selectedPlaceId = null;
   mockPlaceSelectionState.selectedAssignmentId = null;
+  capturedMapViewProps.current = {};
   capturedDayPlanSidebarProps.current = {};
   capturedPlacesSidebarProps.current = {};
   capturedReservationsPanelProps.current = {};
   capturedPlaceFormModalProps.current = {};
   capturedReservationModalProps.current = {};
   capturedConfirmDialogProps.current = {};
+  capturedConfirmDialogsByTitle.current = {};
   capturedDayDetailPanelProps.current = {};
   capturedTripFormModalProps.current = {};
   capturedTripMembersModalProps.current = {};
   capturedFileManagerProps.current = {};
   capturedPlaceInspectorProps.current = {};
+  capturedRoadtripSidebarProps.current = {};
+  capturedTransportDetailModalProps.current = {};
   seedStore(useAuthStore, { isAuthenticated: true, user: buildUser() });
 });
 
@@ -272,9 +330,8 @@ describe('TripPlannerPage', () => {
 
       renderPlannerPage(99);
 
-      // Loading state: shows loading gif
-      const loadingImg = document.querySelector('img[alt="Loading"]');
-      expect(loadingImg).toBeInTheDocument();
+      // Loading state: shows the trip-open loading splash
+      expect(screen.getByTestId('trip-loading-splash')).toBeInTheDocument();
     });
   });
 
@@ -400,7 +457,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const bookingsTab = await screen.findByTitle('Bookings');
+      const bookingsTab = await screen.findByRole('button', { name: 'Bookings' });
       fireEvent.click(bookingsTab);
 
       await waitFor(() => {
@@ -427,7 +484,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const listsTab = await screen.findByTitle('Lists');
+      const listsTab = await screen.findByRole('button', { name: 'Lists' });
       fireEvent.click(listsTab);
 
       await waitFor(() => {
@@ -454,7 +511,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const costsTab = await screen.findByTitle('Costs');
+      const costsTab = await screen.findByRole('button', { name: 'Costs' });
       fireEvent.click(costsTab);
 
       await waitFor(() => {
@@ -481,7 +538,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const filesTab = await screen.findByTitle('Files');
+      const filesTab = await screen.findByRole('button', { name: 'Files' });
       fireEvent.click(filesTab);
 
       await waitFor(() => {
@@ -508,7 +565,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const collabTab = await screen.findByTitle('Collab');
+      const collabTab = await screen.findByRole('button', { name: 'Collab' });
       fireEvent.click(collabTab);
 
       await waitFor(() => {
@@ -529,7 +586,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const bookingsTab = await screen.findByTitle('Bookings');
+      const bookingsTab = await screen.findByRole('button', { name: 'Bookings' });
       fireEvent.click(bookingsTab);
 
       await waitFor(() => {
@@ -613,7 +670,7 @@ describe('TripPlannerPage', () => {
       vi.useRealTimers();
 
       // Navigate to the Lists tab first
-      const listsTab = await screen.findByTitle('Lists');
+      const listsTab = await screen.findByRole('button', { name: 'Lists' });
       fireEvent.click(listsTab);
 
       // Find the Todo subtab button inside ListsContainer and click it
@@ -653,6 +710,74 @@ describe('TripPlannerPage', () => {
       await act(async () => {
         capturedDayPlanSidebarProps.current.onSelectDay?.(day.id);
       });
+    });
+
+    it('bumps map fitKey even when selecting the already selected day', async () => {
+      vi.useFakeTimers();
+
+      const { day } = seedTripStore({ id: 42 });
+      seedStore(useTripStore, { selectedDayId: day.id } as any);
+
+      renderPlannerPage(42);
+
+      act(() => { vi.runAllTimers(); });
+
+      vi.useRealTimers();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('day-plan-sidebar')).toBeInTheDocument();
+      });
+
+      const initialFitKey = capturedMapViewProps.current.fitKey;
+
+      await act(async () => {
+        capturedDayPlanSidebarProps.current.onSelectDay?.(day.id);
+      });
+
+      await waitFor(() => {
+        expect(capturedMapViewProps.current.fitKey).toBe(initialFitKey + 1);
+      });
+    });
+
+    it('leaves the opening camera to the map instead of passing a default centre', async () => {
+      vi.useFakeTimers();
+      seedTripStore({ id: 42 });
+      renderPlannerPage(42);
+      act(() => { vi.runAllTimers(); });
+      vi.useRealTimers();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('map-view')).toBeInTheDocument();
+      });
+
+      // The map frames itself on the trip's places at mount; a center/zoom from settings
+      // would only fight that.
+      expect(capturedMapViewProps.current.center).toBeUndefined();
+      expect(capturedMapViewProps.current.zoom).toBeUndefined();
+    });
+  });
+
+  describe('FE-PAGE-PLANNER-020b: the transit (tram) action needs trip dates', () => {
+    async function renderWithTripDates(dates: { start_date: string | null; end_date: string | null }) {
+      vi.useFakeTimers();
+      const { trip } = seedTripStore({ id: 42 });
+      seedStore(useTripStore, { trip: { ...trip, ...dates } } as any);
+      renderPlannerPage(42);
+      act(() => { vi.runAllTimers(); });
+      vi.useRealTimers();
+      await waitFor(() => {
+        expect(screen.getByTestId('day-plan-sidebar')).toBeInTheDocument();
+      });
+    }
+
+    it('passes onPlanTransit when the trip has a start and end date', async () => {
+      await renderWithTripDates({ start_date: '2025-06-01', end_date: '2025-06-05' });
+      expect(capturedDayPlanSidebarProps.current.onPlanTransit).toBeInstanceOf(Function);
+    });
+
+    it('omits onPlanTransit — hiding the tram button — when the trip has no dates', async () => {
+      await renderWithTripDates({ start_date: null, end_date: null });
+      expect(capturedDayPlanSidebarProps.current.onPlanTransit).toBeUndefined();
     });
   });
 
@@ -958,7 +1083,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const bookingsTab = await screen.findByTitle('Bookings');
+      const bookingsTab = await screen.findByRole('button', { name: 'Bookings' });
       fireEvent.click(bookingsTab);
 
       await waitFor(() => {
@@ -1175,7 +1300,7 @@ describe('TripPlannerPage', () => {
       vi.useRealTimers();
 
       // Navigate to Bookings tab so ReservationsPanel is rendered
-      const bookingsTab = await screen.findByTitle('Bookings');
+      const bookingsTab = await screen.findByRole('button', { name: 'Bookings' });
       fireEvent.click(bookingsTab);
 
       await waitFor(() => {
@@ -1272,7 +1397,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const filesTab = await screen.findByTitle('Files');
+      const filesTab = await screen.findByRole('button', { name: 'Files' });
       fireEvent.click(filesTab);
 
       await waitFor(() => {
@@ -1307,7 +1432,7 @@ describe('TripPlannerPage', () => {
 
       vi.useRealTimers();
 
-      const bookingsTab = await screen.findByTitle('Bookings');
+      const bookingsTab = await screen.findByRole('button', { name: 'Bookings' });
       fireEvent.click(bookingsTab);
 
       await waitFor(() => {
@@ -1330,6 +1455,43 @@ describe('TripPlannerPage', () => {
       renderPlannerPage(42);
 
       // The useEffect should detect the invalid tab and reset it
+      await waitFor(() => {
+        expect(sessionStorage.getItem('trip-tab-42')).toBe('plan');
+      });
+    });
+  });
+
+  describe('FE-PAGE-PLANNER-048: trip-page plugins can replace core tabs and pick a position', () => {
+    afterEach(() => usePluginStore.setState({ plugins: [], loaded: false }));
+
+    it('hides the replaced core tab and splices the plugin tab at its position', async () => {
+      usePluginStore.setState({
+        plugins: [{ id: 'transit-pro', name: 'Transit Pro', type: 'trip-page', icon: null, tripPage: { replaces: ['transports'], position: 1 } }],
+        loaded: true,
+      });
+      seedTripStore({ id: 42 });
+
+      renderPlannerPage(42);
+
+      // the plugin tab is present, the replaced Transports tab is not (the splash
+      // screen holds the page for 1.5s, so give the query room)
+      const pluginTab = await screen.findByRole('button', { name: 'Transit Pro' }, { timeout: 4000 });
+      expect(pluginTab).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Transports' })).not.toBeInTheDocument();
+      // an unreplaced core tab stays reachable
+      expect(screen.getByRole('button', { name: 'Bookings' })).toBeInTheDocument();
+    });
+
+    it('a saved session tab that a plugin replaced resets to plan once plugins load', async () => {
+      sessionStorage.setItem('trip-tab-42', 'transports');
+      usePluginStore.setState({
+        plugins: [{ id: 'transit-pro', name: 'Transit Pro', type: 'trip-page', icon: null, tripPage: { replaces: ['transports'] } }],
+        loaded: true,
+      });
+      seedTripStore({ id: 42 });
+
+      renderPlannerPage(42);
+
       await waitFor(() => {
         expect(sessionStorage.getItem('trip-tab-42')).toBe('plan');
       });
@@ -1405,6 +1567,31 @@ describe('TripPlannerPage', () => {
   });
 
   describe('FE-PAGE-PLANNER-049: Mobile sidebar left panel opens via Plan button', () => {
+    it('renders the POI category pill in the mobile map controls', async () => {
+      vi.useFakeTimers();
+
+      Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 });
+      seedStore(useSettingsStore, {
+        settings: {
+          ...useSettingsStore.getState().settings,
+          map_poi_pill_enabled: true,
+        },
+      } as any);
+      seedTripStore({ id: 42 });
+
+      renderPlannerPage(42);
+      act(() => { vi.runAllTimers(); });
+      vi.useRealTimers();
+
+      await waitFor(() => {
+        const pill = screen.getByTestId('mobile-poi-category-pill');
+        expect(pill).toBeInTheDocument();
+        expect(pill.querySelectorAll('button').length).toBeGreaterThan(0);
+      });
+
+      Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
+    });
+
     it('clicking the mobile Plan button opens the left sidebar portal (lines 882-893)', async () => {
       vi.useFakeTimers();
 
@@ -1421,9 +1608,9 @@ describe('TripPlannerPage', () => {
       });
 
       // The mobile portal buttons are rendered to document.body.
-      // The "Plan" tab button has title="Plan"; the mobile portal button does not.
+      // The "Plan" tab button carries aria-label="Plan"; the portal button does not.
       const mobilePlanBtn = Array.from(document.body.querySelectorAll('button')).find(
-        b => b.textContent === 'Plan' && !b.getAttribute('title'),
+        b => b.textContent === 'Plan' && !b.getAttribute('aria-label'),
       );
 
       if (mobilePlanBtn) {
@@ -1465,7 +1652,7 @@ describe('TripPlannerPage', () => {
 
       // "Places" tab doesn't exist; the mobile portal "Places" button has no title
       const mobilePlacesBtn = Array.from(document.body.querySelectorAll('button')).find(
-        b => b.textContent === 'Places' && !b.getAttribute('title'),
+        b => b.textContent === 'Places' && !b.getAttribute('aria-label'),
       );
 
       if (mobilePlacesBtn) {
@@ -1504,7 +1691,7 @@ describe('TripPlannerPage', () => {
 
       // Open the mobile Plan portal via the bottom-nav Plan button (selector mirrors FE-PAGE-PLANNER-049).
       const mobilePlanBtn = Array.from(document.body.querySelectorAll('button')).find(
-        b => b.textContent === 'Plan' && !b.getAttribute('title'),
+        b => b.textContent === 'Plan' && !b.getAttribute('aria-label'),
       );
       expect(mobilePlanBtn).toBeTruthy();
       await act(async () => { fireEvent.click(mobilePlanBtn!); });
@@ -1562,6 +1749,133 @@ describe('TripPlannerPage', () => {
       await act(async () => {
         capturedDayPlanSidebarProps.current.onExpandedDaysChange?.(new Set([day.id]));
       });
+    });
+  });
+
+  describe('FE-PAGE-PLANNER-053: Deleting a day from the reorder dialog', () => {
+    it('asks with the list of what goes with the day, then deletes through the store', async () => {
+      vi.useFakeTimers();
+      seedTripStore({ id: 42 });
+      const deleteDay = vi.fn().mockResolvedValue(undefined);
+      const harbour = buildDay({ id: 902, trip_id: 42, day_number: 2, date: null, title: 'Harbour day' });
+      useTripStore.setState({
+        days: [buildDay({ id: 901, trip_id: 42, day_number: 1, date: null }), harbour],
+        dayNotes: {},
+        deleteDay,
+      });
+
+      renderPlannerPage(42);
+      act(() => { vi.runAllTimers(); });
+      vi.useRealTimers();
+      await waitFor(() => {
+        expect(screen.getByTestId('day-plan-sidebar')).toBeInTheDocument();
+      });
+
+      // The sidebar hands the reorder dialog its delete action; no question is open until it is used.
+      expect(typeof capturedDayPlanSidebarProps.current.onDeleteDay).toBe('function');
+      expect(capturedDayPlanSidebarProps.current.deleteDayQuestion).toBeNull();
+
+      await act(async () => { capturedDayPlanSidebarProps.current.onDeleteDay(harbour.id); });
+
+      // The question goes to the reorder dialog, which asks it in place of its
+      // list; the page stacks no second dialog on top of it.
+      await waitFor(() => {
+        expect(capturedDayPlanSidebarProps.current.deleteDayQuestion?.dayId).toBe(harbour.id);
+      });
+      expect(capturedConfirmDialogsByTitle.current['Delete Harbour day?']).toBeUndefined();
+      const question = capturedDayPlanSidebarProps.current.deleteDayQuestion;
+      expect(question.title).toBe('Delete Harbour day?');
+      expect(question.lines.map((l: { text: string }) => l.text)).toContain('Day titles and descriptions: 1');
+
+      await act(async () => { question.onConfirm(); });
+      expect(deleteDay).toHaveBeenCalledWith(42, harbour.id);
+      await waitFor(() => {
+        expect(capturedDayPlanSidebarProps.current.deleteDayQuestion).toBeNull();
+      });
+    });
+  });
+
+  describe('FE-PAGE-PLANNER-054: Adding the next date from the reorder dialog', () => {
+    it('hands the sidebar the planner add controls, whose dated add goes through the store', async () => {
+      vi.useFakeTimers();
+      seedTripStore({ id: 42 });
+      const appendDatedDay = vi.fn().mockResolvedValue({ id: 903, date: '2025-06-06' });
+      useTripStore.setState({
+        trip: buildTrip({ id: 42, start_date: '2025-06-01', end_date: '2025-06-05' }),
+        days: [buildDay({ id: 901, trip_id: 42, day_number: 1, date: '2025-06-01' })],
+        appendDatedDay,
+      });
+
+      renderPlannerPage(42);
+      act(() => { vi.runAllTimers(); });
+      vi.useRealTimers();
+      await waitFor(() => {
+        expect(screen.getByTestId('day-plan-sidebar')).toBeInTheDocument();
+      });
+
+      const { dayAdd } = capturedDayPlanSidebarProps.current;
+      expect(dayAdd).toMatchObject({ nextDate: '2025-06-06', blocked: null, datedBlocked: null, busy: false });
+      await act(async () => { dayAdd.onAddDated(); });
+      expect(appendDatedDay).toHaveBeenCalledWith(42);
+      await waitFor(() => {
+        expect(capturedDayPlanSidebarProps.current.dayAdd.busy).toBe(false);
+      });
+    });
+  });
+
+  describe('FE-PAGE-PLANNER-052: Road trip mode opens a booking the way the day plan does (#2428)', () => {
+    // The rail is mounted only with the addon on and the mode on for this trip; the
+    // road-trip hooks then read their own endpoints, answered empty here.
+    const enterRoadtrip = () => {
+      server.use(
+        http.get('/api/addons', () => HttpResponse.json({ addons: [{ id: 'roadtrip', type: 'roadtrip' }] })),
+        http.get('/api/trips/42/roadtrip/vias', () => HttpResponse.json({ vias: [], tracks: [] })),
+        http.get('/api/trips/42/roadtrip/preferences', () => HttpResponse.json({ tripId: 42, preferences: {} })),
+      );
+      sessionStorage.setItem('trip-roadtrip-42', '1');
+    };
+
+    it('a flight opens the transport detail view the rail brings along, a table opens its editor', async () => {
+      enterRoadtrip();
+      vi.useFakeTimers();
+      seedTripStore({ id: 42 });
+      const flight = buildReservation({ id: 70, trip_id: 42, type: 'flight', title: 'LH 2020' });
+      const table = buildReservation({ id: 11, trip_id: 42, type: 'restaurant', title: 'Tisch Bullerei' });
+      seedStore(useTripStore, { reservations: [flight, table] });
+
+      renderPlannerPage(42);
+
+      act(() => { vi.runAllTimers(); });
+
+      vi.useRealTimers();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('roadtrip-sidebar')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('day-plan-sidebar')).not.toBeInTheDocument();
+
+      // Without this the rail cannot tell a chip that opens from one that does not, and
+      // every table and ticket becomes a button that no-ops.
+      expect(capturedRoadtripSidebarProps.current.canEditBookings).toBe(true);
+
+      // A terminal row, a ride pill and a map endpoint all set the booking to show, and
+      // under Days the day panel owns the dialog that shows it. Here it has to be the
+      // rail's own copy, or nothing shows.
+      act(() => { capturedRoadtripSidebarProps.current.onOpenBooking?.(70); });
+      await waitFor(() => {
+        expect(capturedTransportDetailModalProps.current.transportDetail).toMatchObject({ id: 70 });
+      });
+      expect(capturedReservationModalProps.current.isOpen).toBe(false);
+
+      act(() => { capturedRoadtripSidebarProps.current.onOpenBooking?.(11); });
+      await waitFor(() => {
+        expect(capturedReservationModalProps.current.isOpen).toBe(true);
+      });
+      expect(capturedReservationModalProps.current.reservation).toMatchObject({ id: 11 });
+
+      // A booking the trip does not hold opens nothing.
+      act(() => { capturedRoadtripSidebarProps.current.onOpenBooking?.(999); });
+      expect(capturedTransportDetailModalProps.current.transportDetail).toMatchObject({ id: 70 });
     });
   });
 });

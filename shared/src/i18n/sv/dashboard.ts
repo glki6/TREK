@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} arkiverad',
   'dashboard.newTrip': 'Ny resa',
   'dashboard.newTripSub': 'Planera en ny resa från grunden',
+  'dashboard.subscribeAllTrips': 'Prenumerera på alla resor',
+  'dashboard.subscribeAllTripsDesc':
+    'En kalenderfeed för alla dina aktiva resor, som hålls synkroniserad automatiskt. Arkiverade resor och resor som avslutades för mer än 90 dagar sedan är undantagna.',
   'dashboard.gridView': 'Rutnätsvy',
   'dashboard.listView': 'Listvy',
   'dashboard.currency': 'Valuta',
@@ -98,6 +101,33 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Använd Unsplash-foto av {photographer}',
   'dashboard.titleRequired': 'Titel är obligatoriskt',
   'dashboard.endDateError': 'Slutdatumet måste ligga efter startdatumet',
+  'dashboard.tripTooLong': 'En resa kan vara högst {days} dagar',
+  'dashboard.dateShiftTitle': 'Nytt startdatum',
+  'dashboard.dateShiftIntro': 'Du har ändrat när resan börjar. Hur ska dina planer följa de nya datumen?',
+  'dashboard.dateShiftKeepBookings': 'Behåll bokningar på sina datum',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Dagsplanerna flyttas med de nya datumen, medan bokningar och boenden ligger kvar på sina ursprungliga datum så länge dessa fortfarande ingår i resan.',
+  'dashboard.dateShiftAll': 'Flytta allt',
+  'dashboard.dateShiftAllDesc': 'Hela resplanen flyttas med de nya datumen, inklusive bokningar och boenden.',
+  'dashboard.dateShiftHint':
+    'Tips: om du bara vill flytta en del av resplanen öppnar du ”Sortera om dagar” i planeraren, lägger till dagen efter resans slut med knappen som visar dess datum och flyttar den dagen dit luckan ska vara.',
+  'dashboard.shrinkTitle': 'Ta bort dagar?',
+  'dashboard.shrinkIntro': 'När de nya datumen sparas tas de här dagarna bort:',
+  'dashboard.shrinkMoreDays': '+{count} till',
+  'dashboard.shrinkLastDays': 'Det är de sista dagarna som försvinner, inte de första',
+  'dashboard.shrinkLastDaysHint':
+    'Dagsplanerna följer med de nya datumen, så det är alltid de sista dagarna i planen som tas bort, även när starten har flyttats.',
+  'dashboard.shrinkBookingsHint':
+    'De ligger kvar under Bokningar. En bokning vars datum fortfarande ingår i resan hamnar på den dagen igen.',
+  'dashboard.shrinkBookingsShiftHint': 'De ligger kvar under Bokningar, utan dag.',
+  'dashboard.shrinkStayHint': 'Incheckning eller utcheckning sker en dag som tas bort, så hela boendet tas bort.',
+  'dashboard.shrinkStayBookedHint':
+    'Incheckning eller utcheckning sker en dag som tas bort, så hela boendet tas bort. Bokningen ”{booking}” och dess utgift ligger kvar under Bokningar.',
+  'dashboard.shrinkStayBookingHint':
+    'Incheckning eller utcheckning sker en dag som tas bort, så hela boendet tas bort. Bokningen ”{booking}” ligger kvar under Bokningar.',
+  'dashboard.shrinkConfirm': 'Ta bort dagar och spara',
+  'dashboard.shrinkUnknown':
+    'Resans dagar kunde inte kontrolleras. Om de nya datumen rymmer färre dagar tar sparandet bort de sista dagarna och allt som är planerat på dem.',
   'dashboard.greeting.morning': 'God morgon,',
   'dashboard.greeting.afternoon': 'God eftermiddag,',
   'dashboard.greeting.evening': 'God kväll,',
@@ -107,6 +137,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Platser',
   'dashboard.mobile.buddies': 'Kompisar',
   'dashboard.mobile.newTrip': 'Ny resa',
+  'dashboard.mobile.addCoverImage': 'Lägg till omslagsbild',
   'dashboard.mobile.currency': 'Valuta',
   'dashboard.mobile.timezone': 'Tidszone',
   'dashboard.mobile.upcomingTrips': 'Kommande resor',
@@ -121,6 +152,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'I morgon',
   'dashboard.mobile.inDays': 'Inom {count} dagar',
   'dashboard.mobile.inMonths': 'Inom {count} månader',
+  'dashboard.mobile.spotlightDayOf': 'Dag {day} av {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} dag',
+  'dashboard.mobile.spotlightDaysMany': '{count} dagar',
   'dashboard.mobile.completed': 'Slutförd',
   'dashboard.mobile.currencyConverter': 'Valutaomvandlare',
   'dashboard.filter.planned': 'Planerad',

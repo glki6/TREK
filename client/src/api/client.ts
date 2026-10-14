@@ -1,5 +1,9 @@
+import { isEffectivelyOffline } from '../sync/networkMode'
 import axios, { AxiosInstance } from 'axios'
 import type { z } from 'zod'
+import type { Day, Place, Trip } from '../types'
+import type { TransitProvider } from '@trek/shared'
+import { randomId } from '../utils/randomId'
 import {
   weatherResultSchema, type WeatherResult,
   inAppListResultSchema, type InAppListResult,
@@ -7,18 +11,21 @@ import {
   channelTestResultSchema,
   mapsSearchResultSchema, mapsAutocompleteResultSchema, mapsPlaceDetailsResultSchema,
   mapsPlacePhotoResultSchema, mapsReverseResultSchema, mapsResolveUrlResultSchema,
+  mapsPlaceEnrichmentResultSchema,
   type NotificationRespondRequest,
   type SettingUpsertRequest, type SettingsBulkRequest,
-  type JourneyCreateRequest, type JourneyAddTripRequest,
+  type JourneyCreateRequest, type JourneyAddTripRequest, type JourneyTracksResponse,
+  type JourneyStats, type BookRecord, type BookSaveRequest,
   type JourneyReorderEntriesRequest, type JourneyProviderPhotosRequest,
   type JourneyShareLinkRequest,
   type RegisterRequest, type LoginRequest, type ForgotPasswordRequest,
   type ResetPasswordRequest, type ChangePasswordRequest,
   type MfaVerifyLoginRequest, type MfaEnableRequest, type McpTokenCreateRequest,
+  type ApiTokenCreateRequest, type PublicApiScope,
   type TripAddMemberRequest, type TripTransferOwnershipRequest,
   type TripCreateGuestRequest, type TripRenameGuestRequest, type AssignmentReorderRequest,
   type PackingReorderRequest, type PackingCreateBagRequest, type TodoReorderRequest,
-  type TripCreateRequest, type TripUpdateRequest, type TripCopyRequest,
+  type TripCreateRequest, type TripUpdateRequest, type TripCopyRequest, type ActiveTripResponse,
   type DayCreateRequest, type DayUpdateRequest, type DayReorderRequest,
   type PlaceCreateRequest, type PlaceUpdateRequest,
   type ReservationCreateRequest, type ReservationUpdateRequest,
@@ -26,13 +33,15 @@ import {
   type BudgetCreateItemRequest, type BudgetUpdateItemRequest,
   type PackingCreateItemRequest, type PackingUpdateItemRequest, type PackingSetSharingRequest,
   type TodoCreateItemRequest, type TodoUpdateItemRequest,
-  type AssignmentCreateRequest, type AssignmentParticipantsRequest, type AssignmentTimeRequest,
+  type AssignmentCreateRequest, type AssignmentNotesRequest, type AssignmentParticipantsRequest, type AssignmentTimeRequest, type AssignmentTransportRequest,
   type PlaceBulkDeleteRequest,
   type PlaceBulkUpdateRequest,
   type DayNoteCreateRequest, type DayNoteUpdateRequest,
   type PackingImportRequest, type PackingBagMembersRequest, type PackingUpdateBagRequest,
-  type PackingCategoryAssigneesRequest,
+  type PackingCategoryAssigneesRequest, type PackingApplyTemplateRequest,
   type BudgetUpdateMembersRequest, type BudgetToggleMemberPaidRequest, type BudgetReorderCategoriesRequest,
+  type BudgetCreateSettlementRequest, type BudgetUpdateSettlementRequest, type BudgetSettlementQuery,
+  type BudgetFreezeRatesRequest, type BudgetFreezeRatesResponse,
   type TodoCategoryAssigneesRequest,
   type CollabNoteCreateRequest, type CollabNoteUpdateRequest, type CollabPollCreateRequest,
   type CollabPollVoteRequest, type CollabMessageCreateRequest, type CollabReactionRequest,
@@ -44,9 +53,27 @@ import {
   type BookingImportPreviewResponse,
   type BookingImportConfirmResponse,
   type BookingImportMode,
+  type StorageAdminState,
+  type StorageBackend,
+  type StorageConfigPut,
+  type StorageTestResponse,
+  type StorageUsage,
+  type PluginSettingsField,
+  type PluginInstanceConfigResponse,
+  type PluginInstanceConfigUpdated,
+  type PluginActionDescriptor,
+  type PluginActionResult,
+  type PluginInstallRequest,
+  RoadtripDayTrack,
+  RoadtripVia,
+  RoadtripViaBatchRequest,
+  RoadtripViaCreateRequest,
+  RoadtripViaReanchorRequest,
+  RoadtripViaUpdateRequest,
 } from '@trek/shared'
 import { getSocketId } from './websocket'
 import { probeNow } from '../sync/connectivity'
+import { downloadBlob } from '../utils/fileDownload'
 
 /**
  * Validate a response payload against its @trek/shared Zod schema — but only in
@@ -104,12 +131,15 @@ const RATE_LIMIT_MESSAGES: Record<string, string> = {
   ko:      '시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
   uk:      'Занадто багато спроб. Спробуйте пізніше.',
   sv:      'För många försök. Prova igen senare.',
+  ca:      'Massa intents. Torneu-ho a provar més tard.',
+  gr:      'Πάρα πολλές προσπάθειες. Δοκιμάστε ξανά αργότερα.',
+  vi:      'Quá nhiều lần thử. Vui lòng thử lại sau.',
 }
 
 function translateRateLimit(): string {
   const fallback = RATE_LIMIT_MESSAGES['en']!
   try {
-    const lang = localStorage.getItem('app_language') || 'en'
+    const lang = localStorage.getItem('app_language') || localStorage.getItem('app_language_server') || 'en'
     return RATE_LIMIT_MESSAGES[lang] ?? fallback
   } catch {
     return fallback
@@ -139,10 +169,7 @@ apiClient.interceptors.request.use(
       // The mutation queue sets its own pre-generated key; skip if already set.
       const method = (config.method ?? '').toLowerCase()
       if (MUTATING_METHODS.has(method) && !config.headers['X-Idempotency-Key']) {
-        const key = typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : Math.random().toString(36).slice(2)
-        config.headers['X-Idempotency-Key'] = key
+        config.headers['X-Idempotency-Key'] = randomId()
       }
       return config
     },
@@ -198,16 +225,24 @@ apiClient.interceptors.response.use(
         }
       }
       // Pangolin header-auth extended compatibility mode: returns 401 with an
-      // HTML body (a JS redirect page) instead of a 302. TREK's own 401s are
-      // always application/json, so checking for text/html is unambiguous.
+      // HTML body (a JS redirect page) instead of a 302.
+      //
+      // A text/html 401 is NOT unambiguous on its own: several of TREK's own
+      // routes answer with res.status(401).send('Authentication required'),
+      // which Express labels text/html. Tearing the service worker down for one
+      // of those would cost the user offline mode for a proxy wall that isn't
+      // there, so confirm a reachable proxy first, exactly like the no-response
+      // branch above (#2228).
       if (error.response?.status === 401) {
         const ct = (error.response.headers?.['content-type'] as string | undefined) ?? ''
         if (ct.includes('text/html')) {
           const { pathname } = window.location
           if (!isAuthPublicPath(pathname) && !sessionStorage.getItem('proxy_reauth_attempted')) {
-            sessionStorage.setItem('proxy_reauth_attempted', '1')
-            await unregisterSWAndReload()
-            return Promise.reject(error)
+            if (await probeNow() === 'proxy-wall') {
+              sessionStorage.setItem('proxy_reauth_attempted', '1')
+              await unregisterSWAndReload()
+              return Promise.reject(error)
+            }
           }
         }
       }
@@ -227,9 +262,11 @@ apiClient.interceptors.response.use(
       }
       if (error.response?.status === 429) {
         const translated = translateRateLimit()
-        const data = error.response.data as { error?: string } | undefined
-        if (data && typeof data === 'object') {
-          data.error = translated
+        const data = error.response.data
+        // Only a plain object body carries an `error` field worth overwriting;
+        // an array (a validation-error list) or a string is replaced outright.
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          (data as { error?: string }).error = translated
         } else {
           error.response.data = { error: translated }
         }
@@ -238,6 +275,40 @@ apiClient.interceptors.response.use(
       return Promise.reject(error)
     }
 )
+
+/**
+ * POST a FormData body — the ONLY way this client should upload a file.
+ *
+ * The shared axios instance carries `timeout: 8000`, and axios' timeout is a whole-
+ * request deadline rather than an idle one. A file upload that takes longer than 8s to
+ * push its body — a phone photo on a slow uplink, a 500 MB document — is aborted
+ * mid-stream, which the server reports as a multer "Request aborted" (#1495).
+ *
+ * Every upload therefore has to opt out with `timeout: 0`. That opt-out used to be
+ * hand-written per call site, so it was forgotten on 7 of 15 — including the two 500 MB
+ * endpoints (documents, backup restore). Centralizing makes the correct behavior the
+ * default instead of something you have to remember.
+ *
+ * The Content-Type is set for clarity only: axios unsets it for FormData in the browser
+ * so the platform can generate the multipart boundary.
+ */
+export interface UploadOptions {
+  onUploadProgress?: (e: import('axios').AxiosProgressEvent) => void
+  idempotencyKey?: string
+  signal?: AbortSignal
+}
+
+export function postMultipart<T = any>(url: string, formData: FormData, opts?: UploadOptions): Promise<T> {
+  return apiClient.post(url, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(opts?.idempotencyKey ? { 'X-Idempotency-Key': opts.idempotencyKey } : {}),
+    },
+    timeout: 0,
+    onUploadProgress: opts?.onUploadProgress,
+    signal: opts?.signal,
+  }).then(r => r.data as T)
+}
 
 export const authApi = {
   register: (data: RegisterRequest) => apiClient.post('/auth/register', data).then(r => r.data),
@@ -253,7 +324,7 @@ export const authApi = {
   updateSettings: (data: Record<string, unknown>) => apiClient.put('/auth/me/settings', data).then(r => r.data),
   getSettings: () => apiClient.get('/auth/me/settings').then(r => r.data),
   listUsers: () => apiClient.get('/auth/users').then(r => r.data),
-  uploadAvatar: (formData: FormData) => apiClient.post('/auth/avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
+  uploadAvatar: (formData: FormData) => postMultipart('/auth/avatar', formData),
   deleteAvatar: () => apiClient.delete('/auth/avatar').then(r => r.data),
   getAppConfig: () => apiClient.get('/auth/app-config').then(r => r.data),
   updateAppSettings: (data: Record<string, unknown>) => apiClient.put('/auth/app-settings', data).then(r => r.data),
@@ -268,6 +339,17 @@ export const authApi = {
     list: () => apiClient.get('/auth/mcp-tokens').then(r => r.data),
     create: (name: string) => apiClient.post('/auth/mcp-tokens', { name } satisfies McpTokenCreateRequest).then(r => r.data),
     delete: (id: number) => apiClient.delete(`/auth/mcp-tokens/${id}`).then(r => r.data),
+  },
+  // Keys for the public API. Same shape as the MCP tokens above and a separate
+  // credential: one drives the assistant tools, the other reads trips over HTTP,
+  // and a key of the wrong kind is refused like one that does not exist.
+  apiKeys: {
+    list: () => apiClient.get('/auth/api-tokens').then(r => r.data),
+    // `scopes` narrows what the key may read (#2279). Omitted means everything,
+    // which is what every key minted before scopes existed still does.
+    create: (name: string, scopes?: PublicApiScope[]) =>
+      apiClient.post('/auth/api-tokens', { name, ...(scopes?.length ? { scopes } : {}) } satisfies ApiTokenCreateRequest).then(r => r.data),
+    delete: (id: number) => apiClient.delete(`/auth/api-tokens/${id}`).then(r => r.data),
   },
   passkey: {
     registerOptions: (password: string) => apiClient.post('/auth/passkey/register/options', { password }).then(r => r.data),
@@ -332,9 +414,12 @@ export const tripsApi = {
   list: (params?: Record<string, unknown>) => apiClient.get('/trips', { params }).then(r => r.data),
   create: (data: TripCreateRequest) => apiClient.post('/trips', data).then(r => r.data),
   get: (id: number | string) => apiClient.get(`/trips/${id}`).then(r => r.data),
+  // The startup redirect's one lookup — deliberately not list(), which would pull
+  // every trip with its counts just to read one id.
+  active: (): Promise<ActiveTripResponse> => apiClient.get('/trips/active').then(r => r.data),
   update: (id: number | string, data: TripUpdateRequest) => apiClient.put(`/trips/${id}`, data).then(r => r.data),
   delete: (id: number | string) => apiClient.delete(`/trips/${id}`).then(r => r.data),
-  uploadCover: (id: number | string, formData: FormData) => apiClient.post(`/trips/${id}/cover`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
+  uploadCover: (id: number | string, formData: FormData) => postMultipart(`/trips/${id}/cover`, formData),
   searchCoverImages: (query: string) => apiClient.get('/trips/cover-images/search', { params: { query } }).then(r => r.data),
   archive: (id: number | string) => apiClient.put(`/trips/${id}`, { is_archived: true }).then(r => r.data),
   unarchive: (id: number | string) => apiClient.put(`/trips/${id}`, { is_archived: false }).then(r => r.data),
@@ -351,36 +436,63 @@ export const tripsApi = {
 
 export const daysApi = {
   list: (tripId: number | string) => apiClient.get(`/trips/${tripId}/days`).then(r => r.data),
-  create: (tripId: number | string, data: DayCreateRequest) => apiClient.post(`/trips/${tripId}/days`, data).then(r => r.data),
+  // `trip` comes along when the new day changed the trip itself: a dated day
+  // (`dated: true`) moved its end date, an insert at a position grew it by a day.
+  create: (tripId: number | string, data: DayCreateRequest): Promise<{ day: Day; trip?: Trip }> =>
+    apiClient.post(`/trips/${tripId}/days`, data).then(r => r.data),
   update: (tripId: number | string, dayId: number | string, data: DayUpdateRequest) => apiClient.put(`/trips/${tripId}/days/${dayId}`, data).then(r => r.data),
-  delete: (tripId: number | string, dayId: number | string) => apiClient.delete(`/trips/${tripId}/days/${dayId}`).then(r => r.data),
+  // Whole-day default route mode (#1281); per-segment leg modes override it.
+  updateTransport: (tripId: number | string, dayId: number | string, mode: string | null) => apiClient.put(`/trips/${tripId}/days/${dayId}/transport`, { transport_mode: mode }).then(r => r.data),
+  // Answers with the trip in list shape: its day count changed, and its end
+  // date when the day took the last date along.
+  delete: (tripId: number | string, dayId: number | string): Promise<{ success: boolean; trip?: Trip }> =>
+    apiClient.delete(`/trips/${tripId}/days/${dayId}`).then(r => r.data),
   reorder: (tripId: number | string, orderedIds: number[]) => apiClient.put(`/trips/${tripId}/days/reorder`, { orderedIds } satisfies DayReorderRequest).then(r => r.data),
 }
 
 export const placesApi = {
   list: (tripId: number | string, params?: Record<string, unknown>) => apiClient.get(`/trips/${tripId}/places`, { params }).then(r => r.data),
-  create: (tripId: number | string, data: PlaceCreateRequest) => apiClient.post(`/trips/${tripId}/places`, data).then(r => r.data),
+  // Typed: an untyped `r.data` is what let `{ place }` be read as a bare place,
+  // so every hotel booking minted an unlinked duplicate (#2243).
+  create: (tripId: number | string, data: PlaceCreateRequest): Promise<{ place: Place }> =>
+    apiClient.post(`/trips/${tripId}/places`, data).then(r => r.data),
   get: (tripId: number | string, id: number | string) => apiClient.get(`/trips/${tripId}/places/${id}`).then(r => r.data),
   update: (tripId: number | string, id: number | string, data: PlaceUpdateRequest) => apiClient.put(`/trips/${tripId}/places/${id}`, data).then(r => r.data),
   delete: (tripId: number | string, id: number | string) => apiClient.delete(`/trips/${tripId}/places/${id}`).then(r => r.data),
   searchImage: (tripId: number | string, id: number | string) => apiClient.get(`/trips/${tripId}/places/${id}/image`).then(r => r.data),
+  uploadImage: (tripId: number | string, id: number | string, file: File) => {
+    const fd = new FormData()
+    fd.append('image', file)
+    return postMultipart<{ place: Place }>(`/trips/${tripId}/places/${id}/image`, fd)
+  },
+  rate: (tripId: number | string, id: number | string, rating: number | null): Promise<{ place: Place }> =>
+    rating === null
+      ? apiClient.delete(`/trips/${tripId}/places/${id}/rating`).then(r => r.data)
+      : apiClient.put(`/trips/${tripId}/places/${id}/rating`, { rating }).then(r => r.data),
   importGpx: (tripId: number | string, file: File, opts?: { waypoints?: boolean; routes?: boolean; tracks?: boolean }) => {
     const fd = new FormData()
     fd.append('file', file)
     if (opts?.waypoints !== undefined) fd.append('importWaypoints', String(opts.waypoints))
     if (opts?.routes !== undefined) fd.append('importRoutes', String(opts.routes))
     if (opts?.tracks !== undefined) fd.append('importTracks', String(opts.tracks))
-    return apiClient.post(`/trips/${tripId}/places/import/gpx`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+    return postMultipart(`/trips/${tripId}/places/import/gpx`, fd)
   },
   importMapFile: (tripId: number | string, file: File, opts?: { points?: boolean; paths?: boolean }) => {
     const fd = new FormData()
     fd.append('file', file)
     if (opts?.points !== undefined) fd.append('importPoints', String(opts.points))
     if (opts?.paths !== undefined) fd.append('importPaths', String(opts.paths))
-    return apiClient.post(`/trips/${tripId}/places/import/map`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+    return postMultipart(`/trips/${tripId}/places/import/map`, fd)
   },
+  // A longer timeout than the shared 8 s, like the other routes here that wait
+  // on somebody else's service. A directions link whose stops are only named
+  // has to be geocoded one at a time behind a 1.1 s throttle, so a route with
+  // eight stops needs about ten seconds. Giving up at eight left the server
+  // finishing the import and writing the places while the browser reported a
+  // failure, and a retry then spent the whole geocoding budget again only to
+  // have the dedupe skip every stop.
   importGoogleList: (tripId: number | string, url: string, enrich?: boolean) =>
-      apiClient.post(`/trips/${tripId}/places/import/google-list`, { url, enrich } satisfies PlaceImportListRequest).then(r => r.data),
+      apiClient.post(`/trips/${tripId}/places/import/google-list`, { url, enrich } satisfies PlaceImportListRequest, { timeout: 60000 }).then(r => r.data),
   importNaverList: (tripId: number | string, url: string, enrich?: boolean) =>
       apiClient.post(`/trips/${tripId}/places/import/naver-list`, { url, enrich } satisfies PlaceImportListRequest).then(r => r.data),
   bulkDelete: (tripId: number | string, ids: number[]) =>
@@ -399,6 +511,12 @@ export const assignmentsApi = {
   getParticipants: (tripId: number | string, id: number) => apiClient.get(`/trips/${tripId}/assignments/${id}/participants`).then(r => r.data),
   setParticipants: (tripId: number | string, id: number, userIds: number[]) => apiClient.put(`/trips/${tripId}/assignments/${id}/participants`, { user_ids: userIds } satisfies AssignmentParticipantsRequest).then(r => r.data),
   updateTime: (tripId: number | string, id: number, times: AssignmentTimeRequest) => apiClient.put(`/trips/${tripId}/assignments/${id}/time`, times).then(r => r.data),
+  // Day-specific note on an assignment (#2163) — null clears it.
+  updateNotes: (tripId: number | string, id: number, data: AssignmentNotesRequest) => apiClient.put(`/trips/${tripId}/assignments/${id}/notes`, data).then(r => r.data),
+  // Per-segment travel mode (#1281): mode of the leg leaving this stop (null = inherit day default).
+  // direction defaults to 'outgoing' server-side, so only send it for the incoming (boundary-leg) case
+  // and keep the outgoing payload byte-for-byte identical to the pre-#1281 shape.
+  updateTransport: (tripId: number | string, id: number, mode: string | null, direction: 'outgoing' | 'incoming' = 'outgoing') => apiClient.put(`/trips/${tripId}/assignments/${id}/transport`, (direction === 'incoming' ? { transport_mode: mode, direction } : { transport_mode: mode }) satisfies Partial<AssignmentTransportRequest>).then(r => r.data),
 }
 
 export const packingApi = {
@@ -415,7 +533,7 @@ export const packingApi = {
   getCategoryAssignees: (tripId: number | string) => apiClient.get(`/trips/${tripId}/packing/category-assignees`).then(r => r.data),
   setCategoryAssignees: (tripId: number | string, categoryName: string, userIds: number[]) => apiClient.put(`/trips/${tripId}/packing/category-assignees/${encodeURIComponent(categoryName)}`, { user_ids: userIds } satisfies PackingCategoryAssigneesRequest).then(r => r.data),
   listTemplates: (tripId: number | string) => apiClient.get(`/trips/${tripId}/packing/templates`).then(r => r.data),
-  applyTemplate: (tripId: number | string, templateId: number) => apiClient.post(`/trips/${tripId}/packing/apply-template/${templateId}`).then(r => r.data),
+  applyTemplate: (tripId: number | string, templateId: number, visibility: 'common' | 'personal' = 'common') => apiClient.post(`/trips/${tripId}/packing/apply-template/${templateId}`, { visibility } satisfies PackingApplyTemplateRequest).then(r => r.data),
   saveAsTemplate: (tripId: number | string, name: string) => apiClient.post(`/trips/${tripId}/packing/save-as-template`, { name }).then(r => r.data),
   setBagMembers: (tripId: number | string, bagId: number, userIds: number[]) => apiClient.put(`/trips/${tripId}/packing/bags/${bagId}/members`, { user_ids: userIds } satisfies PackingBagMembersRequest).then(r => r.data),
   listBags: (tripId: number | string) => apiClient.get(`/trips/${tripId}/packing/bags`).then(r => r.data),
@@ -463,14 +581,45 @@ export const adminApi = {
   plugins: () => apiClient.get('/admin/plugins').then(r => r.data),
   pluginBrowse: (refresh?: boolean) => apiClient.get('/admin/plugins/registry', { params: refresh ? { refresh: 1 } : undefined }).then(r => r.data),
   pluginDetail: (id: string) => apiClient.get(`/admin/plugins/registry/${encodeURIComponent(id)}`).then(r => r.data),
-  pluginInstall: (id: string, opts?: { version?: string; constraint?: string; withDependencies?: boolean }) =>
-    apiClient.post('/admin/plugins/install', { id, ...opts }).then(r => r.data),
+  pluginInstall: (id: string, opts?: Pick<PluginInstallRequest, 'version' | 'constraint' | 'withDependencies'>) =>
+    apiClient.post('/admin/plugins/install', { id, ...opts } satisfies PluginInstallRequest).then(r => r.data),
   pluginActivate: (id: string, consent?: boolean) => apiClient.post(`/admin/plugins/${id}/activate`, consent ? { consent: true } : {}).then(r => r.data),
   pluginDeactivate: (id: string) => apiClient.post(`/admin/plugins/${id}/deactivate`).then(r => r.data),
-  pluginUpdate: (id: string) => apiClient.post(`/admin/plugins/${id}/update`).then(r => r.data),
+  // `version` pins the exact version to install (the rollback path); omitted, the server
+  // resolves the newest TREK-compatible version itself.
+  pluginUpdate: (id: string, version?: string) =>
+    apiClient.post(`/admin/plugins/${id}/update`, version ? { version } : {}).then(r => r.data),
+  // Release a per-plugin update hold (set by a deliberate non-latest install).
+  pluginResumeUpdates: (id: string) => apiClient.post(`/admin/plugins/${id}/resume-updates`).then(r => r.data),
+  // Re-trust a ROTATED author signing key and update, in ONE call. `publicKey` is the
+  // full key the admin was shown (not a fingerprint): the server compares it exactly, so
+  // it can refuse if the registry entry was re-keyed again since the dialog rendered.
+  pluginRetrust: (id: string, version: string, publicKey: string) =>
+    apiClient.post(`/admin/plugins/${id}/retrust`, { version, publicKey }).then(r => r.data),
   pluginUninstall: (id: string, deleteData: boolean) => apiClient.post(`/admin/plugins/${id}/uninstall`, { deleteData }).then(r => r.data),
   pluginRescan: () => apiClient.post('/admin/plugins/rescan').then(r => r.data),
-  pluginUpload: (file: File) => { const fd = new FormData(); fd.append('file', file); return apiClient.post('/admin/plugins/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data) },
+  pluginUpload: (file: File) => { const fd = new FormData(); fd.append('file', file); return postMultipart('/admin/plugins/upload', fd) },
+  // Dev-link (dev-only): register a plugin from a local built dir + hot-reload it.
+  pluginLink: (path: string) => apiClient.post('/admin/plugins/link', { path }).then(r => r.data),
+  pluginReload: (id: string) => apiClient.post(`/admin/plugins/${id}/reload`).then(r => r.data),
+  // The admin-owned `scope:'instance'` settings: the declared fields plus the stored
+  // values (secrets masked). Saving may RESTART a running plugin — the child gets its
+  // config once at init — and `restarted` reports whether that happened.
+  pluginConfig: (id: string): Promise<PluginInstanceConfigResponse> =>
+    apiClient.get(`/admin/plugins/${id}/config`).then(r => r.data),
+  pluginSaveConfig: (id: string, config: Record<string, unknown>): Promise<PluginInstanceConfigUpdated> =>
+    apiClient.put(`/admin/plugins/${id}/config`, config).then(r => r.data),
+  // Run a `scope:'instance'` action the plugin declared ("Purge cache"). Runs AS the
+  // clicking admin. 404 when the plugin is inactive (no child process to run it).
+  runPluginAction: (id: string, key: string): Promise<PluginActionResult> =>
+    apiClient.post(`/admin/plugins/${id}/actions/${encodeURIComponent(key)}`).then(r => r.data),
+  // Operator-supplied egress hosts: a plugin talking to a SELF-HOSTED service can't name
+  // the operator's hostname in its manifest, so the admin adds it here. Saving re-spawns
+  // the plugin with the widened allow-list.
+  pluginEgressHosts: (id: string): Promise<{ supported: boolean; hosts: string[] }> =>
+    apiClient.get(`/admin/plugins/${id}/egress-hosts`).then(r => r.data),
+  pluginSetEgressHosts: (id: string, hosts: string[]): Promise<{ hosts: string[] }> =>
+    apiClient.put(`/admin/plugins/${id}/egress-hosts`, { hosts }).then(r => r.data),
   pluginErrors: (id: string) => apiClient.get(`/admin/plugins/${id}/errors`).then(r => r.data),
   pluginAudit: (id: string) => apiClient.get(`/admin/plugins/${id}/audit`).then(r => r.data),
   // Local LLM (Ollama) management for the AI-parsing addon.
@@ -488,24 +637,35 @@ export const adminApi = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ baseUrl, model }),
     })
-    if (!res.ok || !res.body) {
+    if (!res.ok) {
       let msg = `Pull failed (${res.status})`
       try { msg = (await res.json())?.error ?? msg } catch { /* non-json */ }
       throw new Error(msg)
     }
+    // An accepted request without a stream can't be followed to completion.
+    if (!res.body) throw new Error('Pull returned no progress stream')
     const reader = res.body.getReader()
     const dec = new TextDecoder()
     let buf = ''
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buf += dec.decode(value, { stream: true })
-      const lines = buf.split('\n')
-      buf = lines.pop() ?? ''
-      for (const line of lines) {
-        if (!line.trim()) continue
-        try { onProgress(JSON.parse(line)) } catch { /* skip partial */ }
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        // split() always yields at least one element; the last one is the
+        // trailing (possibly partial) line carried into the next chunk.
+        const lines = buf.split('\n')
+        buf = lines.pop()!
+        for (const line of lines) {
+          if (!line.trim()) continue
+          // Only the parse is swallowed — a throw from onProgress aborts the pull.
+          let frame: { status?: string; total?: number; completed?: number; error?: string }
+          try { frame = JSON.parse(line) } catch { continue }
+          onProgress(frame)
+        }
       }
+    } finally {
+      reader.cancel().catch(() => {})
     }
   },
   checkVersion: () => apiClient.get('/admin/version-check').then(r => r.data),
@@ -513,10 +673,18 @@ export const adminApi = {
   updateBagTracking: (enabled: boolean) => apiClient.put('/admin/bag-tracking', { enabled }).then(r => r.data),
   getPlacesPhotos: () => apiClient.get('/admin/places-photos').then(r => r.data),
   updatePlacesPhotos: (enabled: boolean) => apiClient.put('/admin/places-photos', { enabled }).then(r => r.data),
+  getPlaceShadow: () => apiClient.get('/admin/place-shadow').then(r => r.data),
+  updatePlaceShadow: (enabled: boolean) => apiClient.put('/admin/place-shadow', { enabled }).then(r => r.data),
   getPlacesAutocomplete: () => apiClient.get('/admin/places-autocomplete').then(r => r.data),
   updatePlacesAutocomplete: (enabled: boolean) => apiClient.put('/admin/places-autocomplete', { enabled }).then(r => r.data),
   getPlacesDetails: () => apiClient.get('/admin/places-details').then(r => r.data),
   updatePlacesDetails: (enabled: boolean) => apiClient.put('/admin/places-details', { enabled }).then(r => r.data),
+  getPlacesGoogleOnly: () => apiClient.get('/admin/places-google-only').then(r => r.data),
+  updatePlacesGoogleOnly: (enabled: boolean) => apiClient.put('/admin/places-google-only', { enabled }).then(r => r.data),
+  getPlacesEnrich: () => apiClient.get('/admin/places-enrich').then(r => r.data),
+  updatePlacesEnrich: (enabled: boolean) => apiClient.put('/admin/places-enrich', { enabled }).then(r => r.data),
+  getTransitProvider: () => apiClient.get('/admin/transit-provider').then(r => r.data),
+  updateTransitProvider: (provider: TransitProvider) => apiClient.put('/admin/transit-provider', { provider }).then(r => r.data),
   getCollabFeatures: () => apiClient.get('/admin/collab-features').then(r => r.data),
   updateCollabFeatures: (features: Record<string, boolean>) => apiClient.put('/admin/collab-features', features).then(r => r.data),
   packingTemplates: () => apiClient.get('/admin/packing-templates').then(r => r.data),
@@ -549,11 +717,141 @@ export const adminApi = {
   updateNotificationPreferences: (prefs: Record<string, Record<string, boolean>>) => apiClient.put('/admin/notification-preferences', prefs).then(r => r.data),
   getDefaultUserSettings: () => apiClient.get('/admin/default-user-settings').then(r => r.data),
   updateDefaultUserSettings: (settings: Record<string, unknown>) => apiClient.put('/admin/default-user-settings', settings).then(r => r.data),
+  getStorage: (): Promise<StorageAdminState> => apiClient.get('/admin/storage').then(r => r.data),
+  updateStorage: (config: StorageConfigPut): Promise<StorageAdminState> =>
+    apiClient.put('/admin/storage', config).then(r => r.data),
+  // A probe is bounded by the target driver's own timeout (default 30s, ×2 with
+  // one retry) and a mirror probes its targets sequentially — the instance-wide
+  // 8s axios timeout would abort a legitimate slow probe, so this call carries
+  // its own generous ceiling.
+  testStorageBackend: (backend: StorageBackend): Promise<StorageTestResponse> =>
+    apiClient.post('/admin/storage/test', { backend }, { timeout: 120_000 }).then(r => r.data),
+  startStorageBackfill: (backend: string): Promise<{ started: true }> =>
+    apiClient.post(`/admin/storage/backends/${encodeURIComponent(backend)}/backfill`).then(r => r.data),
+  cancelStorageBackfill: (backend: string): Promise<{ cancelled: true }> =>
+    apiClient.delete(`/admin/storage/backends/${encodeURIComponent(backend)}/backfill`).then(r => r.data),
+  startStorageMigration: (category: string, to: string): Promise<{ started: true }> =>
+    apiClient.post('/admin/storage/migrations', { category, to }).then(r => r.data),
+  cancelStorageMigration: (category: string): Promise<{ cancelled: true }> =>
+    apiClient.delete(`/admin/storage/migrations/${encodeURIComponent(category)}`).then(r => r.data),
+  // A full scan of a large install can exceed the 8s instance timeout.
+  refreshStorageStats: (): Promise<StorageUsage> =>
+    apiClient.post('/admin/storage/stats/refresh', undefined, { timeout: 120_000 }).then(r => r.data),
 }
 
 export const addonsApi = {
   enabled: () => apiClient.get('/addons').then(r => r.data),
 }
+
+/** A host-rendered column/action a plugin contributes into a native planner view
+ * (reservations/places/day) via the tableContributor hook. Every field is bounded +
+ * normalized server-side; a column url is guaranteed http/https/mailto. */
+export type ViewContribution =
+  | { kind: 'column'; pluginId: string; entityId: number; id: string; label: string; value?: string; url?: string; icon?: string; tone: 'default' | 'success' | 'warn' | 'danger' }
+  | { kind: 'action'; pluginId: string; entityId: number; id: string; label: string; icon?: string; target: { kind: 'frame'; sub: string } | { kind: 'route'; method: 'GET' | 'POST'; sub: string } }
+
+/** A badge a plugin adds to a dashboard trip card via the tripCardProvider hook.
+ * Bounded + normalized server-side; the url is guaranteed http/https/mailto. */
+export interface TripCardBadge {
+  pluginId: string; tripId: number; id: string; label: string;
+  value?: string; icon?: string; tone: 'default' | 'success' | 'warn' | 'danger'; url?: string;
+}
+
+export interface PluginMapMarker {
+  pluginId: string; id: string; lat: number; lng: number;
+  label?: string; popupText?: string; url?: string; icon?: string;
+  tone: 'default' | 'success' | 'warn' | 'danger'
+}
+
+/** One shape of a plugin map layer (mapLayerProvider hook). Server-normalized:
+ * coordinates range-checked, vertex budget capped, styling clamped to the tone
+ * palette + bounded numerics — never free-form CSS or markup. */
+export interface PluginMapLayerFeature {
+  type: 'polyline' | 'polygon' | 'circle';
+  points?: Array<[number, number]>;
+  center?: [number, number];
+  radiusM?: number;
+  tone: 'default' | 'success' | 'warn' | 'danger';
+  width: number;
+  dash: 'solid' | 'dash' | 'dot';
+  opacity: number;
+  fill: boolean;
+  label?: string;
+}
+
+/** A vector overlay a plugin draws on the trip map (routes, corridors, zones). */
+export interface PluginMapLayer {
+  pluginId: string; id: string; name?: string;
+  features: PluginMapLayerFeature[];
+}
+
+/** A time contribution a dayScheduleProvider plugin attaches to the day plan
+ * ("35 min charging at this stop"). Server-normalized: dayIds checked against
+ * the trip, minutes clamped to a day, labels sanitized + capped. */
+export interface PluginDayScheduleItem {
+  pluginId: string; id: string; dayId: number;
+  assignmentId?: number; reservationId?: number;
+  position?: 'start' | 'end';
+  minutes?: number; label: string;
+  tone: 'default' | 'success' | 'warn' | 'danger';
+}
+
+/** The colours a dayTintProvider plugin puts into one day card, so leg membership is
+ * visible while scrolling the itinerary. The card has three separately tintable
+ * regions; an absent one is not tinted and renders exactly as it does with no plugin.
+ * Server-normalized: dayIds checked against the trip, one contribution per day (first
+ * granted provider wins), the `tone` / `color` shorthands already resolved into the
+ * regions, labels sanitized + capped.
+ *
+ * A region carries EITHER a tone from the fixed palette or the plugin's own colour,
+ * never both — the server picked the winner. `*Color` is guaranteed `#rrggbb` (nothing
+ * else survives normalization, because it lands inside a CSS value); the client still
+ * owns how strongly it renders — alpha per theme and per region, lightness clamped
+ * into a readable band. */
+export type PluginDayTintTone = 'default' | 'success' | 'warn' | 'danger'
+export interface PluginDayTint {
+  pluginId: string; dayId: number;
+  badgeTone?: PluginDayTintTone;
+  badgeColor?: string;
+  headerTone?: PluginDayTintTone;
+  headerColor?: string;
+  activityTone?: PluginDayTintTone;
+  activityColor?: string;
+  label?: string;
+}
+
+/** A route computed by a routeProvider plugin (server-normalized: coordinates
+ * range-checked, legs forced to waypoints-1, vias capped). null = provider failed
+ * or refused — the caller falls back to straight lines like on an OSRM outage. */
+export interface PluginRouteResult {
+  pluginId: string; profile: string;
+  coordinates: Array<[number, number]>;
+  distance: number; duration: number;
+  legs: Array<{ distance: number; duration: number; note?: string }>;
+  viaPoints: Array<{ lat: number; lng: number; label?: string; tone: 'default' | 'success' | 'warn' | 'danger'; dwellSeconds?: number }>;
+}
+
+/** A text-only section a pdfSectionProvider plugin appends to the trip PDF export.
+ * Server-normalized: counts + lengths are capped, cells are plain strings. */
+export interface PluginPdfSection {
+  pluginId: string; title: string; paragraphs: string[];
+  table?: { headers: string[]; rows: string[][] }
+}
+
+/** A country tint layer an atlasLayerProvider plugin draws over the Atlas map for
+ * the signed-in user. Codes are ISO alpha-2 (server-validated), tone enum-whitelisted. */
+export interface PluginAtlasLayer {
+  pluginId: string; id: string; name?: string;
+  countries: Array<{ code: string; tone: 'default' | 'success' | 'warn' | 'danger'; label?: string }>
+}
+
+/** The settings-field descriptor is the SHARED contract (both scopes emit the same
+ * shape) — aliased so existing per-user settings consumers keep their import path. */
+export type PluginUserSettingField = PluginSettingsField
+
+/** A button a plugin contributes to a settings form ("Test connection", "Purge cache").
+ * `scope` says which form: the user tab or the admin instance-settings dialog. */
+export type PluginAction = PluginActionDescriptor
 
 export const pluginsApi = {
   // Active plugins the client renders (page nav entries, dashboard widgets).
@@ -565,6 +863,75 @@ export const pluginsApi = {
   // Validation/warning contributions from warningProvider plugins (#1429). Fail-safe.
   tripWarnings: (tripId: number) =>
     apiClient.get(`/trip-warnings/${tripId}`).then(r => r.data as { warnings: Array<{ pluginId: string; level: 'info' | 'warning' | 'error'; message: string; dayId?: number; placeId?: number }> }),
+  // Host-rendered columns/actions plugins add into a native planner view via the
+  // tableContributor hook. Fetched once per view, keyed by entityId; fail-safe.
+  viewContributions: (view: 'reservations' | 'transports' | 'places' | 'day' | 'costs' | 'packing' | 'files' | 'todos', tripId: number | string) =>
+    apiClient.get(`/view-contributions/${view}/${tripId}`).then(r => r.data as { contributions: ViewContribution[] }),
+  // Bounded markers plugins overlay on the trip map via the mapMarkerProvider hook
+  // (#587). Host-normalized + range-checked; fail-safe (skips slow/failing providers).
+  mapMarkers: (tripId: number | string) =>
+    apiClient.get(`/map-markers/${tripId}`).then(r => r.data as { markers: PluginMapMarker[] }),
+  // Vector overlays (polylines/polygons/circles) plugins draw on the trip map via
+  // the mapLayerProvider hook. Host-normalized + vertex-budgeted; fail-safe.
+  mapLayers: (tripId: number | string) =>
+    apiClient.get(`/map-layers/${tripId}`).then(r => r.data as { layers: PluginMapLayer[] }),
+  // Route the given waypoints through ONE routeProvider plugin profile (targeted,
+  // not a fan-out — the user picked this profile in the route toggle). Slow by
+  // design (external solvers): the server allows the plugin 20 s.
+  pluginRoute: (pluginId: string, profileId: string, body: { tripId: number | string; dayId?: number | null; waypoints: Array<{ lat: number; lng: number; name?: string; placeId?: number }> }, opts: { signal?: AbortSignal } = {}) =>
+    apiClient.post(`/plugin-routes/${pluginId}/${profileId}`, body, { timeout: 25000, signal: opts.signal }).then(r => r.data as { route: PluginRouteResult | null }),
+  // Time contributions plugins attach to the day plan via the dayScheduleProvider
+  // hook (charging stops, security buffers). Host-normalized; fail-safe.
+  daySchedule: (tripId: number | string) =>
+    apiClient.get(`/day-schedule/${tripId}`).then(r => r.data as { items: PluginDayScheduleItem[] }),
+  // Per-day colours plugins put behind the day cards via the dayTintProvider hook
+  // (which leg of the trip a day belongs to). Host-normalized; fail-safe.
+  dayTints: (tripId: number | string) =>
+    apiClient.get(`/day-tints/${tripId}`).then(r => r.data as { tints: PluginDayTint[] }),
+  // Text-only sections plugins append to the trip PDF export via the
+  // pdfSectionProvider hook. Host-normalized (counts + lengths capped); fail-safe.
+  pdfSections: (tripId: number | string) =>
+    apiClient.get(`/pdf-sections/${tripId}`).then(r => r.data as { sections: PluginPdfSection[] }),
+  // Country tint layers plugins draw over the Atlas map for the signed-in user via
+  // the atlasLayerProvider hook. No tripId — user-scoped server-side; fail-safe.
+  atlasLayers: () =>
+    apiClient.get('/atlas-layers').then(r => r.data as { layers: PluginAtlasLayer[] }),
+  // Extra rows plugins add under a journal entry via the journalEntryProvider hook.
+  // Same shape + hardening as placeDetails (label/value/allowlisted url); fail-safe.
+  journalEntryRows: (entryId: number) =>
+    apiClient.get(`/journal-entry-rows/${entryId}`).then(r => r.data as { providers: Array<{ pluginId: string; items: Array<{ label: string; value?: string; url?: string }> }> }),
+  // Badges plugins add to the dashboard trip cards via the tripCardProvider hook.
+  // One call for all visible cards; host access-checks each tripId + bounds every
+  // field (label/value/tone/allowlisted url); fail-safe.
+  tripCardContributions: (tripIds: Array<number | string>) =>
+    apiClient.get(`/trip-card-contributions?tripIds=${tripIds.join(',')}`).then(r => r.data as { contributions: TripCardBadge[] }),
+  // The signed-in user's OWN plugin activity log — every host-mediated action a
+  // plugin took bound to them, across all plugins, newest first. The user-facing
+  // half of the capability audit; what makes the broad read grants accountable.
+  myActivity: (limit = 200) =>
+    apiClient.get(`/plugin-activity?limit=${limit}`).then(r => r.data as { activity: Array<{ ts: string; plugin_id: string; plugin_name: string | null; method: string; resource: string | null; code: string }> }),
+  // A user's OWN scope:'user' settings for a plugin (API key, prefs). Secrets are
+  // masked; the write only accepts declared user-scope keys.
+  userSettings: (id: string) =>
+    apiClient.get(`/plugin-settings/${id}`).then(r => r.data as {
+      fields: PluginUserSettingField[]
+      config: Record<string, unknown>
+      actions: PluginAction[]
+    }),
+  // Run a settings-page action the plugin declared ("Test connection"). It runs AS the
+  // caller, so it reads the caller's own settings.
+  runAction: (id: string, key: string) =>
+    apiClient.post(`/plugin-settings/${id}/actions/${encodeURIComponent(key)}`)
+      .then(r => r.data as PluginActionResult),
+  saveUserSettings: (id: string, config: Record<string, unknown>) =>
+    apiClient.post(`/plugin-settings/${id}`, { config }).then(r => r.data as { config: Record<string, unknown> }),
+  // Host-brokered outbound OAuth (the host owns the tokens; the plugin only triggers).
+  oauthStatus: (id: string) =>
+    apiClient.get(`/plugin-oauth/${id}/status`).then(r => r.data as { configured: boolean; connected: boolean }),
+  oauthConnect: (id: string) =>
+    apiClient.post(`/plugin-oauth/${id}/connect`).then(r => r.data as { authorizeUrl: string }),
+  oauthDisconnect: (id: string) =>
+    apiClient.post(`/plugin-oauth/${id}/disconnect`).then(r => r.data as { connected: boolean }),
   // Call one of a plugin's own declared routes through the host proxy. `sub` is
   // supplied by untrusted plugin code (the trekBridge forwards it verbatim), so it
   // MUST stay inside the plugin's own /plugins/:id/ namespace. We resolve it with
@@ -598,8 +965,8 @@ export const airtrailApi = {
   sync: (): Promise<{ changed: number }> => apiClient.post('/integrations/airtrail/sync').then(r => r.data),
   // flights + import are added with the trip-planner import (P2)
   flights: () => apiClient.get('/integrations/airtrail/flights').then(r => r.data),
-  import: (tripId: number, flightIds: string[]) =>
-    apiClient.post(`/trips/${tripId}/reservations/import/airtrail`, { flightIds }).then(r => r.data),
+  import: (tripId: number, flightIds: string[], connections?: string[][]) =>
+    apiClient.post(`/trips/${tripId}/reservations/import/airtrail`, connections?.length ? { flightIds, connections } : { flightIds }).then(r => r.data),
 }
 
 export const journeyApi = {
@@ -618,33 +985,37 @@ export const journeyApi = {
 
   // Entries
   listEntries: (id: number) => apiClient.get(`/journeys/${id}/entries`).then(r => r.data),
+  // GPX tracks of the trips this journey's entries came from (#1260).
+  listTracks: (id: number): Promise<JourneyTracksResponse> => apiClient.get(`/journeys/${id}/tracks`).then(r => r.data),
+  // What the journey adds up to — distance, days, countries, the route (#1973).
+  // Read by TREK Studio, which freezes the answer into the book document.
+  stats: (id: number): Promise<JourneyStats> => apiClient.get(`/journeys/${id}/stats`).then(r => r.data),
+
+  // The Studio book (#1973). `book` is null for a journey that has none yet —
+  // Studio lays one out and the first save creates it.
+  getBook: (id: number): Promise<{ book: BookRecord | null }> =>
+    apiClient.get(`/journeys/${id}/book`).then(r => r.data),
+  // A 409 carries the current record in its body, so a conflict can be shown
+  // rather than only announced. See useBookStore.
+  saveBook: (id: number, body: BookSaveRequest): Promise<BookRecord> =>
+    apiClient.put(`/journeys/${id}/book`, body).then(r => r.data),
+  deleteBook: (id: number): Promise<void> =>
+    apiClient.delete(`/journeys/${id}/book`).then(r => r.data),
   createEntry: (id: number, data: Record<string, unknown>) => apiClient.post(`/journeys/${id}/entries`, data).then(r => r.data),
   updateEntry: (entryId: number, data: Record<string, unknown>) => apiClient.patch(`/journeys/entries/${entryId}`, data).then(r => r.data),
   deleteEntry: (entryId: number) => apiClient.delete(`/journeys/entries/${entryId}`).then(r => r.data),
   reorderEntries: (journeyId: number, orderedIds: number[]) => apiClient.put(`/journeys/${journeyId}/entries/reorder`, { orderedIds } satisfies JourneyReorderEntriesRequest).then(r => r.data),
 
   // Photos
-  uploadPhotos: (entryId: number, formData: FormData, opts?: { onUploadProgress?: (e: import('axios').AxiosProgressEvent) => void; idempotencyKey?: string; signal?: AbortSignal }) =>
-    apiClient.post(`/journeys/entries/${entryId}/photos`, formData, {
-      headers: { 'Content-Type': undefined as any, ...(opts?.idempotencyKey ? { 'X-Idempotency-Key': opts.idempotencyKey } : {}) },
-      timeout: 0,
-      onUploadProgress: opts?.onUploadProgress,
-      signal: opts?.signal,
-    }).then(r => r.data),
-  uploadGalleryPhotos: (journeyId: number, formData: FormData, opts?: { onUploadProgress?: (e: import('axios').AxiosProgressEvent) => void; idempotencyKey?: string; signal?: AbortSignal }) =>
-    apiClient.post(`/journeys/${journeyId}/gallery/photos`, formData, {
-      headers: { 'Content-Type': undefined as any, ...(opts?.idempotencyKey ? { 'X-Idempotency-Key': opts.idempotencyKey } : {}) },
-      timeout: 0,
-      onUploadProgress: opts?.onUploadProgress,
-      signal: opts?.signal,
-    }).then(r => r.data),
-  uploadGalleryVideo: (journeyId: number, formData: FormData, opts?: { onUploadProgress?: (e: import('axios').AxiosProgressEvent) => void; idempotencyKey?: string; signal?: AbortSignal }) =>
-    apiClient.post(`/journeys/${journeyId}/gallery/video`, formData, {
-      headers: { 'Content-Type': undefined as any, ...(opts?.idempotencyKey ? { 'X-Idempotency-Key': opts.idempotencyKey } : {}) },
-      timeout: 0,
-      onUploadProgress: opts?.onUploadProgress,
-      signal: opts?.signal,
-    }).then(r => r.data),
+  uploadPhotos: (entryId: number, formData: FormData, opts?: UploadOptions) =>
+    postMultipart(`/journeys/entries/${entryId}/photos`, formData, opts),
+  uploadGalleryPhotos: (journeyId: number, formData: FormData, opts?: UploadOptions) =>
+    postMultipart(`/journeys/${journeyId}/gallery/photos`, formData, opts),
+  uploadGalleryVideo: (journeyId: number, formData: FormData, opts?: UploadOptions) =>
+    postMultipart(`/journeys/${journeyId}/gallery/video`, formData, opts),
+  /** A clip on one entry: the video plus the poster frame the browser grabbed (issue #2341). */
+  uploadEntryVideo: (entryId: number, formData: FormData, opts?: UploadOptions) =>
+    postMultipart(`/journeys/entries/${entryId}/video`, formData, opts),
   addProviderPhotosToGallery: (journeyId: number, provider: string, assetIds: string[], passphrase?: string, mediaTypes?: string[]) => apiClient.post(`/journeys/${journeyId}/gallery/provider-photos`, { provider, asset_ids: assetIds, ...(passphrase ? { passphrase } : {}), ...(mediaTypes ? { media_types: mediaTypes } : {}) } satisfies JourneyProviderPhotosRequest).then(r => r.data),
   addProviderPhoto: (entryId: number, provider: string, assetId: string, caption?: string, passphrase?: string) => apiClient.post(`/journeys/entries/${entryId}/provider-photos`, { provider, asset_id: assetId, caption, ...(passphrase ? { passphrase } : {}) }).then(r => r.data),
   addProviderPhotos: (entryId: number, provider: string, assetIds: string[], caption?: string, passphrase?: string, mediaTypes?: string[]) => apiClient.post(`/journeys/entries/${entryId}/provider-photos`, { provider, asset_ids: assetIds, caption, ...(passphrase ? { passphrase } : {}), ...(mediaTypes ? { media_types: mediaTypes } : {}) }).then(r => r.data),
@@ -655,7 +1026,7 @@ export const journeyApi = {
   deletePhoto: (photoId: number) => apiClient.delete(`/journeys/photos/${photoId}`).then(r => r.data),
 
   // Cover
-  uploadCover: (id: number, formData: FormData) => apiClient.post(`/journeys/${id}/cover`, formData, { headers: { 'Content-Type': undefined as any } }).then(r => r.data),
+  uploadCover: (id: number, formData: FormData) => postMultipart(`/journeys/${id}/cover`, formData),
 
   // Contributors
   addContributor: (id: number, userId: number, role: string) => apiClient.post(`/journeys/${id}/contributors`, { user_id: userId, role }).then(r => r.data),
@@ -664,6 +1035,9 @@ export const journeyApi = {
 
   // Preferences
   updatePreferences: (id: number, data: { hide_skeletons?: boolean }) => apiClient.patch(`/journeys/${id}/preferences`, data).then(r => r.data),
+  /** Bring every waved-away trip suggestion back. Answers with how many returned. */
+  restoreSuggestions: (id: number): Promise<{ restored: number }> =>
+    apiClient.post(`/journeys/${id}/suggestions/restore`).then(r => r.data),
 
   // Share
   getShareLink: (id: number) => apiClient.get(`/journeys/${id}/share-link`).then(r => r.data),
@@ -672,19 +1046,298 @@ export const journeyApi = {
   getPublicJourney: (token: string) => apiClient.get(`/public/journey/${token}`).then(r => r.data),
 }
 
+// Photo providers (Immich, Synology Photos, …) behind /api/integrations/memories.
+// The provider sits on the user's own hardware and the server proxies through to
+// it, so the 8s default does not apply — and neither does any number picked
+// here. The server already holds the deadline, and its worst case is longer than
+// anything that would look reasonable in this file: a Synology call is 30s, and
+// an expired session makes it re-authenticate and try again. A client cap below
+// that turns a slow NAS into a NAS that reads as disconnected, which is what
+// these calls looked like before they moved off raw fetch (which had no timeout
+// either). Callers that need to give up early pass an AbortSignal.
+const MEMORIES_TIMEOUT = 0
+
+export const memoriesApi = {
+  status: (provider: string): Promise<{ connected: boolean }> =>
+    apiClient.get(`/integrations/memories/${provider}/status`, { timeout: MEMORIES_TIMEOUT }).then(r => r.data),
+  // utc_offset_minutes says which 24 hours from/to name. It is NOT the Synology
+  // `offset`, which is rows to skip: one body goes to whichever provider, so the
+  // two names have to stay apart (#2336).
+  search: (provider: string, body: { from: string; to: string; page: number; size: number; utc_offset_minutes?: number }, signal?: AbortSignal) =>
+    apiClient.post(`/integrations/memories/${provider}/search`, body, { timeout: MEMORIES_TIMEOUT, signal }).then(r => r.data),
+  albums: (provider: string) =>
+    apiClient.get(`/integrations/memories/${provider}/albums`, { timeout: MEMORIES_TIMEOUT }).then(r => r.data),
+  albumPhotos: (provider: string, albumId: string, passphrase?: string, signal?: AbortSignal) =>
+    apiClient.get(`/integrations/memories/${provider}/albums/${albumId}/photos`, {
+      timeout: MEMORIES_TIMEOUT,
+      params: passphrase ? { passphrase } : undefined,
+      signal,
+    }).then(r => r.data),
+}
+
+/**
+ * Place search that still answers with no network.
+ *
+ * The cache is what `sync/placePrefetcher` stored for the trip's area, and this
+ * is the one place it is read from, so all ten call sites got the offline path
+ * without any of them learning about it. `source` says 'offline-cache' rather
+ * than pretending to be the index — several screens show it, and a stale answer
+ * that claims to be live is worse than one that says what it is.
+ *
+ * Only network-level failures fall through. A 4xx or 5xx means the server did
+ * answer and the caller has to see it.
+ */
+/**
+ * The same offline treatment as `withCachedPlaces`, for the single-place lookup.
+ *
+ * Separate because the shape is different: this one is keyed by id rather than
+ * by a query, and a miss has to stay a miss — a place the cache does not hold
+ * must fail the way it did before, not answer with somebody else's record.
+ */
+/**
+ * The rejection both search surfaces already know to swallow.
+ *
+ * They filter on the axios cancel code and on the DOMException name, so an
+ * abort from the cache path has to look like one or it surfaces as a toast.
+ */
+function abortedError(): Error & { code: string } {
+  const err = new Error('canceled') as Error & { code: string }
+  err.name = 'CanceledError'
+  err.code = 'ERR_CANCELED'
+  return err
+}
+
+async function withCachedPlace(
+  placeId: string,
+  online: () => Promise<{ place: Record<string, unknown> | null }>,
+): Promise<{ place: Record<string, unknown> | null }> {
+  const fromCache = async (): Promise<{ place: Record<string, unknown> | null } | null> => {
+    const { getCachedPlace, cachedToPlaceRecord } = await import('../sync/placePrefetcher')
+    const hit = await getCachedPlace(placeId)
+    return hit ? { place: cachedToPlaceRecord(hit) } : null
+  }
+
+  if (isEffectivelyOffline()) {
+    const cached = await fromCache()
+    if (cached) return cached
+    return online()
+  }
+  try {
+    return await online()
+  } catch (err) {
+    const e = err as { isAxiosError?: boolean; response?: unknown; code?: string } | null
+    const neverArrived = !!e && e.isAxiosError === true && e.response == null && e.code !== 'ERR_CANCELED'
+    if (!neverArrived) throw err
+    const cached = await fromCache()
+    if (!cached) throw err
+    return cached
+  }
+}
+
+async function withCachedPlaces<T>(
+  query: string,
+  shape: (places: Record<string, unknown>[]) => T,
+  online: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  const fromCache = async (): Promise<Record<string, unknown>[]> => {
+    const { searchCachedPlaces, cachedToPlaceRecord } = await import('../sync/placePrefetcher')
+    const found = (await searchCachedPlaces(query)).map(cachedToPlaceRecord)
+    // The keystroke this answers may already be two keystrokes old. Both search
+    // surfaces order their suggestions by aborting the previous request and
+    // discarding the rejection — there is no request counter — so an offline
+    // answer that resolves regardless of the signal can overwrite a newer list.
+    // The two cache reads are also very unequal: a prefix hit comes off the
+    // index, the substring pass walks every cached place of every trip.
+    if (signal?.aborted) throw abortedError()
+    return found
+  }
+
+  if (isEffectivelyOffline()) return shape(await fromCache())
+  try {
+    return await online()
+  } catch (err) {
+    const e = err as { isAxiosError?: boolean; response?: unknown; code?: string } | null
+    const neverArrived = !!e && e.isAxiosError === true && e.response == null && e.code !== 'ERR_CANCELED'
+    if (!neverArrived) throw err
+    const cached = await fromCache()
+    if (!cached.length) throw err
+    return shape(cached)
+  }
+}
+
+/**
+ * What plugins implementing `searchProvider` found for the same query (#2221).
+ *
+ * Its own request beside the core one rather than a branch inside it: the core search
+ * is TREK's own indexes and must not wait on, or fail with, somebody's plugin. This
+ * answers with an empty list for every failure there is — no provider installed, one
+ * that timed out, a 404 on an older server, the network gone — because a search that
+ * breaks when an optional index is unwell is worse than one without it.
+ */
+/**
+ * How long a plugin index may keep the search list waiting, in milliseconds.
+ *
+ * The host gives a provider two seconds to answer and this gives the round trip a
+ * little more. It is a ceiling on the WAIT, not on the provider: with no search
+ * plugin installed the route answers immediately without reaching any of them, so
+ * the normal case costs one local round trip and nothing else.
+ *
+ * A deadline rather than patience, because the alternative is a search that feels
+ * broken. A list that arrives without an optional index is a smaller answer; a list
+ * that arrives four seconds late is no answer at all.
+ */
+const PLUGIN_SEARCH_DEADLINE_MS = 2500
+
+async function pluginSearchPlaces(
+  query: string,
+  lang?: string,
+  near?: { lat: number; lng: number },
+): Promise<Record<string, unknown>[]> {
+  const stop = new AbortController()
+  const timer = setTimeout(() => stop.abort(), PLUGIN_SEARCH_DEADLINE_MS)
+  try {
+    const r = await apiClient.get('/plugin-search', {
+      params: { q: query, lang: lang || 'en', lat: near?.lat, lng: near?.lng },
+      signal: stop.signal,
+    })
+    const places = (r.data as { places?: unknown })?.places
+    return Array.isArray(places) ? (places as Record<string, unknown>[]) : []
+  } catch {
+    return []
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export const mapsApi = {
-  search: (query: string, lang?: string) => apiClient.post(`/maps/search?lang=${lang || 'en'}`, { query }).then(r => checkInDev(mapsSearchResultSchema, r.data, 'maps.search')),
-  autocomplete: (input: string, lang?: string, locationBias?: { low: { lat: number; lng: number }; high: { lat: number; lng: number } }, signal?: AbortSignal) =>
-      apiClient.post('/maps/autocomplete', { input, lang, locationBias }, { signal }).then(r => checkInDev(mapsAutocompleteResultSchema, r.data, 'maps.autocomplete')),
-  details: (placeId: string, lang?: string) => apiClient.get(`/maps/details/${encodeURIComponent(placeId)}`, { params: { lang } }).then(r => checkInDev(mapsPlaceDetailsResultSchema, r.data, 'maps.details')),
+  /**
+   * `locationBias` is what tells the search which "Hase-dera" is meant, and it
+   * is the difference between finding the temple the user stands next to and
+   * one 400km away. The route has always accepted it; nothing passed it.
+   *
+   * It also decides whether the index answers at all: a common single word
+   * without coordinates is refused upstream as too expensive, and the search
+   * then falls back to Nominatim alone.
+   *
+   * Plugin indexes are asked at the same time and their hits are appended, so every
+   * caller of this one function gets them without knowing they exist. Appended rather
+   * than interleaved: the core list is ordered by relevance and has earned that order,
+   * and a plugin's row carries its own `source` for a caller that wants to mark it.
+   *
+   * `provider: 'google'` sends this one search to Google alone, the "search Google
+   * instead" link under a list the index answered with the wrong place. The server
+   * ignores it unless Google holds the keyed slot: without a Google key, or with
+   * Amap or OpenStreetMap picked as the provider, the index answers as usual.
+   */
+  search: (query: string, lang?: string, locationBias?: { lat: number; lng: number; radius?: number }, provider?: 'google') =>
+    withCachedPlaces(query, (places) => ({ places, source: 'offline-cache' }), async () => {
+      // Side by side, so the wait is the slower of the two rather than their sum. Only
+      // the core call may reject: that rejection is what hands withCachedPlaces the
+      // offline path, and a plugin failure must never trigger it.
+      const [core, extra] = await Promise.all([
+        apiClient.post(`/maps/search?lang=${lang || 'en'}`, { query, locationBias, ...(provider ? { provider } : {}) }).then(r => checkInDev(mapsSearchResultSchema, r.data, 'maps.search')),
+        pluginSearchPlaces(query, lang, locationBias),
+      ])
+      if (extra.length === 0) return core
+      const from = [...new Set(extra.map(p => String(p.source ?? 'plugin')))].join('+')
+      return { places: [...core.places, ...extra], source: `${core.source}+${from}` }
+    }),
+  autocomplete: (input: string, lang?: string, locationBias?: { low: { lat: number; lng: number }; high: { lat: number; lng: number } }, signal?: AbortSignal, sessionToken?: string) =>
+    withCachedPlaces(
+      input,
+      (places) => ({
+        suggestions: places.map((p) => ({
+          placeId: String(p.osm_id),
+          mainText: String(p.name),
+          secondaryText: String(p.address || ''),
+        })),
+        source: 'offline-cache',
+      }),
+      () => apiClient.post('/maps/autocomplete', { input, lang, locationBias, sessionToken }, { signal }).then(r => checkInDev(mapsAutocompleteResultSchema, r.data, 'maps.autocomplete')),
+      signal,
+    ),
+  // Answered from the cache when the network is not there, for the ids the
+  // offline suggestion list hands out. Without it, picking an offline
+  // suggestion failed here and the callers fell back to searching for
+  // "name, address" — which the cache matches on the folded NAME alone, so it
+  // found nothing and the user got an error toast for a place that was sitting
+  // in the cache all along.
+  details: (placeId: string, lang?: string, sessionToken?: string) =>
+    withCachedPlace(placeId, () =>
+      apiClient.get(`/maps/details/${encodeURIComponent(placeId)}`, { params: { lang, sessionToken } })
+        .then(r => checkInDev(mapsPlaceDetailsResultSchema, r.data, 'maps.details'))),
+  // Pictures and a description for a place that is being looked at but not yet
+  // saved. Fans out to several providers server-side, so it takes a signal and
+  // the caller is expected to abort it when the selection changes, and a longer
+  // timeout than the global 8s — a cold Wikimedia connection alone can eat that.
+  placeEnrichment: (
+    body: { placeId?: string; lat: number; lng: number; name: string; lang?: string; details?: Record<string, unknown> },
+    signal?: AbortSignal,
+  ) => apiClient.post('/maps/enrichment', body, { signal, timeout: 25000 })
+      .then(r => checkInDev(mapsPlaceEnrichmentResultSchema, r.data, 'maps.placeEnrichment')),
+  // Author + licence for a picture already stored in the photo cache, keyed by
+  // the cache key embedded in its proxy URL. Local read, no provider call.
+  placePhotoCredit: (key: string) =>
+    apiClient.get(`/maps/enrichment/credit/${encodeURIComponent(key)}`).then(r => r.data as { credit: string | null }),
   placePhoto: (placeId: string, lat?: number, lng?: number, name?: string) => apiClient.get(`/maps/place-photo/${encodeURIComponent(placeId)}`, { params: { lat, lng, name } }).then(r => checkInDev(mapsPlacePhotoResultSchema, r.data, 'maps.placePhoto')),
   reverse: (lat: number, lng: number, lang?: string) => apiClient.get('/maps/reverse', { params: { lat, lng, lang } }).then(r => checkInDev(mapsReverseResultSchema, r.data, 'maps.reverse')),
   resolveUrl: (url: string) => apiClient.post('/maps/resolve-url', { url }).then(r => checkInDev(mapsResolveUrlResultSchema, r.data, 'maps.resolveUrl')),
   // OSM-only POI explore: places of a category within the current map viewport bbox.
   // Overpass can be slow on a fresh (uncached) area, so this call gets a longer
   // timeout than the global default instead of aborting at 8s and showing nothing.
-  pois: (category: string, bbox: { south: number; west: number; north: number; east: number }, signal?: AbortSignal) =>
-    apiClient.get('/maps/pois', { params: { category, ...bbox }, signal, timeout: 20000 }).then(r => r.data as { pois: import('../components/Map/poiCategories').Poi[]; source: string; truncated: boolean; clamped?: boolean }),
+  /**
+   * Every place in a box, for the offline cache. One call per trip area, not
+   * per keystroke, so the timeout is generous where the search ones are short.
+   */
+  area: (
+    bbox: { minLat: number; minLng: number; maxLat: number; maxLng: number },
+    limit?: number,
+    signal?: AbortSignal,
+  ) =>
+    apiClient
+      .get('/maps/area', { params: { ...bbox, limit }, signal, timeout: 30000 })
+      .then(
+        (r) =>
+          r.data as {
+            results: Record<string, unknown>[]
+            truncated: boolean
+            unavailable?: boolean
+          },
+      ),
+
+  pois: (category: string, bbox: { south: number; west: number; north: number; east: number }, lang?: string, signal?: AbortSignal) =>
+    apiClient.get('/maps/pois', { params: { category, ...bbox, lang }, signal, timeout: 20000 }).then(r => r.data as { pois: import('../components/Map/poiCategories').Poi[]; source: string; truncated: boolean; clamped?: boolean }),
+}
+
+/**
+ * Road-trip via points (#1797): the places a day's drive is routed through without
+ * stopping. Separate from places on purpose — a via bends the route, a stop is somewhere
+ * you go.
+ */
+export const roadtripApi = {
+  /** Every via of the trip, so all days can be routed without a request per day. */
+  listVias: (tripId: number | string) =>
+    apiClient.get(`/trips/${tripId}/roadtrip/vias`).then(r => r.data as { vias: RoadtripVia[]; tracks: RoadtripDayTrack[] }),
+  addVia: (tripId: number | string, dayId: number | string, body: RoadtripViaCreateRequest) =>
+    apiClient.post(`/trips/${tripId}/roadtrip/days/${dayId}/vias`, body).then(r => r.data as { via: RoadtripVia }),
+  /**
+   * Lay a chain of vias on one day in one write. Anything that derives its anchors from a
+   * line produces dozens of them, and one request each would re-route the whole trip once
+   * per point at better than a second apart.
+   */
+  addVias: (tripId: number | string, dayId: number | string, body: RoadtripViaBatchRequest) =>
+    apiClient.post(`/trips/${tripId}/roadtrip/days/${dayId}/vias/batch`, body).then(r => r.data as { vias: RoadtripVia[] }),
+  /**
+   * Re-pin a day's vias in one write, after its stops changed shape. One request, not one
+   * per via: the anchors are only correct as a set.
+   */
+  reanchorVias: (tripId: number | string, dayId: number | string, body: RoadtripViaReanchorRequest) =>
+    apiClient.put(`/trips/${tripId}/roadtrip/days/${dayId}/vias`, body).then(r => r.data as { vias: RoadtripVia[] }),
+  moveVia: (tripId: number | string, dayId: number | string, id: number, body: RoadtripViaUpdateRequest) =>
+    apiClient.put(`/trips/${tripId}/roadtrip/days/${dayId}/vias/${id}`, body).then(r => r.data as { via: RoadtripVia }),
+  removeVia: (tripId: number | string, dayId: number | string, id: number) =>
+    apiClient.delete(`/trips/${tripId}/roadtrip/days/${dayId}/vias/${id}`).then(r => r.data),
 }
 
 export const airportsApi = {
@@ -701,9 +1354,13 @@ export const budgetApi = {
   togglePaid: (tripId: number | string, id: number, userId: number, paid: boolean) => apiClient.put(`/trips/${tripId}/budget/${id}/members/${userId}/paid`, { paid } satisfies BudgetToggleMemberPaidRequest).then(r => r.data),
   setPayers: (tripId: number | string, id: number, payers: { user_id: number; amount: number }[]) => apiClient.put(`/trips/${tripId}/budget/${id}/payers`, { payers }).then(r => r.data),
   perPersonSummary: (tripId: number | string) => apiClient.get(`/trips/${tripId}/budget/summary/per-person`).then(r => r.data),
-  settlement: (tripId: number | string, base?: string) => apiClient.get(`/trips/${tripId}/budget/settlement`, base ? { params: { base } } : undefined).then(r => r.data),
-  createSettlement: (tripId: number | string, data: { from_user_id: number; to_user_id: number; amount: number; currency?: string }) => apiClient.post(`/trips/${tripId}/budget/settlements`, data).then(r => r.data),
-  updateSettlement: (tripId: number | string, settlementId: number, data: { from_user_id: number; to_user_id: number; amount: number; currency?: string }) => apiClient.put(`/trips/${tripId}/budget/settlements/${settlementId}`, data).then(r => r.data),
+  // `baseRate` is units of `base` per 1 trip currency from the client's own rates. The server
+  // uses it only in place of a display quote it cannot fetch itself, which also reads legacy
+  // transfers without a currency (in the display currency, as with a live quote).
+  settlement: (tripId: number | string, base?: string, baseRate?: number | null) => apiClient.get(`/trips/${tripId}/budget/settlement`, base ? { params: { base, ...(baseRate != null ? { base_rate: baseRate } : {}) } satisfies BudgetSettlementQuery } : undefined).then(r => r.data),
+  createSettlement: (tripId: number | string, data: BudgetCreateSettlementRequest) => apiClient.post(`/trips/${tripId}/budget/settlements`, data).then(r => r.data),
+  updateSettlement: (tripId: number | string, settlementId: number, data: BudgetUpdateSettlementRequest) => apiClient.put(`/trips/${tripId}/budget/settlements/${settlementId}`, data).then(r => r.data),
+  freezeRates: (tripId: number | string, data: BudgetFreezeRatesRequest): Promise<BudgetFreezeRatesResponse> => apiClient.post(`/trips/${tripId}/budget/freeze-rates`, data).then(r => r.data),
   deleteSettlement: (tripId: number | string, settlementId: number) => apiClient.delete(`/trips/${tripId}/budget/settlements/${settlementId}`).then(r => r.data),
   reorderItems: (tripId: number | string, orderedIds: number[]) => apiClient.put(`/trips/${tripId}/budget/reorder/items`, { orderedIds }).then(r => r.data),
   reorderCategories: (tripId: number | string, orderedCategories: string[]) => apiClient.put(`/trips/${tripId}/budget/reorder/categories`, { orderedCategories } satisfies BudgetReorderCategoriesRequest).then(r => r.data),
@@ -711,9 +1368,7 @@ export const budgetApi = {
 
 export const filesApi = {
   list: (tripId: number | string, trash?: boolean) => apiClient.get(`/trips/${tripId}/files`, { params: trash ? { trash: 'true' } : {} }).then(r => r.data),
-  upload: (tripId: number | string, formData: FormData) => apiClient.post(`/trips/${tripId}/files`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }).then(r => r.data),
+  upload: (tripId: number | string, formData: FormData, opts?: UploadOptions) => postMultipart(`/trips/${tripId}/files`, formData, opts),
   update: (tripId: number | string, id: number, data: FileUpdateRequest) => apiClient.put(`/trips/${tripId}/files/${id}`, data).then(r => r.data),
   delete: (tripId: number | string, id: number) => apiClient.delete(`/trips/${tripId}/files/${id}`).then(r => r.data),
   toggleStar: (tripId: number | string, id: number) => apiClient.patch(`/trips/${tripId}/files/${id}/star`).then(r => r.data),
@@ -725,12 +1380,72 @@ export const filesApi = {
   getLinks: (tripId: number | string, fileId: number) => apiClient.get(`/trips/${tripId}/files/${fileId}/links`).then(r => r.data),
 }
 
+/**
+ * How long the browser waits for a document-sync call that makes the server go
+ * and ask the store.
+ *
+ * The shared 8 s on `apiClient` is right for TREK's own routes and wrong for
+ * these, for the reason `dawarich.ts` gives: the server allows each request to
+ * a store 15 s by itself (20 s for Papra), a connection test may probe more
+ * than once, and binding or unbinding first registers or removes a webhook at
+ * the store. Cut off at 8 s, the browser reported a failure while the server
+ * carried on and finished, so a listing that took twelve seconds read as a
+ * broken store.
+ */
+export const DOCSYNC_UPSTREAM_TIMEOUT_MS = 60_000
+
+/**
+ * A run is longer again. The server answers only once the whole of it is
+ * through: a listing of up to 40 pages, then up to 25 transfers at up to 120 s
+ * each, and Paperless-ngx holds every push until its consume task has run.
+ * Resolving a conflict runs the binding afterwards, so it waits just as long.
+ * Ten minutes covers a full transfer budget of ordinary documents; a run that
+ * outlasts it still finishes on the server, and the `docsync:changed` ping
+ * refreshes the dialog when it does.
+ */
+export const DOCSYNC_RUN_TIMEOUT_MS = 600_000
+
+const docsyncUpstream = { timeout: DOCSYNC_UPSTREAM_TIMEOUT_MS }
+const docsyncRun = { timeout: DOCSYNC_RUN_TIMEOUT_MS }
+
+/**
+ * Document sync: one provider connection per trip, shared by every member.
+ *
+ * Trip-scoped rather than user-scoped on purpose: a per-user connection would
+ * make a document's visibility depend on whose credentials fetched it, which is
+ * the opposite of what a shared trip needs.
+ */
+export const docsyncApi = {
+  providers: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/providers`).then(r => r.data),
+  status: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/status`).then(r => r.data),
+  listConnections: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/connections`).then(r => r.data),
+  saveConnection: (tripId: number | string, data: unknown) => apiClient.put(`/trips/${tripId}/docsync/connections`, data).then(r => r.data),
+  testConnection: (tripId: number | string, data: unknown) => apiClient.post(`/trips/${tripId}/docsync/connections/test`, data, docsyncUpstream).then(r => r.data),
+  deleteConnection: (tripId: number | string, connectionId: number) => apiClient.delete(`/trips/${tripId}/docsync/connections/${connectionId}`).then(r => r.data),
+  listScopes: (tripId: number | string, connectionId: number, q?: string) =>
+    apiClient.get(`/trips/${tripId}/docsync/connections/${connectionId}/scopes`, { params: q ? { q } : {}, ...docsyncUpstream }).then(r => r.data),
+  createScope: (tripId: number | string, connectionId: number, name: string) =>
+    apiClient.post(`/trips/${tripId}/docsync/connections/${connectionId}/scopes`, { name }, docsyncUpstream).then(r => r.data),
+  listLinks: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/links`).then(r => r.data),
+  createLink: (tripId: number | string, data: unknown) => apiClient.post(`/trips/${tripId}/docsync/links`, data, docsyncUpstream).then(r => r.data),
+  updateLink: (tripId: number | string, linkId: number, data: unknown) => apiClient.patch(`/trips/${tripId}/docsync/links/${linkId}`, data).then(r => r.data),
+  deleteLink: (tripId: number | string, linkId: number) => apiClient.delete(`/trips/${tripId}/docsync/links/${linkId}`, docsyncUpstream).then(r => r.data),
+  syncNow: (tripId: number | string, linkId: number, full = false) =>
+    apiClient.post(`/trips/${tripId}/docsync/links/${linkId}/sync`, { full }, docsyncRun).then(r => r.data),
+  items: (tripId: number | string, state?: string) =>
+    apiClient.get(`/trips/${tripId}/docsync/items`, { params: state ? { state } : {} }).then(r => r.data),
+  resolve: (tripId: number | string, itemId: number, keep: 'trek' | 'provider' | 'both') =>
+    apiClient.post(`/trips/${tripId}/docsync/items/${itemId}/resolve`, { keep }, docsyncRun).then(r => r.data),
+}
+
 export const reservationsApi = {
   list: (tripId: number | string) => apiClient.get(`/trips/${tripId}/reservations`).then(r => r.data),
   upcoming: () => apiClient.get('/reservations/upcoming').then(r => r.data),
   create: (tripId: number | string, data: ReservationCreateRequest) => apiClient.post(`/trips/${tripId}/reservations`, data).then(r => r.data),
   update: (tripId: number | string, id: number, data: ReservationUpdateRequest) => apiClient.put(`/trips/${tripId}/reservations/${id}`, data).then(r => r.data),
   delete: (tripId: number | string, id: number) => apiClient.delete(`/trips/${tripId}/reservations/${id}`).then(r => r.data),
+  // Assign trip members / named guests to a booking (#1517).
+  setTravelers: (tripId: number | string, id: number, userIds: number[]) => apiClient.put(`/trips/${tripId}/reservations/${id}/travelers`, { user_ids: userIds }).then(r => r.data),
   updatePositions: (tripId: number | string, positions: { id: number; day_plan_position: number }[], dayId?: number) => apiClient.put(`/trips/${tripId}/reservations/positions`, { positions, day_id: dayId }).then(r => r.data),
   importBookingPreview: (tripId: number | string, files: File[], mode: BookingImportMode = 'no-ai'): Promise<BookingImportPreviewResponse> => {
     const fd = new FormData()
@@ -738,7 +1453,7 @@ export const reservationsApi = {
     fd.append('mode', mode)
     // No client-side timeout: kitinerary + LLM extraction routinely exceeds the
     // global 8s default (a cold local model alone can take ~45s).
-    return apiClient.post(`/trips/${tripId}/reservations/import/booking`, fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0 }).then(r => r.data)
+    return postMultipart(`/trips/${tripId}/reservations/import/booking`, fd)
   },
   importBookingConfirm: (tripId: number | string, items: BookingImportPreviewItem[]): Promise<BookingImportConfirmResponse> =>
     apiClient.post(`/trips/${tripId}/reservations/import/booking/confirm`, { items }).then(r => r.data),
@@ -748,7 +1463,7 @@ export const reservationsApi = {
     const fd = new FormData()
     for (const f of files) fd.append('files', f)
     fd.append('mode', mode)
-    return apiClient.post(`/trips/${tripId}/reservations/import/booking/async`, fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0 }).then(r => r.data)
+    return postMultipart(`/trips/${tripId}/reservations/import/booking/async`, fd)
   },
   // Poll a background job — recovery path when a WebSocket push was missed.
   importJobStatus: (tripId: number | string, jobId: string): Promise<{ status: 'running' | 'done' | 'error'; done: number; total: number; result?: BookingImportPreviewResponse; error?: string }> =>
@@ -760,7 +1475,10 @@ export const healthApi = {
 }
 
 export const weatherApi = {
-  get: (lat: number, lng: number, date: string): Promise<WeatherResult> => apiClient.get('/weather', { params: { lat, lng, date } }).then(r => parseInDev(weatherResultSchema, r.data, 'weather.get')),
+  // `time` (HH:MM) makes a past date answer for that hour instead of the day (#1614).
+  // `lang` localizes the description; when omitted the server keeps its own default (#2167).
+  get: (lat: number, lng: number, date: string, lang?: string, time?: string): Promise<WeatherResult> => apiClient.get('/weather', { params: { lat, lng, date, lang, time } }).then(r => parseInDev(weatherResultSchema, r.data, 'weather.get')),
+  getCurrent: (lat: number, lng: number, lang?: string): Promise<WeatherResult> => apiClient.get('/weather', { params: { lat, lng, lang } }).then(r => parseInDev(weatherResultSchema, r.data, 'weather.getCurrent')),
   getDetailed: (lat: number, lng: number, date: string, lang?: string): Promise<WeatherResult> => apiClient.get('/weather/detailed', { params: { lat, lng, date, lang } }).then(r => parseInDev(weatherResultSchema, r.data, 'weather.getDetailed')),
 }
 
@@ -796,7 +1514,7 @@ export const accommodationsApi = {
   list: (tripId: number | string) => apiClient.get(`/trips/${tripId}/accommodations`).then(r => r.data),
   create: (tripId: number | string, data: AccommodationCreateRequest) => apiClient.post(`/trips/${tripId}/accommodations`, data).then(r => r.data),
   update: (tripId: number | string, id: number, data: AccommodationUpdateRequest) => apiClient.put(`/trips/${tripId}/accommodations/${id}`, data).then(r => r.data),
-  delete: (tripId: number | string, id: number) => apiClient.delete(`/trips/${tripId}/accommodations/${id}`).then(r => r.data),
+  delete: (tripId: number | string, id: number, opts?: { keepStop?: boolean }) => apiClient.delete(`/trips/${tripId}/accommodations/${id}`, opts?.keepStop ? { params: { keepStop: 'true' } } : undefined).then(r => r.data),
 }
 
 export const dayNotesApi = {
@@ -811,15 +1529,21 @@ export const collabApi = {
   createNote: (tripId: number | string, data: CollabNoteCreateRequest) => apiClient.post(`/trips/${tripId}/collab/notes`, data).then(r => r.data),
   updateNote: (tripId: number | string, id: number, data: CollabNoteUpdateRequest) => apiClient.put(`/trips/${tripId}/collab/notes/${id}`, data).then(r => r.data),
   deleteNote: (tripId: number | string, id: number) => apiClient.delete(`/trips/${tripId}/collab/notes/${id}`).then(r => r.data),
-  uploadNoteFile: (tripId: number | string, noteId: number, formData: FormData) => apiClient.post(`/trips/${tripId}/collab/notes/${noteId}/files`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
+  uploadNoteFile: (tripId: number | string, noteId: number, formData: FormData) => postMultipart(`/trips/${tripId}/collab/notes/${noteId}/files`, formData),
   deleteNoteFile: (tripId: number | string, noteId: number, fileId: number) => apiClient.delete(`/trips/${tripId}/collab/notes/${noteId}/files/${fileId}`).then(r => r.data),
+  getLinks: (tripId: number | string) => apiClient.get(`/trips/${tripId}/collab/links`).then(r => r.data),
+  createLink: (tripId: number | string, data: { title: string; url: string; pinned?: boolean }) => apiClient.post(`/trips/${tripId}/collab/links`, data).then(r => r.data),
+  updateLink: (tripId: number | string, id: number, data: { title?: string; url?: string; pinned?: boolean }) => apiClient.put(`/trips/${tripId}/collab/links/${id}`, data).then(r => r.data),
+  deleteLink: (tripId: number | string, id: number) => apiClient.delete(`/trips/${tripId}/collab/links/${id}`).then(r => r.data),
   getPolls: (tripId: number | string) => apiClient.get(`/trips/${tripId}/collab/polls`).then(r => r.data),
   createPoll: (tripId: number | string, data: CollabPollCreateRequest) => apiClient.post(`/trips/${tripId}/collab/polls`, data).then(r => r.data),
   votePoll: (tripId: number | string, id: number, optionIndex: number) => apiClient.post(`/trips/${tripId}/collab/polls/${id}/vote`, { option_index: optionIndex } satisfies CollabPollVoteRequest).then(r => r.data),
   closePoll: (tripId: number | string, id: number) => apiClient.put(`/trips/${tripId}/collab/polls/${id}/close`).then(r => r.data),
   deletePoll: (tripId: number | string, id: number) => apiClient.delete(`/trips/${tripId}/collab/polls/${id}`).then(r => r.data),
   getMessages: (tripId: number | string, before?: string) => apiClient.get(`/trips/${tripId}/collab/messages${before ? `?before=${before}` : ''}`).then(r => r.data),
-  sendMessage: (tripId: number | string, data: CollabMessageCreateRequest) => apiClient.post(`/trips/${tripId}/collab/messages`, data).then(r => r.data),
+  sendMessage: (tripId: number | string, data: CollabMessageCreateRequest | FormData, opts?: UploadOptions) => data instanceof FormData
+    ? postMultipart(`/trips/${tripId}/collab/messages`, data, opts)
+    : apiClient.post(`/trips/${tripId}/collab/messages`, data).then(r => r.data),
   deleteMessage: (tripId: number | string, id: number) => apiClient.delete(`/trips/${tripId}/collab/messages/${id}`).then(r => r.data),
   reactMessage: (tripId: number | string, id: number, emoji: string) => apiClient.post(`/trips/${tripId}/collab/messages/${id}/react`, { emoji } satisfies CollabReactionRequest).then(r => r.data),
   linkPreview: (tripId: number | string, url: string) => apiClient.get(`/trips/${tripId}/collab/link-preview?url=${encodeURIComponent(url)}`).then(r => r.data),
@@ -833,20 +1557,14 @@ export const backupApi = {
       credentials: 'include',
     })
     if (!res.ok) throw new Error('Download failed')
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(await res.blob(), filename)
   },
   delete: (filename: string) => apiClient.delete(`/backup/${filename}`).then(r => r.data),
   restore: (filename: string) => apiClient.post(`/backup/restore/${filename}`).then(r => r.data),
   uploadRestore: (file: File) => {
     const form = new FormData()
     form.append('backup', file)
-    return apiClient.post('/backup/upload-restore', form, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+    return postMultipart('/backup/upload-restore', form)
   },
   getAutoSettings: () => apiClient.get('/backup/auto-settings').then(r => r.data),
   setAutoSettings: (settings: Record<string, unknown>) => apiClient.put('/backup/auto-settings', settings).then(r => r.data),
@@ -859,11 +1577,13 @@ export const shareApi = {
   getSharedTrip: (token: string) => apiClient.get(`/shared/${token}`).then(r => r.data),
 }
 
-// Public transit routing (#1065) — Transitous/MOTIS proxied through the server.
+// Public transit routing (#1065) — proxied through the server, which picks the
+// backend (Transitous/MOTIS, or Google since #1699). `lang` reaches the Google
+// backend as the languageCode, so station names come back in the user's script.
 export const transitApi = {
   geocode: (q: string, opts?: { lang?: string; near?: string }) =>
     apiClient.get('/transit/geocode', { params: { q, lang: opts?.lang, near: opts?.near } }).then(r => r.data),
-  plan: (params: { from: string; to: string; time?: string; arriveBy?: boolean; modes?: string; maxTransfers?: number }) =>
+  plan: (params: { from: string; to: string; time?: string; arriveBy?: boolean; modes?: string; maxTransfers?: number; lang?: string }) =>
     apiClient.get('/transit/plan', { params }).then(r => r.data),
 }
 
@@ -877,12 +1597,22 @@ export const tripInviteApi = {
   accept: (token: string) => apiClient.post(`/trip-invites/${token}/accept`).then(r => r.data),
 }
 
+// A channel test dials a third party the admin just typed in, and the server
+// budgets for it: up to 20s for a wrong SMTP port, 10s for a webhook or ntfy
+// endpoint. The 8s instance timeout aborted those before the reason came back,
+// so the toast could only ever say "failed" (#2196).
+const CHANNEL_TEST_TIMEOUT = 40000
+
 export const notificationsApi = {
   getPreferences: () => apiClient.get('/notifications/preferences').then(r => r.data),
   updatePreferences: (prefs: Record<string, Record<string, boolean>>) => apiClient.put('/notifications/preferences', prefs).then(r => r.data),
-  testSmtp: (email?: string) => apiClient.post('/notifications/test-smtp', { email }).then(r => checkInDev(channelTestResultSchema, r.data, 'notifications.testSmtp')),
-  testWebhook: (url?: string) => apiClient.post('/notifications/test-webhook', { url }).then(r => checkInDev(channelTestResultSchema, r.data, 'notifications.testWebhook')),
-  testNtfy: (payload: { topic?: string; server?: string | null; token?: string | null }) => apiClient.post('/notifications/test-ntfy', payload).then(r => checkInDev(channelTestResultSchema, r.data, 'notifications.testNtfy')),
+  testSmtp: (email?: string) => apiClient.post('/notifications/test-smtp', { email }, { timeout: CHANNEL_TEST_TIMEOUT }).then(r => checkInDev(channelTestResultSchema, r.data, 'notifications.testSmtp')),
+  testWebhook: (url?: string) => apiClient.post('/notifications/test-webhook', { url }, { timeout: CHANNEL_TEST_TIMEOUT }).then(r => checkInDev(channelTestResultSchema, r.data, 'notifications.testWebhook')),
+  testNtfy: (payload: { topic?: string; server?: string | null; token?: string | null }) => apiClient.post('/notifications/test-ntfy', payload, { timeout: CHANNEL_TEST_TIMEOUT }).then(r => checkInDev(channelTestResultSchema, r.data, 'notifications.testNtfy')),
+  // Generic channel test — this is how a PLUGIN channel's "Send test" button works.
+  testChannel: (channelId: string) =>
+    apiClient.post(`/notifications/test/${encodeURIComponent(channelId)}`, undefined, { timeout: CHANNEL_TEST_TIMEOUT })
+      .then(r => checkInDev(channelTestResultSchema, r.data, 'notifications.testChannel')),
 }
 
 export const inAppNotificationsApi = {

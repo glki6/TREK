@@ -88,16 +88,63 @@ const admin: TranslationStrings = {
   'admin.requireMfaHint':
     'Gebruikers zonder 2FA moeten de installatie in Instellingen voltooien voordat ze de app kunnen gebruiken.',
   'admin.apiKeys': 'API-sleutels',
-  'admin.apiKeysHint': "Optioneel. Schakelt uitgebreide plaatsgegevens in zoals foto's en weer.",
+  'admin.apiKeysHint': 'Waar plaatsgegevens vandaan komen. De TREK-index heeft geen sleutel nodig; de twee aanbieders hieronder zijn optioneel.',
+  'admin.trekApi.badgeDefault': 'Aanbevolen standaardbron',
+  'admin.googleCaveat.badge': 'Niet aanbevolen',
+  'admin.googleCaveat.body':
+    "TREK is open source en wij zijn hier niet neutraal. Op deze schaal bestaan beoordelingen en foto's van gewone zaken alleen bij Google, en dat is een monopolie. Het veld staat er bij gebrek aan alternatief, niet omdat wij het aanraden. Elke opvraging gaat dan naar Google.",
+  'admin.trekApi.tagline':
+    'TREK\'s eigen plaatsenindex. Zoeken zonder Google-sleutel, zonder quotum en zonder dat iemand meetelt.',
+  'admin.trekApi.factPlaces':
+    '73,6 miljoen plaatsen wereldwijd',
+  'admin.trekApi.factNoKey':
+    'Geen sleutel, geen quotum',
+  'admin.trekApi.factOffline':
+    'Landpakketten werken offline',
+  'admin.trekApi.factPrivacy':
+    'Zoekopdrachten worden nooit vastgelegd',
+  'admin.trekApi.more':
+    'Wat erin zit',
+  'admin.trekApi.fieldPhone':
+    'Telefoon',
+  'admin.trekApi.fieldStableId':
+    'Stabiele id',
+  'admin.trekApi.includedNote':
+    'Beschrijvingen komen van de website van de plaats zelf; openingstijden uit OpenStreetMap waar ze zijn ingevuld.',
+  'admin.trekApi.notRatings':
+    'Beoordelingen',
+  'admin.trekApi.notPhotos':
+    'Foto\'s van gewone zaken',
+  'admin.trekApi.notIncludedNote':
+    'Geen enkele open bron heeft ze, voor geen prijs. Een Google-sleutel blijft de enige weg naar die twee.',
+  'admin.trekApi.sourcesLabel':
+    'Bronnen',
+  'admin.trekApi.sourcesNote':
+    'Elk veld in een antwoord vermeldt uit welke ervan het komt.',
+  'admin.trekApi.included':
+    'Inbegrepen',
+  'admin.trekApi.notIncluded':
+    'Niet inbegrepen',
   'admin.mapsKey': 'Google Maps API-sleutel',
   'admin.mapsKeyHint': 'Vereist voor het zoeken van plaatsen. Verkrijgbaar op console.cloud.google.com',
   'admin.mapsKeyHintLong':
-    "Zonder API-sleutel wordt OpenStreetMap gebruikt voor het zoeken van plaatsen. Met een Google API-sleutel kunnen ook foto's, beoordelingen en openingstijden worden geladen. Verkrijgbaar op console.cloud.google.com.",
+    "Zonder Google-API-sleutel wordt de aanbevolen TREK-API gebruikt. Met een sleutel kunnen daarnaast foto's, beoordelingen en openingstijden worden geladen. Maak er een aan op console.cloud.google.com.",
   'admin.recommended': 'Aanbevolen',
   'admin.weatherKey': 'OpenWeatherMap API-sleutel',
   'admin.weatherKeyHint': 'Voor weergegevens. Gratis op openweathermap.org',
   'admin.unsplashKey': 'Unsplash API-sleutel',
   'admin.unsplashKeyHint': 'Voor het zoeken naar afbeeldingen. Gratis op unsplash.com/developers',
+  'admin.amapKey': 'Amap (高德地图) API-sleutel',
+  'admin.amapKeyHint':
+    'Voor het zoeken naar plaatsen in het Chinese vasteland, waar Google onbereikbaar is en OpenStreetMap weinig gegevens heeft. Vereist een sleutel van het type ‘Web 服务’ (webservice), geen JS API-sleutel. Verkrijgbaar op console.amap.com.',
+  'admin.placesProvider.title': 'Provider voor plaatszoeken',
+  'admin.placesProvider.subtitle': 'De eigen index van TREK en OpenStreetMap beantwoorden elke zoekopdracht. Hier kies je wie er nog meer wordt gevraagd als zij niets vinden: Automatisch geeft de voorkeur aan Google als er een sleutel is, daarna Amap.',
+  'admin.placesProvider.auto': 'Automatisch',
+  'admin.placesProvider.google': 'Google Places',
+  'admin.placesProvider.amap': 'Amap (高德地图)',
+  'admin.placesProvider.openstreetmap': 'OpenStreetMap',
+  'admin.placesProvider.missingKey': 'Voor de gekozen aanbieder is geen API-sleutel ingesteld, dus plaatszoeken wordt alleen door de TREK-index en OpenStreetMap beantwoord.',
+  'admin.placesProvider.saved': 'Provider voor plaatszoeken opgeslagen',
   'admin.validateKey': 'Testen',
   'admin.keyValid': 'Verbonden',
   'admin.keyInvalid': 'Ongeldig',
@@ -115,6 +162,8 @@ const admin: TranslationStrings = {
   'admin.fileTypesHint': 'Configureer welke bestandstypen gebruikers kunnen uploaden.',
   'admin.fileTypesFormat': 'Kommagescheiden extensies (bijv. jpg,png,pdf,doc). Gebruik * om alle typen toe te staan.',
   'admin.fileTypesSaved': 'Bestandstype-instellingen opgeslagen',
+  'admin.googleOptions': 'Waarvoor de sleutel wordt gebruikt',
+  'admin.googleOptionsSummary': '{on} van {total} aan',
   'admin.placesPhotos.title': "Plaatsfoto's",
   'admin.placesPhotos.subtitle':
     "Haalt foto's op via de Google Places API. Schakel uit om API-quota te besparen. Wikimedia-foto's worden niet beïnvloed.",
@@ -124,6 +173,24 @@ const admin: TranslationStrings = {
   'admin.placesDetails.title': 'Plaatsdetails',
   'admin.placesDetails.subtitle':
     'Haalt gedetailleerde plaatsinformatie (openingstijden, beoordeling, website) op via de Google Places API. Schakel uit om API-quota te besparen.',
+  'admin.placesEnrich.title': 'Plaatsverrijking',
+  'admin.placesEnrich.subtitle':
+    "Toont afbeeldingen en een beschrijving bij het toevoegen van een plaats. Wikipedia en OpenStreetMap worden altijd gebruikt; Google komt erbij als Plaatsfoto's of Plaatsdetails aanstaan.",
+  'admin.placesGoogleOnly.title': 'Alleen met Google zoeken',
+  'admin.placesGoogleOnly.subtitle': 'Elke zoekopdracht en elke suggestie gaat naar Google Places. Uit, antwoorden eerst de TREK-index en OpenStreetMap; Google wordt alleen gevraagd als die niets vinden.',
+  'admin.placesGoogleOnly.missingKey': 'Vereist een Google Maps API-sleutel. Zonder sleutel zoekt TREK via de eigen index en OpenStreetMap, wat deze schakelaar ook zegt.',
+  'admin.placesGoogleOnly.otherProvider': 'Vereist Google als plaatsenprovider. Met Amap of OpenStreetMap gekozen gaat geen enkele zoekopdracht naar Google, wat deze schakelaar ook zegt.',
+  'admin.transitProvider.title': 'Ov-provider',
+  'admin.transitProvider.subtitle': 'Welke dienst het ov-zoeken beantwoordt.',
+  'admin.transitProvider.transitous': 'Transitous (gratis)',
+  'admin.transitProvider.google': 'Google',
+  'admin.transitProvider.transitousHint': 'GTFS-feeds van de community. Gratis en zonder sleutel, met de beste dekking in Europa.',
+  'admin.transitProvider.googleHint': 'Gebruikt de Google-sleutel hierboven, voor regio\'s zonder Transitous-data. Wordt per zoekopdracht afgerekend — zolang er geen sleutel is, wordt Transitous gebruikt.',
+  'admin.transitProvider.noKeyWarning': 'Google is geselecteerd, maar er is geen Google-sleutel ingesteld — het ov-zoeken gebruikt nog steeds Transitous. Voeg hierboven een sleutel toe bij API-sleutels.',
+  'admin.transitProvider.personalKeyWarning': 'Alleen je eigen Google-sleutel is ingesteld, dus het zoeken van andere leden valt nog steeds terug op Transitous. Sla de sleutel hierboven op als beheerder om hem instantiebreed toe te passen.',
+  'admin.placeShadow.title': 'Logboek van plaatszoekopdrachten',
+  'admin.placeShadow.subtitle':
+    'Vastleggen welk zoekresultaat is gekozen, zodat een andere plaatsindex later aan echte zoekopdrachten kan worden getoetst. Er verlaat niets deze instantie en een beheerder kan het logboek altijd exporteren of verwijderen.',
   'admin.bagTracking.title': 'Bagagetracking',
   'admin.bagTracking.subtitle': 'Gewicht en bagagetoewijzing inschakelen voor paklijstitems',
   'admin.collab.chat.title': 'Chat',
@@ -159,15 +226,25 @@ const admin: TranslationStrings = {
   'admin.packingTemplates.loadError': 'Fout bij laden van sjablonen',
   'admin.packingTemplates.createError': 'Fout bij aanmaken van sjabloon',
   'admin.packingTemplates.deleteError': 'Fout bij verwijderen van sjabloon',
+  'admin.packingTemplates.deleteCategoryError': 'Categorie verwijderen mislukt',
+  'admin.packingTemplates.deleteItemError': 'Item verwijderen mislukt',
   'admin.packingTemplates.saveError': 'Fout bij opslaan',
   'admin.tabs.addons': 'Add-ons',
   'admin.tabs.plugins': 'Plugins',
+  'admin.tabs.storage': 'Opslag',
   'admin.plugins.rescan': 'Opnieuw scannen',
   'admin.plugins.rescanned': 'Pluginmap opnieuw gescand',
   'admin.plugins.upload': 'Plugin uploaden',
   'admin.plugins.dropToUpload': 'Zet een plugin-.zip neer om te installeren',
   'admin.plugins.uploaded': 'Plugin “{name}” geüpload — activeer om uit te voeren',
   'admin.plugins.sideloaded': 'Handmatig geladen',
+  'admin.plugins.devLinkBadge': 'Dev-Link',
+  'admin.plugins.devLinkHint':
+    'Geladen vanuit een lokale build-map en hot-reload met echte data — alleen voor ontwikkeling',
+  'admin.plugins.devLinkTitle': 'Een lokale plugin koppelen',
+  'admin.plugins.devLinkPathPlaceholder': '/absolute/path/to/your/plugin',
+  'admin.plugins.devLinkButton': 'Koppelen',
+  'admin.plugins.devLinkLinked': '{id} gekoppeld — activeer het om te draaien',
   'admin.plugins.sideloadedHint': 'Handmatig geüpload — niet uit het register, niet ondertekend en niet gecontroleerd',
   'admin.plugins.browse': 'Plugins verkennen',
   'admin.plugins.installed': 'Geïnstalleerd',
@@ -180,6 +257,18 @@ const admin: TranslationStrings = {
   'admin.plugins.deactivated': 'Plugin gedeactiveerd',
   'admin.plugins.viewErrors': 'Foutenlog bekijken',
   'admin.plugins.errorLog': 'Foutenlog',
+  'admin.plugins.allowedHosts': 'Toegestane hosts',
+  'admin.plugins.allowedHosts.hint':
+    'Deze plug-in praat met een dienst die alleen jij kunt benoemen (een zelf-gehoste server). Voeg de hosts toe die hij mag bereiken — andere bereikt hij niet.',
+  'admin.plugins.allowedHosts.none': 'Nog geen hosts toegevoegd.',
+  'admin.plugins.allowedHosts.unsupported':
+    'Deze plug-in gebruikt geen door de beheerder opgegeven hosts. De toegestane hosts staan vast in het manifest.',
+  'admin.plugins.allowedHosts.restartNote': 'Opslaan herstart de plug-in zodat de nieuwe lijst wordt opgepakt.',
+  'admin.plugins.allowedHosts.add': 'Toegestane host toevoegen',
+  'admin.plugins.allowedHosts.count': '{n} toegestane host(s)',
+  'admin.plugins.operatorEgressPill': '+ hosts die jij toevoegt',
+  'admin.plugins.operatorEgressHint':
+    'Deze plug-in praat met een dienst die alleen jij kunt benoemen (een zelf-gehoste server). Voeg na installatie de bereikbare hosts toe via ⋯ → Toegestane hosts. Andere bereikt hij niet.',
   'admin.plugins.noErrors': 'Geen fouten geregistreerd.',
   'admin.plugins.uninstalled': 'Plugin verwijderd',
   'admin.plugins.uninstallTitle': 'Plugin verwijderen?',
@@ -196,6 +285,7 @@ const admin: TranslationStrings = {
   'admin.plugins.updateTo': 'Update → v{version}',
   'admin.plugins.enabledToggle': 'Plugin inschakelen',
   'plugins.notFound': 'Plugin niet gevonden',
+  'plugins.frameLoadFailed': 'Deze plug-in kon niet worden geladen.',
   'admin.plugins.title': 'Plugins',
   'admin.plugins.subtitle': 'Installeer en beheer plugins van derden op je instantie.',
   'admin.plugins.disabledTitle': 'Plugins zijn uitgeschakeld',
@@ -221,6 +311,7 @@ const admin: TranslationStrings = {
   'admin.plugins.scope.user': 'Per gebruiker',
   'admin.plugins.fieldRequired': 'Verplicht',
   'admin.plugins.sourceRepo': 'Broncoderepository',
+  'admin.plugins.reportIssue': 'Probleem melden',
   'admin.plugins.homepage': 'Homepage',
   'admin.plugins.requiresTrek': 'Vereist TREK {version}+',
   'admin.plugins.reviewedOn': 'Beoordeeld op {date}',
@@ -229,7 +320,51 @@ const admin: TranslationStrings = {
   'admin.plugins.perm.db:read:users': 'Basisprofielgegevens lezen (naam, avatar — nooit inloggegevens)',
   'admin.plugins.perm.db:read:costs': 'Uitgaven (budgetposten) lezen waartoe de actieve gebruiker toegang heeft',
   'admin.plugins.perm.db:read:packing': 'Paklijsten lezen van reizen waartoe de actieve gebruiker toegang heeft',
+  'admin.plugins.perm.db:write:packing':
+    'Paklijst-items aanmaken, bewerken en verwijderen op reizen die de actieve gebruiker mag bewerken',
+  'admin.plugins.perm.weather:read': 'De gecachte weersvoorspelling van de host lezen (op coördinaten)',
+  'admin.plugins.perm.db:read:categories': 'De globale lijst met plaatscategorieën lezen',
+  'admin.plugins.perm.db:read:tags': 'De tags van de actieve gebruiker lezen',
+  'admin.plugins.perm.db:write:tags': 'De tags van de actieve gebruiker aanmaken, bewerken en verwijderen',
+  'admin.plugins.perm.db:read:todos': 'De taken lezen van reizen waartoe de actieve gebruiker toegang heeft',
+  'admin.plugins.perm.db:write:todos':
+    'Taken aanmaken, bewerken en verwijderen op reizen die de actieve gebruiker mag bewerken',
+  'admin.plugins.perm.db:write:atlas':
+    "Landen en regio's als bezocht markeren en de bucketlist van de actieve gebruiker beheren (vereist de Atlas-add-on)",
+  'admin.plugins.perm.db:write:vacay':
+    'Vakantiedagen en bedrijfssluitingen op het actieve plan van de actieve gebruiker omschakelen (vereist de Vacay-add-on)',
+  'admin.plugins.perm.db:write:journal':
+    'Dagboekvermeldingen aanmaken, bewerken en verwijderen in dagboeken die de actieve gebruiker mag bewerken (vereist de Journey-add-on)',
+  'admin.plugins.perm.db:write:collections':
+    'Collecties aanmaken en bewerken en er plaatsen in opslaan, met de collectierol van de actieve gebruiker (vereist de Collections-add-on)',
+  'admin.plugins.perm.db:write:files':
+    'Bestanden toevoegen aan reizen die de actieve gebruiker mag bewerken (limiet 10 MB, geblokkeerde extensies geweigerd) en hun koppelingen beheren',
+  'admin.plugins.perm.db:write:collab':
+    'Notities, peilingen en chatberichten plaatsen op reizen die de actieve gebruiker mag bewerken (vereist de Collab-add-on)',
+  'admin.plugins.perm.db:write:members':
+    'Gebruikers aan reizen toevoegen — verleent reistoegang; beveiligd door het ledenbeheer-recht van de actieve gebruiker',
+  'admin.plugins.perm.notify:send':
+    'Een melding (belinbox + e-mail/ntfy) sturen naar de actieve gebruiker of een reis waartoe hij behoort — nooit naar een willekeurige ontvanger',
+  'admin.plugins.perm.ai:invoke':
+    'De door de beheerder geconfigureerde AI-provider (tekstaanvulling + documentextractie) namens de actieve gebruiker gebruiken — de plug-in bezit nooit een sleutel',
+  'admin.plugins.perm.oauth:client':
+    'Namens jou verbinden met een externe dienst via host-bemiddelde OAuth (de host bewaart de tokens, de plug-in ziet ze nooit)',
   'admin.plugins.perm.db:read:files': 'Bestanden lezen van reizen waartoe de actieve gebruiker toegang heeft',
+  'admin.plugins.perm.db:write:reservations':
+    'Boekingen (reserveringen) aanmaken, bewerken en verwijderen op reizen die de actieve gebruiker mag bewerken',
+  'admin.plugins.perm.db:write:accommodations':
+    'Accommodaties (verblijven) aanmaken, bewerken en verwijderen op reizen die de actieve gebruiker mag bewerken',
+  'admin.plugins.perm.db:read:journal': 'De reisdagboeken van de actieve gebruiker lezen (vereist de Journey-add-on)',
+  'admin.plugins.perm.db:read:atlas':
+    "De door de actieve gebruiker bezochte landen en regio's lezen (vereist de Atlas-add-on)",
+  'admin.plugins.perm.db:read:vacay': 'Het vakantieplan van de actieve gebruiker lezen (vereist de Vacay-add-on)',
+  'admin.plugins.perm.db:read:daynotes': 'De dagnotities lezen van reizen waartoe de actieve gebruiker toegang heeft',
+  'admin.plugins.perm.db:read:collections':
+    'De collecties met opgeslagen plaatsen van de actieve gebruiker lezen (vereist de Collections-add-on)',
+  'admin.plugins.perm.db:write:daynotes':
+    'Dagnotities aanmaken, bewerken en verwijderen op reizen die de actieve gebruiker mag bewerken',
+  'admin.plugins.perm.jobs:run':
+    'De gedeclareerde achtergrondtaken volgens een schema uitvoeren (zonder gebruikerscontext — kan geen gebruikersgegevens lezen)',
   'admin.plugins.perm.db:write:costs':
     'Uitgaven (budgetposten) aanmaken op reizen die de actieve gebruiker mag bewerken',
   'admin.plugins.perm.db:write:places':
@@ -248,11 +383,45 @@ const admin: TranslationStrings = {
   'admin.plugins.perm.hook:calendar-source': 'Evenementen aanleveren voor de kalender',
   'admin.plugins.perm.hook:place-detail-provider':
     'Extra details (reviews, beoordelingen, links) aan een plek toevoegen',
+  'admin.plugins.perm.hook:search-provider':
+    'Zoekopdrachten naar locaties beantwoorden vanuit een eigen index, naast de resultaten van TREK',
   'admin.plugins.perm.hook:trip-warning-provider':
     'Validatiewaarschuwingen tonen bij een reis (zichtbaar in de planner)',
+  'admin.plugins.perm.hook:table-contributor':
+    'Kolommen en acties toevoegen aan reisweergaven (boekingen, plaatsen, dagen)',
+  'admin.plugins.perm.hook:map-marker-provider':
+    "Markeringen aan de reiskaart toevoegen (bijv. boekingen of POI's tonen)",
+  'admin.plugins.perm.hook:map-layer-provider': 'Routes, corridors en zones op de reiskaart tekenen',
+  'admin.plugins.perm.hook:route-provider':
+    'Routeprofielen aanbieden waarmee de planner dagroutes berekent (bijv. EV-routering met laadstops)',
+  'admin.plugins.perm.hook:day-schedule-provider': 'Tijdsitems aan het dagplan koppelen (laadstops, buffertijden)',
+  'admin.plugins.perm.hook:day-tint-provider':
+    'Dagen in het dagplan een kleur geven (bijvoorbeeld bij welk deel van de reis een dag hoort)',
+  'admin.plugins.cap.mcpTools': 'Publiceert AI-tools',
+  'admin.plugins.mcpToolsTitle': 'Gepubliceerde AI-tools',
+  'admin.plugins.mcpToolsHint': 'Een assistent kan deze namens een gebruiker uitvoeren. Elke tool handelt met de hierboven verleende rechten.',
+  'admin.plugins.perm.mcp:tools':
+    'Tools publiceren die een AI-assistent namens jou kan uitvoeren (die handelt met de rechten die je de plug-in hier geeft, niet met die van de assistent)',
+  'admin.plugins.perm.geolocation:read':
+    'Je live locatie opvragen zolang een van zijn weergaven open is (TREK leest die met de locatietoestemming van deze site, niet met een eigen toestemming van de plug-in)',
+  'admin.plugins.perm.hook:pdf-section-provider': 'Tekstsecties toevoegen aan de PDF-export van de reis',
+  'admin.plugins.perm.hook:atlas-layer-provider':
+    'Landen markeren op de Atlas-wereldkaart (bijv. wensenlijsten of reisadviezen)',
+  'admin.plugins.perm.hook:journal-entry-provider': 'Extra regels (links, statistieken) toevoegen aan dagboek-items',
+  'admin.plugins.perm.hook:user-data':
+    'De gegevens die het over een gebruiker opslaat wissen of exporteren (AVG: accountverwijdering en inzageverzoeken)',
+  'admin.plugins.perm.hook:trip-card-provider':
+    'Kleine badges (status, aantallen) aan je dashboard-reiskaarten toevoegen',
+  'admin.plugins.perm.hook:notification-channel': 'Je meldingen via een extra kanaal bezorgen',
   'admin.plugins.perm.events:subscribe':
     'Reageert op kernactiviteitsgebeurtenissen (alleen gebeurtenisnaam + reis, nooit de inhoud)',
   'admin.plugins.perm.http:outbound': 'Uitgaande verzoeken doen naar de opgegeven hosts',
+  'admin.plugins.perm.db:read:collab':
+    'Notities, peilingen en chatberichten lezen van reizen waartoe de actieve gebruiker toegang heeft (vereist de Collab-add-on)',
+  'admin.plugins.perm.db:read:files:content':
+    'De inhoud (bytes) van bestanden lezen van reizen waartoe de actieve gebruiker toegang heeft',
+  'admin.plugins.perm.db:create:trips': 'Nieuwe reizen aanmaken die eigendom zijn van de actieve gebruiker',
+  'admin.plugins.perm.rates:read': 'De gecachte wisselkoersen van de host lezen',
   'admin.plugins.updateConsentTitle': 'Deze update vereist nieuwe machtigingen',
   'admin.plugins.updateConsentBody':
     '{name} v{version} vraagt om rechten die je nog niet hebt verleend. De nieuwe versie is geïnstalleerd, maar blijft uit totdat je deze goedkeurt.',
@@ -279,6 +448,34 @@ const admin: TranslationStrings = {
   'admin.plugins.security.reviewedTitle': 'Wat "Beoordeeld" betekent',
   'admin.plugins.security.reviewedBody':
     'Een beoordeelde plugin is bij elke versie handmatig door een TREK-beheerder op malware gecontroleerd — gecontroleerd op kwaadaardige code, niet op de vraag of hij goed werkt. Het is geen belofte dat de plugin ongevaarlijk is.',
+  'admin.plugins.security.signedTitle': 'Wat "Ondertekend" betekent',
+  'admin.plugins.security.signedBody':
+    'De controlesom die TREK bij elke installatie verifieert, bewijst dat de bestanden precies zijn waarvoor de registry instaat. Een handtekening bewijst iets anders: dat ze van de auteur komen, ondertekend met een sleutel die alleen hij heeft. Een ondertekende plugin heeft beide. Een niet-ondertekende plugin is niet onveilig — hij draagt simpelweg één garantie minder, en de meeste plugins in de registry zijn vandaag niet ondertekend.',
+  'admin.plugins.signed': 'Ondertekend',
+  'admin.plugins.signedHint': 'Bij de installatie geverifieerd tegen de ondertekeningssleutel van de auteur',
+  'admin.plugins.unsigned': 'Niet ondertekend',
+  'admin.plugins.unsignedHint':
+    'De bestanden komen overeen met waarvoor de registry instaat, maar niets koppelt ze aan de auteur. Eén garantie minder — niet onveilig.',
+  'admin.plugins.updateBlocked': 'Update geblokkeerd — {reason}',
+  'admin.plugins.reviewBlock': 'Bekijken',
+  'admin.plugins.retrusted': 'Nieuwe ondertekeningssleutel vertrouwd — de plugin is bijgewerkt',
+  'admin.plugins.sig.title': 'De handtekening van {name} kon niet worden geverifieerd',
+  'admin.plugins.sig.keyChangedBody':
+    'De ondertekeningssleutel van de auteur is niet die waarmee deze plugin is geïnstalleerd. Auteurs wisselen weleens van sleutel — maar een aanvaller die de plugin heeft overgenomen, zou er precies zo uitzien.',
+  'admin.plugins.sig.invalidBody':
+    'De bestanden komen niet overeen met de handtekening van de auteur. Ze zijn niet wat de auteur heeft ondertekend — ze zijn beschadigd geraakt, of er is mee geknoeid. Dit kan niet worden genegeerd.',
+  'admin.plugins.sig.missingBody':
+    'Deze plugin was ondertekend toen je hem installeerde, maar de nieuwe versie levert geen handtekening mee. TREK aanvaardt die stap terug niet stilzwijgend. Dit kan niet worden genegeerd.',
+  'admin.plugins.sig.incompleteBody':
+    'Het registry-item is half ondertekend: het vermeldt een auteurssleutel, maar de versie draagt geen handtekening (of andersom). Dat is een fout aan de kant van de plugin. Dit kan niet worden genegeerd.',
+  'admin.plugins.sig.pinnedKey': 'Sleutel waarmee hij is geïnstalleerd',
+  'admin.plugins.sig.newKey': 'Sleutel die hij nu aanbiedt',
+  'admin.plugins.sig.confirmOutOfBand':
+    'TREK kan een legitieme sleutelwissel niet onderscheiden van een overname — van hieruit zien ze er identiek uit. Bevestig de nieuwe sleutel bij de auteur via een kanaal dat je al vertrouwt voordat je hem accepteert. Zodra je dat doet, wordt de plugin bijgewerkt en wordt de nieuwe sleutel onthouden.',
+  'admin.plugins.sig.retrustConfirm': 'Nieuwe sleutel vertrouwen en bijwerken',
+  'admin.plugins.sig.cancel': 'Niet vertrouwen',
+  'admin.plugins.sig.consentUnsigned':
+    'Niets koppelt deze versie aan de auteur — de bestanden komen overeen met de registry, maar dragen geen handtekening van de auteur.',
   'admin.plugins.security.trustTitle': 'De conclusie',
   'admin.plugins.security.trustBody':
     'Een plugin installeren is als het installeren van elke andere app van derden: voeg alleen code toe van auteurs die je vertrouwt en controleer deze bij twijfel eerst zelf. TREK aanvaardt geen enkele verantwoordelijkheid voor plugins van derden.',
@@ -295,12 +492,33 @@ const admin: TranslationStrings = {
   'admin.plugins.sortName': 'Naam',
   'admin.plugins.sortRecent': 'Onlangs bijgewerkt',
   'admin.plugins.sortUpdates': 'Updates eerst',
+  'admin.plugins.sortDownloads': 'Meest gedownload',
   'admin.plugins.updatesAvailable': '{count} updates beschikbaar voor je plugins.',
+  'admin.plugins.newerNeedsTrek': 'v{version} beschikbaar — vereist TREK {range}',
+  'admin.plugins.versionsTitle': 'Versies',
+  'admin.plugins.versionPickerTitle': 'Versie wijzigen — {name}',
+  'admin.plugins.versionSwitch': 'Overschakelen naar {version}',
+  'admin.plugins.versionNeedsTrek': 'vereist TREK {range}',
+  'admin.plugins.changeVersion': 'Versie wijzigen…',
+  'admin.plugins.noVersions': 'Geen gepubliceerde versies gevonden in het register.',
+  'admin.plugins.downgradeTitle': 'Deze plugin terugdraaien?',
+  'admin.plugins.downgradeBody': 'Overschakelen van v{from} naar v{to}: gegevens die door de nieuwere versie zijn geschreven blijven staan, en de oudere versie begrijpt ze mogelijk niet.',
+  'admin.plugins.downgradeConfirm': 'Terugdraaien',
+  'admin.plugins.updatesHeld': 'Updates gepauzeerd op v{version}',
+  'admin.plugins.resumeUpdates': 'Updates hervatten',
+  'admin.plugins.updatesResumed': 'Updates hervat',
   'admin.plugins.updateAll': 'Alles bijwerken',
   'admin.plugins.noMatchInstalled': 'Geen geïnstalleerde plugins komen overeen met je zoekopdracht.',
   'admin.plugins.noMatchRegistry': 'Geen plugins in het register komen overeen met je zoekopdracht.',
   'admin.plugins.restart': 'Opnieuw starten',
   'admin.plugins.restarted': 'Plugin opnieuw gestart',
+  'admin.plugins.instanceSettings': 'Instantie-instellingen',
+  'admin.plugins.settingsSaved': 'Instellingen opgeslagen',
+  'admin.plugins.settingsSavedRestarted': 'Instellingen opgeslagen — plugin opnieuw gestart',
+  'admin.plugins.actions': 'Acties',
+  'admin.plugins.actions.confirm': 'Deze actie uitvoeren?',
+  'admin.plugins.actions.inactive': 'Activeer de plugin om de acties uit te voeren',
+  'admin.plugins.requiredMissing': '"{field}" is vereist',
   'admin.plugins.cap.readsTrips': 'Leest je reizen',
   'admin.plugins.cap.readsUsers': 'Leest basisprofielen',
   'admin.plugins.cap.readsCosts': 'Leest je uitgaven',
@@ -315,11 +533,21 @@ const admin: TranslationStrings = {
   'admin.plugins.cap.widget': 'Dashboardwidget',
   'admin.plugins.cap.heroWidget': 'Instapkaartwidget',
   'admin.plugins.cap.placeSlot': 'Plaatsdetail',
+  'admin.plugins.cap.daySlot': 'Dagdetail',
+  'admin.plugins.cap.reservationSlot': 'Reserveringsdetail',
+  'admin.plugins.cap.replacesTabs': 'Vervangt planner-tabbladen',
   'admin.plugins.cap.realtime': 'Realtime updates',
+  'admin.plugins.cap.notificationChannel': 'Meldingskanaal',
   'admin.plugins.cap.photos': "Levert foto's",
   'admin.plugins.cap.calendar': 'Levert kalenderevenementen',
   'admin.plugins.cap.placeDetails': 'Verrijkt plekken',
+  'admin.plugins.cap.search': 'Beantwoordt zoekopdrachten',
   'admin.plugins.cap.warnings': 'Signaleert problemen',
+  'admin.plugins.cap.mapLayers': 'Tekent op de kaart',
+  'admin.plugins.cap.routing': 'Biedt routering aan',
+  'admin.plugins.cap.daySchedule': 'Voegt plantijden toe',
+  'admin.plugins.cap.dayTint': 'Kleurt dagen',
+  'admin.plugins.cap.geolocation': 'Leest je locatie',
   'admin.plugins.cap.events': 'Reageert op activiteit',
   'admin.plugins.cap.requiresAddon': 'Vereist {addon}',
   'admin.plugins.cap.dependsOn': 'Vereist {id} {version}',
@@ -333,6 +561,22 @@ const admin: TranslationStrings = {
   'admin.plugins.dep.download': 'Downloaden',
   'admin.plugins.dep.update': 'Bijwerken',
   'admin.plugins.dep.resolveHint': 'Downloadt de nieuwste compatibele versie, inclusief de eigen afhankelijkheden.',
+  'admin.plugins.dep.trekIncompatible': 'Vereist TREK {range} — deze server draait {host}',
+  'admin.plugins.dep.trekUnknown': 'Geeft niet aan welke TREK-versies worden ondersteund',
+  'admin.plugins.installCompatible': '{version} installeren',
+  'admin.plugins.installAnyway': 'Toch installeren',
+  'admin.plugins.rangeBypass.pill': 'Versiecontroles uit',
+  'admin.plugins.rangeBypass.pillHint':
+    'TREK_PLUGINS_IGNORE_TREK_RANGE is ingesteld — plugins mogen worden geïnstalleerd en uitgevoerd buiten de TREK-versies die hun auteurs opgeven',
+  'admin.plugins.rangeBypass.title': 'Buiten de ondersteunde TREK-versies',
+  'admin.plugins.rangeBypass.noticeTitle': 'Geïnstalleerd buiten de ondersteunde TREK-versies',
+  'admin.plugins.rangeBypass.body':
+    '“{name}” geeft ondersteuning op voor TREK {range}, en deze server draait {host}. TREK laat het alleen door omdat TREK_PLUGINS_IGNORE_TREK_RANGE is ingesteld. De auteur heeft het versiebereik van de plugin niet bijgewerkt voor deze TREK, dus er is geen garantie dat het werkt — en in zeldzame gevallen kan een niet-passende plugin TREK-gegevens beschadigen. Ga alleen verder als je dat risico accepteert.',
+  'admin.plugins.rangeBypass.bodyUnknown':
+    '“{name}” geeft niet op welke TREK-versies het ondersteunt; deze server draait {host}. TREK laat het alleen door omdat TREK_PLUGINS_IGNORE_TREK_RANGE is ingesteld. Niets wijst erop dat de auteur het op deze TREK heeft getest, dus er is geen garantie dat het werkt — en in zeldzame gevallen kan een niet-passende plugin TREK-gegevens beschadigen. Ga alleen verder als je dat risico accepteert.',
+  'admin.plugins.dep.trekBypassed': 'Buiten zijn TREK-bereik ({range}) — versiecontroles uit',
+  'admin.plugins.dep.trekBypassedUnknown': 'Geeft geen TREK-bereik op — versiecontroles uit',
+  'admin.plugins.incompatible': 'Niet compatibel',
   'admin.plugins.accessTitle': 'Waartoe hij toegang heeft',
   'admin.plugins.connectsTitle': 'Maakt verbinding met',
   'admin.plugins.detailsTitle': 'Details',
@@ -341,6 +585,7 @@ const admin: TranslationStrings = {
   'admin.plugins.metaSize': 'Grootte',
   'admin.plugins.metaRequires': 'Vereist',
   'admin.plugins.metaReviewed': 'Beoordeeld op',
+  'admin.plugins.downloads': 'Downloads',
   'admin.addons.title': 'Add-ons',
   'admin.addons.subtitle': 'Schakel functies in of uit om je TREK-ervaring aan te passen.',
   'admin.addons.catalog.memories.name': "Foto's (Immich)",
@@ -349,8 +594,8 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.mcp.description': 'Model Context Protocol voor AI-assistent integratie',
   'admin.addons.catalog.packing.name': 'Lijsten',
   'admin.addons.catalog.packing.description': 'Paklijsten en to-dotaken voor je reizen',
-  'admin.addons.catalog.budget.name': 'Budget',
-  'admin.addons.catalog.budget.description': 'Houd uitgaven bij en plan je reisbudget',
+  'admin.addons.catalog.budget.name': 'Onkosten',
+  'admin.addons.catalog.budget.description': 'Houd reiskosten bij en verdeel ze onder de reisgenoten',
   'admin.addons.catalog.documents.name': 'Documenten',
   'admin.addons.catalog.documents.description': 'Bewaar en beheer reisdocumenten',
   'admin.addons.catalog.vacay.name': 'Vakantie',
@@ -358,9 +603,20 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.atlas.name': 'Atlas',
   'admin.addons.catalog.atlas.description': 'Wereldkaart met bezochte landen en reisstatistieken',
   'admin.addons.catalog.collab.name': 'Samenwerking',
-  'admin.addons.catalog.collab.description': 'Realtime notities, polls en chat voor het plannen van reizen',
+  'admin.addons.catalog.collab.description': 'Notities, peilingen, chat en suggesties om samen te plannen',
+  'admin.addons.catalog.roadtrip.name': 'Roadtrip',
+  'admin.addons.catalog.roadtrip.description': 'Plan ritten met tussenstops; rijtijden en aankomsttijden berekenen zichzelf opnieuw',
   'admin.addons.subtitleBefore': 'Schakel functies in of uit om je ',
   'admin.addons.subtitleAfter': '-ervaring aan te passen.',
+  'admin.addons.catalog.naver_list_import.name': 'Naver List Import',
+  'admin.addons.catalog.naver_list_import.description': 'Importeer plaatsen uit een gedeelde Naver Maps-lijst',
+  'admin.addons.catalog.airtrail.name': 'AirTrail',
+  'admin.addons.catalog.airtrail.description': 'Synchroniseer vluchten vanuit je AirTrail-instantie',
+  'admin.addons.catalog.dawarich.name': 'Dawarich',
+  'admin.addons.catalog.dawarich.description':
+    'Lees bezoeken en opgenomen routes uit een Dawarich-instantie die elke lezer zelf koppelt',
+  'admin.addons.catalog.llm_parsing.name': 'AI-analyse',
+  'admin.addons.catalog.llm_parsing.description': 'Leest boekingen die de ingebouwde parser niet begrijpt, met een AI-model naar keuze',
   'admin.addons.enabled': 'Ingeschakeld',
   'admin.addons.disabled': 'Uitgeschakeld',
   'admin.addons.type.trip': 'Reis',
@@ -371,6 +627,7 @@ const admin: TranslationStrings = {
   'admin.addons.integrationHint': 'Backenddiensten en API-integraties zonder eigen pagina',
   'admin.addons.toast.updated': 'Add-on bijgewerkt',
   'admin.addons.toast.error': 'Add-on bijwerken mislukt',
+  'admin.addons.group.count': '{enabled} van {total} ingeschakeld',
   'admin.addons.noAddons': 'Geen add-ons beschikbaar',
   'admin.weather.title': 'Weergegevens',
   'admin.weather.badge': 'Sinds 24 maart 2026',
@@ -506,8 +763,7 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.journey.name': 'Reisverslag',
   'admin.addons.catalog.journey.description': "Reistracking & reisdagboek met check-ins, foto's en dagelijkse verhalen",
   'admin.addons.catalog.collections.name': 'Collecties',
-  'admin.addons.catalog.collections.description':
-    'Persoonlijke plekkenbibliotheek — sla plekken uit je reizen op in benoemde lijsten, kopieer ze naar elke reis en deel ze met anderen',
+  'admin.addons.catalog.collections.description': 'Verzamel plaatsen uit al je reizen in benoemde lijsten en gebruik ze opnieuw',
   'admin.passkey.title': 'Inloggen met passkey',
   'admin.passkey.cardHint': 'Laat gebruikers inloggen met passkeys (WebAuthn). Standaard uit.',
   'admin.passkey.login': 'Inloggen met passkey inschakelen',
@@ -539,6 +795,9 @@ const admin: TranslationStrings = {
   'admin.defaultSettings.mapboxStylePlaceholder': 'Kies een stijl…',
   'admin.defaultSettings.mapbox3d': '3D-gebouwen & terrein',
   'admin.defaultSettings.mapboxQuality': 'Hogekwaliteitsmodus',
+  'admin.defaultSettings.cartoKey': 'Gedeelde CARTO-sleutel',
+  'admin.defaultSettings.cartoKeyHint':
+    'Wordt gebruikt voor elke gebruiker die nog geen eigen sleutel heeft ingevoerd, zo krijgt de hele instantie CARTO-tegels zonder watermerk. Versleuteld opgeslagen.',
   'admin.group.users': 'Users',
   'admin.group.config': 'Configuration',
   'admin.group.integration': 'Integrations',
@@ -548,5 +807,9 @@ const admin: TranslationStrings = {
   'admin.invite.tripHint':
     'De nieuwe gebruiker wordt automatisch aan deze reis toegevoegd wanneer hij zich via de link registreert.',
   'admin.invite.boundTo': 'voegt toe aan {trip}',
+  'admin.placesUsageTitle': 'Waar de sleutel voor wordt gebruikt',
+  'admin.mapsKeyHintShort': 'Voegt foto\'s, beoordelingen en openingstijden toe. Elke opzoeking gaat dan naar Google.',
+  'admin.amapKeyHintShort': 'Voor plaatszoeken in het vasteland van China. Vereist een webservicesleutel, geen JS-API-sleutel.',
+  'admin.collab.links.subtitle': 'Gedeelde links en bladwijzers',
 };
 export default admin;

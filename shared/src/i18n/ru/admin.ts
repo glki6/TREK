@@ -88,16 +88,64 @@ const admin: TranslationStrings = {
   'admin.requireMfaHint':
     'Пользователи без 2FA должны завершить настройку в разделе «Настройки» перед использованием приложения.',
   'admin.apiKeys': 'API-ключи',
-  'admin.apiKeysHint': 'Необязательно. Включает расширенные данные о местах, такие как фото и погода.',
+  'admin.apiKeysHint': 'Откуда берутся данные о местах. Указателю TREK ключ не нужен; два поставщика ниже необязательны.',
+  'admin.trekApi.badgeDefault': 'Рекомендуемый источник',
+  'admin.googleCaveat.badge': 'Не рекомендуется',
+  'admin.googleCaveat.body':
+    'TREK с открытым исходным кодом, и мы здесь не нейтральны. В таком масштабе отзывы и фотографии обычных заведений есть только у Google, и это и есть монополия. Поле здесь из-за отсутствия альтернативы, а не потому, что мы его советуем. Тогда каждый запрос уходит в Google.',
+  'admin.trekApi.tagline':
+    'Собственный указатель мест TREK. Поиск без ключа Google, без квоты и без того, чтобы кто-то считал ваши запросы.',
+  'admin.trekApi.factPlaces':
+    '73,6 миллиона мест по всему миру',
+  'admin.trekApi.factNoKey':
+    'Без ключа, без квоты',
+  'admin.trekApi.factOffline':
+    'Страновые пакеты работают офлайн',
+  'admin.trekApi.factPrivacy':
+    'Запросы никогда не записываются',
+  'admin.trekApi.more':
+    'Что внутри',
+  'admin.trekApi.fieldPhone':
+    'Телефон',
+  'admin.trekApi.fieldStableId':
+    'Постоянный идентификатор',
+  'admin.trekApi.includedNote':
+    'Описания берутся с сайта самого места, часы работы — из OpenStreetMap там, где они указаны.',
+  'admin.trekApi.notRatings':
+    'Отзывы',
+  'admin.trekApi.notPhotos':
+    'Фотографии обычных заведений',
+  'admin.trekApi.notIncludedNote':
+    'Ни того, ни другого нет ни в одном открытом источнике ни за какие деньги. К этим двум ключ Google остаётся единственной дорогой.',
+  'admin.trekApi.sourcesLabel':
+    'Источники',
+  'admin.trekApi.sourcesNote':
+    'Каждое поле в ответе указывает, из какого из них оно пришло.',
+  'admin.trekApi.included':
+    'Входит',
+  'admin.trekApi.notIncluded':
+    'Не входит',
   'admin.mapsKey': 'API-ключ Google Maps',
   'admin.mapsKeyHint': 'Необходим для поиска мест. Получите на console.cloud.google.com',
   'admin.mapsKeyHintLong':
-    'Без API-ключа используется OpenStreetMap для поиска мест. С ключом Google API можно загружать фото, рейтинги и часы работы. Получите ключ на console.cloud.google.com.',
+    'Без ключа Google API используется рекомендуемый TREK API. С ключом дополнительно загружаются фотографии, оценки и часы работы. Создать ключ можно на console.cloud.google.com.',
   'admin.recommended': 'Рекомендуется',
   'admin.weatherKey': 'API-ключ OpenWeatherMap',
   'admin.weatherKeyHint': 'Для данных о погоде. Бесплатно на openweathermap.org',
   'admin.unsplashKey': 'Ключ API Unsplash',
   'admin.unsplashKeyHint': 'Для поиска изображений. Бесплатно на unsplash.com/developers',
+  'admin.amapKey': 'API-ключ Amap (高德地图)',
+  'admin.amapKeyHint':
+    'Для поиска мест в континентальном Китае, где Google недоступен, а данных OpenStreetMap мало. Нужен ключ типа «Web 服务» (веб-сервис), а не ключ JS API. Получить можно на console.amap.com.',
+  'admin.placesProvider.title': 'Провайдер поиска мест',
+  'admin.placesProvider.subtitle':
+    'Собственный индекс TREK и OpenStreetMap отвечают на каждый поиск. Здесь выбирается, кого спросить дополнительно, если они ничего не нашли: «Автоматически» предпочитает Google при наличии ключа, затем Amap.',
+  'admin.placesProvider.auto': 'Автоматически',
+  'admin.placesProvider.google': 'Google Places',
+  'admin.placesProvider.amap': 'Amap (高德地图)',
+  'admin.placesProvider.openstreetmap': 'OpenStreetMap',
+  'admin.placesProvider.missingKey': 'Для выбранного поставщика не задан ключ API, поэтому на поиск мест отвечают только индекс TREK и OpenStreetMap.',
+  'admin.placesProvider.saved': 'Провайдер поиска мест сохранён',
   'admin.validateKey': 'Проверить',
   'admin.keyValid': 'Подключено',
   'admin.keyInvalid': 'Недействителен',
@@ -115,6 +163,8 @@ const admin: TranslationStrings = {
   'admin.fileTypesHint': 'Настройте, какие типы файлов могут загружать пользователи.',
   'admin.fileTypesFormat': 'Расширения через запятую (напр. jpg,png,pdf,doc). Используйте * для разрешения всех типов.',
   'admin.fileTypesSaved': 'Настройки типов файлов сохранены',
+  'admin.googleOptions': 'Для чего используется ключ',
+  'admin.googleOptionsSummary': 'включено {on} из {total}',
   'admin.placesPhotos.title': 'Фотографии мест',
   'admin.placesPhotos.subtitle':
     'Загрузка фотографий из Google Places API. Отключите для экономии квоты API. Фотографии Wikimedia не затронуты.',
@@ -124,6 +174,24 @@ const admin: TranslationStrings = {
   'admin.placesDetails.title': 'Сведения о месте',
   'admin.placesDetails.subtitle':
     'Загрузка подробной информации о месте (часы работы, рейтинг, веб-сайт) из Google Places API. Отключите для экономии квоты API.',
+  'admin.placesEnrich.title': 'Обогащение мест',
+  'admin.placesEnrich.subtitle':
+    'Показывает изображения и описание при добавлении места. Wikipedia и OpenStreetMap используются всегда; Google добавляется, если включены «Фото мест» или «Детали мест».',
+  'admin.placesGoogleOnly.title': 'Искать только через Google',
+  'admin.placesGoogleOnly.subtitle': 'Каждый поиск и каждая подсказка идут в Google Places. Выключено: сначала отвечают индекс TREK и OpenStreetMap, Google спрашивается, только если они ничего не нашли.',
+  'admin.placesGoogleOnly.missingKey': 'Нужен ключ Google Maps API. Без него поиск идёт через индекс TREK и OpenStreetMap независимо от этого переключателя.',
+  'admin.placesGoogleOnly.otherProvider': 'Требуется Google как провайдер мест. Если выбран Amap или OpenStreetMap, ни один поиск не уходит в Google, как бы ни стоял этот переключатель.',
+  'admin.transitProvider.title': 'Поставщик общественного транспорта',
+  'admin.transitProvider.subtitle': 'Какая служба отвечает на поиск общественного транспорта.',
+  'admin.transitProvider.transitous': 'Transitous (бесплатно)',
+  'admin.transitProvider.google': 'Google',
+  'admin.transitProvider.transitousHint': 'GTFS-фиды сообщества. Бесплатно и без ключа, с лучшим покрытием в Европе.',
+  'admin.transitProvider.googleHint': 'Использует указанный выше ключ Google для регионов, по которым у Transitous нет данных. Оплачивается за каждый поиск — пока ключ не задан, используется Transitous.',
+  'admin.transitProvider.noKeyWarning': 'Выбран Google, но ключ Google не настроен — поиск транспорта по-прежнему использует Transitous. Добавьте ключ в разделе «Ключи API» выше.',
+  'admin.transitProvider.personalKeyWarning': 'Задан только ваш собственный ключ Google, поэтому поиск других участников по-прежнему возвращается к Transitous. Сохраните ключ выше от имени администратора, чтобы он действовал для всей установки.',
+  'admin.placeShadow.title': 'Журнал поиска мест',
+  'admin.placeShadow.subtitle':
+    'Записывать, какой результат поиска был выбран, чтобы позже оценить другой индекс мест на реальных запросах. Ничего не покидает этот сервер, и администратор может в любой момент выгрузить или удалить журнал.',
   'admin.bagTracking.title': 'Отслеживание багажа',
   'admin.bagTracking.subtitle': 'Включить вес и привязку к багажу для вещей',
   'admin.collab.chat.title': 'Чат',
@@ -159,15 +227,25 @@ const admin: TranslationStrings = {
   'admin.packingTemplates.loadError': 'Ошибка загрузки шаблонов',
   'admin.packingTemplates.createError': 'Ошибка создания шаблона',
   'admin.packingTemplates.deleteError': 'Ошибка удаления шаблона',
+  'admin.packingTemplates.deleteCategoryError': 'Не удалось удалить категорию',
+  'admin.packingTemplates.deleteItemError': 'Не удалось удалить элемент',
   'admin.packingTemplates.saveError': 'Ошибка сохранения',
   'admin.tabs.addons': 'Дополнения',
   'admin.tabs.plugins': 'Плагины',
+  'admin.tabs.storage': 'Хранилище',
   'admin.plugins.rescan': 'Пересканировать',
   'admin.plugins.rescanned': 'Папка плагинов пересканирована',
   'admin.plugins.upload': 'Загрузить плагин',
   'admin.plugins.dropToUpload': 'Перетащите .zip плагина для установки',
   'admin.plugins.uploaded': 'Плагин “{name}” загружен — активируйте для запуска',
   'admin.plugins.sideloaded': 'Загружен вручную',
+  'admin.plugins.devLinkBadge': 'Dev-Link',
+  'admin.plugins.devLinkHint':
+    'Загружено из локального каталога сборки и горячо перезагружается с реальными данными — только для разработки',
+  'admin.plugins.devLinkTitle': 'Подключить локальный плагин',
+  'admin.plugins.devLinkPathPlaceholder': '/absolute/path/to/your/plugin',
+  'admin.plugins.devLinkButton': 'Подключить',
+  'admin.plugins.devLinkLinked': '{id} подключён — активируйте для запуска',
   'admin.plugins.sideloadedHint': 'Загружено вручную — не из реестра, без подписи и проверки',
   'admin.plugins.browse': 'Обзор плагинов',
   'admin.plugins.installed': 'Установлен',
@@ -180,6 +258,18 @@ const admin: TranslationStrings = {
   'admin.plugins.deactivated': 'Плагин деактивирован',
   'admin.plugins.viewErrors': 'Показать журнал ошибок',
   'admin.plugins.errorLog': 'Журнал ошибок',
+  'admin.plugins.allowedHosts': 'Разрешённые хосты',
+  'admin.plugins.allowedHosts.hint':
+    'Этот плагин обращается к сервису, который можете указать только вы (self-hosted сервер). Добавьте хосты, к которым он может обращаться — к другим он не сможет.',
+  'admin.plugins.allowedHosts.none': 'Хосты пока не добавлены.',
+  'admin.plugins.allowedHosts.unsupported':
+    'Этот плагин не использует хосты, задаваемые оператором. Его разрешённые хосты зафиксированы в манифесте.',
+  'admin.plugins.allowedHosts.restartNote': 'Сохранение перезапускает плагин, чтобы он подхватил новый список.',
+  'admin.plugins.allowedHosts.add': 'Добавить разрешённый хост',
+  'admin.plugins.allowedHosts.count': 'Разрешённых хостов: {n}',
+  'admin.plugins.operatorEgressPill': '+ добавленные вами хосты',
+  'admin.plugins.operatorEgressHint':
+    'Этот плагин обращается к сервису, который можете указать только вы (self-hosted сервер). После установки добавьте хосты в ⋯ → Разрешённые хосты. К другим он не сможет обратиться.',
   'admin.plugins.noErrors': 'Ошибок не зафиксировано.',
   'admin.plugins.uninstalled': 'Плагин удалён',
   'admin.plugins.uninstallTitle': 'Удалить плагин?',
@@ -196,6 +286,7 @@ const admin: TranslationStrings = {
   'admin.plugins.updateTo': 'Обновить → v{version}',
   'admin.plugins.enabledToggle': 'Включить плагин',
   'plugins.notFound': 'Плагин не найден',
+  'plugins.frameLoadFailed': 'This plugin could not be loaded.',
   'admin.plugins.title': 'Плагины',
   'admin.plugins.subtitle': 'Устанавливайте сторонние плагины и управляйте ими на вашем экземпляре.',
   'admin.plugins.disabledTitle': 'Плагины отключены',
@@ -221,6 +312,7 @@ const admin: TranslationStrings = {
   'admin.plugins.scope.user': 'Для каждого пользователя',
   'admin.plugins.fieldRequired': 'Обязательно',
   'admin.plugins.sourceRepo': 'Репозиторий с исходным кодом',
+  'admin.plugins.reportIssue': 'Сообщить о проблеме',
   'admin.plugins.homepage': 'Домашняя страница',
   'admin.plugins.requiresTrek': 'Требуется TREK {version}+',
   'admin.plugins.reviewedOn': 'Проверен {date}',
@@ -229,7 +321,52 @@ const admin: TranslationStrings = {
   'admin.plugins.perm.db:read:users': 'Читать основную информацию профиля (имя, аватар — но не учётные данные)',
   'admin.plugins.perm.db:read:costs': 'Читать расходы (статьи бюджета), доступные текущему пользователю',
   'admin.plugins.perm.db:read:packing': 'Читать списки вещей поездок, доступных текущему пользователю',
+  'admin.plugins.perm.db:write:packing':
+    'Создавать, редактировать и удалять пункты списка вещей в поездках, которые текущий пользователь может редактировать',
+  'admin.plugins.perm.weather:read': 'Читать кэшированный прогноз погоды хоста (по координатам)',
+  'admin.plugins.perm.db:read:categories': 'Читать глобальный список категорий мест',
+  'admin.plugins.perm.db:read:tags': 'Читать теги текущего пользователя',
+  'admin.plugins.perm.db:write:tags': 'Создавать, редактировать и удалять теги текущего пользователя',
+  'admin.plugins.perm.db:read:todos': 'Читать задачи поездок, доступных текущему пользователю',
+  'admin.plugins.perm.db:write:todos':
+    'Создавать, редактировать и удалять задачи в поездках, которые текущий пользователь может редактировать',
+  'admin.plugins.perm.db:write:atlas':
+    'Отмечать страны и регионы как посещённые и управлять списком желаний текущего пользователя (требуется дополнение Atlas)',
+  'admin.plugins.perm.db:write:vacay':
+    'Переключать дни отпуска и корпоративные праздники в активном плане текущего пользователя (требуется дополнение Vacay)',
+  'admin.plugins.perm.db:write:journal':
+    'Создавать, редактировать и удалять записи в дневниках, которые текущий пользователь может редактировать (требуется дополнение Journey)',
+  'admin.plugins.perm.db:write:collections':
+    'Создавать и редактировать коллекции и сохранять в них места с ролью текущего пользователя в коллекции (требуется дополнение Collections)',
+  'admin.plugins.perm.db:write:files':
+    'Прикреплять файлы к поездкам, которые текущий пользователь может редактировать (лимит 10 МБ, заблокированные расширения отклоняются), и управлять их связями',
+  'admin.plugins.perm.db:write:collab':
+    'Публиковать заметки, опросы и сообщения чата в поездках, которые текущий пользователь может редактировать (требуется дополнение Collab)',
+  'admin.plugins.perm.db:write:members':
+    'Добавлять пользователей в поездки — предоставляет доступ к поездке; защищено правом управления участниками текущего пользователя',
+  'admin.plugins.perm.notify:send':
+    'Отправлять уведомление (колокольчик + email/ntfy) текущему пользователю или его поездке — никогда произвольному получателю',
+  'admin.plugins.perm.ai:invoke':
+    'Использовать настроенного администратором ИИ-провайдера (дополнение текста + извлечение из документов) от имени текущего пользователя — плагин никогда не хранит ключ',
+  'admin.plugins.perm.oauth:client':
+    'Подключаться к стороннему сервису от вашего имени через OAuth, посредником которого выступает хост (хост хранит токены, плагин их не видит)',
   'admin.plugins.perm.db:read:files': 'Читать файлы поездок, доступных текущему пользователю',
+  'admin.plugins.perm.db:write:reservations':
+    'Создавать, редактировать и удалять бронирования в поездках, которые текущий пользователь может редактировать',
+  'admin.plugins.perm.db:write:accommodations':
+    'Создавать, редактировать и удалять размещения в поездках, которые текущий пользователь может редактировать',
+  'admin.plugins.perm.db:read:journal':
+    'Читать дневники путешествий текущего пользователя (требуется дополнение Journey)',
+  'admin.plugins.perm.db:read:atlas':
+    'Читать посещённые страны и регионы текущего пользователя (требуется дополнение Atlas)',
+  'admin.plugins.perm.db:read:vacay': 'Читать план отпуска текущего пользователя (требуется дополнение Vacay)',
+  'admin.plugins.perm.db:read:daynotes': 'Читать заметки дня поездок, доступных текущему пользователю',
+  'admin.plugins.perm.db:read:collections':
+    'Читать коллекции сохранённых мест текущего пользователя (требуется дополнение Collections)',
+  'admin.plugins.perm.db:write:daynotes':
+    'Создавать, редактировать и удалять заметки дня в поездках, которые текущий пользователь может редактировать',
+  'admin.plugins.perm.jobs:run':
+    'Запускать объявленные фоновые задачи по расписанию (без контекста пользователя — не может читать данные пользователя)',
   'admin.plugins.perm.db:write:costs':
     'Создавать расходы (статьи бюджета) в поездках, которые текущий пользователь может редактировать',
   'admin.plugins.perm.db:write:places':
@@ -247,11 +384,47 @@ const admin: TranslationStrings = {
   'admin.plugins.perm.hook:photo-provider': 'Предоставлять фотографии для «Воспоминаний»',
   'admin.plugins.perm.hook:calendar-source': 'Предоставлять события для календаря',
   'admin.plugins.perm.hook:place-detail-provider': 'Добавлять дополнительные сведения (отзывы, оценки, ссылки) к месту',
+  'admin.plugins.perm.hook:search-provider':
+    'Отвечать на поиск мест из собственного индекса, рядом с результатами TREK',
   'admin.plugins.perm.hook:trip-warning-provider':
     'Выдавать предупреждения проверки для поездки (отображаются в планировщике)',
+  'admin.plugins.perm.hook:table-contributor':
+    'Добавлять столбцы и действия в представления поездки (бронирования, места, дни)',
+  'admin.plugins.perm.hook:map-marker-provider':
+    'Добавлять маркеры на карту поездки (например, показывать бронирования или POI)',
+  'admin.plugins.perm.hook:map-layer-provider': 'Рисовать маршруты, коридоры и зоны на карте поездки',
+  'admin.plugins.perm.hook:route-provider':
+    'Предоставлять профили маршрутизации, по которым планировщик строит маршруты дней (например, маршрутизация для электромобилей с остановками для зарядки)',
+  'admin.plugins.perm.hook:day-schedule-provider':
+    'Добавлять записи времени в план дня (остановки для зарядки, запас времени на контроль)',
+  'admin.plugins.perm.hook:day-tint-provider':
+    'Отмечать дни в плане цветом (например, к какому этапу поездки относится день)',
+  'admin.plugins.cap.mcpTools': 'Публикует ИИ-инструменты',
+  'admin.plugins.mcpToolsTitle': 'Публикуемые ИИ-инструменты',
+  'admin.plugins.mcpToolsHint': 'Ассистент может запускать их от имени пользователя. Каждый действует с правами, выданными выше.',
+  'admin.plugins.perm.mcp:tools':
+    'Публиковать инструменты, которые ИИ-ассистент может запускать от вашего имени (он действует с правами, выданными плагину здесь, а не со своими)',
+  'admin.plugins.perm.geolocation:read':
+    'Запрашивать ваше местоположение в реальном времени, пока открыто одно из его представлений (TREK читает его с разрешением на геолокацию для этого сайта, а не с отдельным разрешением плагина)',
+  'admin.plugins.perm.hook:pdf-section-provider': 'Добавлять текстовые разделы в PDF-экспорт поездки',
+  'admin.plugins.perm.hook:atlas-layer-provider':
+    'Выделять страны на карте мира в Атласе (например, списки желаний или предупреждения для путешественников)',
+  'admin.plugins.perm.hook:journal-entry-provider':
+    'Добавлять дополнительные строки (ссылки, статистику) к записям дневника',
+  'admin.plugins.perm.hook:user-data':
+    'Удаление или экспорт хранимых данных о пользователе (GDPR: удаление аккаунта и запросы данных)',
+  'admin.plugins.perm.hook:trip-card-provider':
+    'Добавлять небольшие значки (статус, счётчики) на карточки поездок на панели',
+  'admin.plugins.perm.hook:notification-channel': 'Доставлять ваши уведомления через дополнительный канал',
   'admin.plugins.perm.events:subscribe':
     'Реагировать на основные события активности (только название события и поездка, никогда содержимое)',
   'admin.plugins.perm.http:outbound': 'Выполнять исходящие запросы к заявленным хостам',
+  'admin.plugins.perm.db:read:collab':
+    'Читать заметки, опросы и сообщения чата поездок, доступных текущему пользователю (требуется дополнение Collab)',
+  'admin.plugins.perm.db:read:files:content':
+    'Читать содержимое (байты) файлов поездок, доступных текущему пользователю',
+  'admin.plugins.perm.db:create:trips': 'Создавать новые поездки, принадлежащие текущему пользователю',
+  'admin.plugins.perm.rates:read': 'Читать кэшированные курсы валют хоста',
   'admin.plugins.updateConsentTitle': 'Для этого обновления нужны новые разрешения',
   'admin.plugins.updateConsentBody':
     '{name} v{version} запрашивает права, которые вы ещё не предоставили. Новая версия установлена, но остаётся выключенной, пока вы её не одобрите.',
@@ -278,6 +451,34 @@ const admin: TranslationStrings = {
   'admin.plugins.security.reviewedTitle': 'Что означает «Проверен»',
   'admin.plugins.security.reviewedBody':
     'Проверенный плагин был вручную просканирован на вредоносный код сопровождающим TREK в каждой версии — проверен на вредоносный код, а не на то, насколько хорошо он работает. Это не обещание того, что плагин безвреден.',
+  'admin.plugins.security.signedTitle': 'Что означает «Подписан»',
+  'admin.plugins.security.signedBody':
+    'Контрольная сумма, которую TREK проверяет при каждой установке, доказывает, что файлы — ровно те, за которые ручается реестр. Подпись доказывает другое: что они пришли от автора и подписаны ключом, который есть только у него. У подписанного плагина есть и то, и другое. Неподписанный плагин не является небезопасным — просто у него одной гарантией меньше, и большинство плагинов в реестре сегодня не подписаны.',
+  'admin.plugins.signed': 'Подписан',
+  'admin.plugins.signedHint': 'При установке проверен по ключу подписи автора',
+  'admin.plugins.unsigned': 'Без подписи',
+  'admin.plugins.unsignedHint':
+    'Файлы совпадают с тем, за что ручается реестр, но ничто не связывает их с автором. Одной гарантией меньше — это не значит, что он небезопасен.',
+  'admin.plugins.updateBlocked': 'Обновление заблокировано — {reason}',
+  'admin.plugins.reviewBlock': 'Разобраться',
+  'admin.plugins.retrusted': 'Новый ключ подписи принят — плагин обновлён',
+  'admin.plugins.sig.title': 'Не удалось проверить подпись плагина «{name}»',
+  'admin.plugins.sig.keyChangedBody':
+    'Ключ подписи автора — не тот, с которым этот плагин был установлен. Авторы действительно меняют ключи, но злоумышленник, захвативший плагин, выглядел бы ровно так же.',
+  'admin.plugins.sig.invalidBody':
+    'Файлы не соответствуют подписи автора. Это не то, что автор подписал: они либо повреждены, либо изменены. Это нельзя обойти.',
+  'admin.plugins.sig.missingBody':
+    'Этот плагин был подписан, когда вы его устанавливали, но новая версия поставляется без подписи. TREK не примет такой откат молча. Это нельзя обойти.',
+  'admin.plugins.sig.incompleteBody':
+    'Запись в реестре подписана наполовину: в ней объявлен ключ автора, но у версии нет подписи (или наоборот). Это ошибка на стороне плагина. Это нельзя обойти.',
+  'admin.plugins.sig.pinnedKey': 'Ключ, с которым он был установлен',
+  'admin.plugins.sig.newKey': 'Ключ, который он предлагает сейчас',
+  'admin.plugins.sig.confirmOutOfBand':
+    'TREK не может отличить законную смену ключа от захвата — отсюда они выглядят одинаково. Прежде чем принять новый ключ, подтвердите его у автора по каналу, которому вы уже доверяете. После этого плагин будет обновлён, а новый ключ — запомнен.',
+  'admin.plugins.sig.retrustConfirm': 'Доверять новому ключу и обновить',
+  'admin.plugins.sig.cancel': 'Не доверять',
+  'admin.plugins.sig.consentUnsigned':
+    'Ничто не связывает эту версию с её автором — файлы совпадают с реестром, но не несут подписи автора.',
   'admin.plugins.security.trustTitle': 'Итог',
   'admin.plugins.security.trustBody':
     'Установка плагина похожа на установку любого стороннего приложения: добавляйте только код от авторов, которым доверяете, а при сомнениях сначала проверьте его самостоятельно. TREK не несёт ответственности за сторонние плагины.',
@@ -294,12 +495,33 @@ const admin: TranslationStrings = {
   'admin.plugins.sortName': 'Название',
   'admin.plugins.sortRecent': 'Недавно обновлённые',
   'admin.plugins.sortUpdates': 'Сначала с обновлениями',
+  'admin.plugins.sortDownloads': 'По загрузкам',
   'admin.plugins.updatesAvailable': 'Доступно обновлений для ваших плагинов: {count}.',
+  'admin.plugins.newerNeedsTrek': 'Доступна v{version} — требуется TREK {range}',
+  'admin.plugins.versionsTitle': 'Версии',
+  'admin.plugins.versionPickerTitle': 'Сменить версию — {name}',
+  'admin.plugins.versionSwitch': 'Перейти на {version}',
+  'admin.plugins.versionNeedsTrek': 'требуется TREK {range}',
+  'admin.plugins.changeVersion': 'Сменить версию…',
+  'admin.plugins.noVersions': 'В реестре не найдено опубликованных версий.',
+  'admin.plugins.downgradeTitle': 'Откатить этот плагин?',
+  'admin.plugins.downgradeBody': 'Переход с v{from} на v{to}: данные, записанные более новой версией, остаются на месте, и старая версия может их не понять.',
+  'admin.plugins.downgradeConfirm': 'Откатить',
+  'admin.plugins.updatesHeld': 'Обновления приостановлены на v{version}',
+  'admin.plugins.resumeUpdates': 'Возобновить обновления',
+  'admin.plugins.updatesResumed': 'Обновления возобновлены',
   'admin.plugins.updateAll': 'Обновить все',
   'admin.plugins.noMatchInstalled': 'Нет установленных плагинов по вашему запросу.',
   'admin.plugins.noMatchRegistry': 'В реестре нет плагинов по вашему запросу.',
   'admin.plugins.restart': 'Перезапустить',
   'admin.plugins.restarted': 'Плагин перезапущен',
+  'admin.plugins.instanceSettings': 'Настройки экземпляра',
+  'admin.plugins.settingsSaved': 'Настройки сохранены',
+  'admin.plugins.settingsSavedRestarted': 'Настройки сохранены — плагин перезапущен',
+  'admin.plugins.actions': 'Действия',
+  'admin.plugins.actions.confirm': 'Выполнить это действие?',
+  'admin.plugins.actions.inactive': 'Активируйте плагин, чтобы выполнять его действия',
+  'admin.plugins.requiredMissing': '«{field}» обязательно',
   'admin.plugins.cap.readsTrips': 'Читает ваши поездки',
   'admin.plugins.cap.readsUsers': 'Читает основные профили',
   'admin.plugins.cap.readsCosts': 'Читает ваши расходы',
@@ -314,11 +536,21 @@ const admin: TranslationStrings = {
   'admin.plugins.cap.widget': 'Виджет панели',
   'admin.plugins.cap.heroWidget': 'Виджет посадочного талона',
   'admin.plugins.cap.placeSlot': 'Детали места',
+  'admin.plugins.cap.daySlot': 'Детали дня',
+  'admin.plugins.cap.reservationSlot': 'Детали брони',
+  'admin.plugins.cap.replacesTabs': 'Заменяет вкладки планировщика',
   'admin.plugins.cap.realtime': 'Обновления в реальном времени',
+  'admin.plugins.cap.notificationChannel': 'Канал уведомлений',
   'admin.plugins.cap.photos': 'Предоставляет фото',
   'admin.plugins.cap.calendar': 'Предоставляет события календаря',
   'admin.plugins.cap.placeDetails': 'Обогащает места',
+  'admin.plugins.cap.search': 'Отвечает на поиск',
   'admin.plugins.cap.warnings': 'Отмечает проблемы',
+  'admin.plugins.cap.mapLayers': 'Рисует на карте',
+  'admin.plugins.cap.routing': 'Предоставляет маршрутизацию',
+  'admin.plugins.cap.daySchedule': 'Добавляет время в план',
+  'admin.plugins.cap.dayTint': 'Раскрашивает дни',
+  'admin.plugins.cap.geolocation': 'Считывает ваше местоположение',
   'admin.plugins.cap.events': 'Реагирует на активность',
   'admin.plugins.cap.requiresAddon': 'Требуется {addon}',
   'admin.plugins.cap.dependsOn': 'Нужен {id} {version}',
@@ -332,6 +564,23 @@ const admin: TranslationStrings = {
   'admin.plugins.dep.download': 'Загрузить',
   'admin.plugins.dep.update': 'Обновить',
   'admin.plugins.dep.resolveHint': 'Загружает последнюю совместимую версию вместе с её зависимостями.',
+  'admin.plugins.dep.trekIncompatible': 'Требуется TREK {range} — на этом сервере {host}',
+  'admin.plugins.dep.trekUnknown': 'Не указано, какие версии TREK поддерживаются',
+  'admin.plugins.installCompatible': 'Установить {version}',
+  'admin.plugins.installAnyway': 'Всё равно установить',
+  'admin.plugins.rangeBypass.pill': 'Проверки версии отключены',
+  'admin.plugins.rangeBypass.pillHint':
+    'Задано TREK_PLUGINS_IGNORE_TREK_RANGE — плагины можно устанавливать и запускать вне версий TREK, указанных их авторами',
+  'admin.plugins.rangeBypass.title': 'Вне поддерживаемых версий TREK',
+  'admin.plugins.rangeBypass.noticeTitle': 'Установлен вне поддерживаемых версий TREK',
+  'admin.plugins.rangeBypass.body':
+    '«{name}» заявляет поддержку TREK {range}, а этот сервер работает на {host}. TREK пропускает его только потому, что задано TREK_PLUGINS_IGNORE_TREK_RANGE. Автор не обновил диапазон версий плагина для этого TREK, так что работоспособность не гарантируется — а в редких случаях несовместимый плагин может повредить данные TREK. Продолжайте, только если принимаете этот риск.',
+  'admin.plugins.rangeBypass.bodyUnknown':
+    '«{name}» не указывает, какие версии TREK он поддерживает; этот сервер работает на {host}. TREK пропускает его только потому, что задано TREK_PLUGINS_IGNORE_TREK_RANGE. Ничто не говорит о том, что автор тестировал его на этом TREK, так что работоспособность не гарантируется — а в редких случаях несовместимый плагин может повредить данные TREK. Продолжайте, только если принимаете этот риск.',
+  'admin.plugins.dep.trekBypassed':
+    'Вне своего диапазона TREK ({range}) — проверки версии отключены',
+  'admin.plugins.dep.trekBypassedUnknown': 'Диапазон TREK не указан — проверки версии отключены',
+  'admin.plugins.incompatible': 'Несовместимо',
   'admin.plugins.accessTitle': 'К чему есть доступ',
   'admin.plugins.connectsTitle': 'Подключается к',
   'admin.plugins.detailsTitle': 'Подробности',
@@ -340,6 +589,7 @@ const admin: TranslationStrings = {
   'admin.plugins.metaSize': 'Размер',
   'admin.plugins.metaRequires': 'Требуется',
   'admin.plugins.metaReviewed': 'Проверен',
+  'admin.plugins.downloads': 'Загрузки',
   'admin.addons.title': 'Дополнения',
   'admin.addons.subtitle': 'Включайте или отключайте функции для настройки TREK под себя.',
   'admin.addons.catalog.memories.name': 'Фото (Immich)',
@@ -348,8 +598,8 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.mcp.description': 'Протокол контекста модели для интеграции с ИИ-ассистентами',
   'admin.addons.catalog.packing.name': 'Списки',
   'admin.addons.catalog.packing.description': 'Списки вещей и задачи для ваших поездок',
-  'admin.addons.catalog.budget.name': 'Бюджет',
-  'admin.addons.catalog.budget.description': 'Отслеживайте расходы и планируйте бюджет поездки',
+  'admin.addons.catalog.budget.name': 'Расходы',
+  'admin.addons.catalog.budget.description': 'Учитывайте расходы на поездку и делите их между участниками',
   'admin.addons.catalog.documents.name': 'Документы',
   'admin.addons.catalog.documents.description': 'Храните и управляйте документами для путешествий',
   'admin.addons.catalog.vacay.name': 'Vacay',
@@ -357,9 +607,20 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.atlas.name': 'Atlas',
   'admin.addons.catalog.atlas.description': 'Карта мира с посещёнными странами и статистикой путешествий',
   'admin.addons.catalog.collab.name': 'Collab',
-  'admin.addons.catalog.collab.description': 'Заметки в реальном времени, опросы и чат для планирования поездок',
+  'admin.addons.catalog.collab.description': 'Заметки, опросы, чат и подсказки для совместного планирования',
+  'admin.addons.catalog.roadtrip.name': 'Автопутешествие',
+  'admin.addons.catalog.roadtrip.description': 'Планируйте поездки с остановками: время в пути и прибытия пересчитывается автоматически',
   'admin.addons.subtitleBefore': 'Включайте или отключайте функции для настройки ',
   'admin.addons.subtitleAfter': ' под себя.',
+  'admin.addons.catalog.naver_list_import.name': 'Naver List Import',
+  'admin.addons.catalog.naver_list_import.description': 'Импорт мест из общего списка Naver Maps',
+  'admin.addons.catalog.airtrail.name': 'AirTrail',
+  'admin.addons.catalog.airtrail.description': 'Синхронизация рейсов с вашего сервера AirTrail',
+  'admin.addons.catalog.dawarich.name': 'Dawarich',
+  'admin.addons.catalog.dawarich.description':
+    'Чтение посещений и записанных маршрутов из экземпляра Dawarich, который каждый пользователь подключает сам',
+  'admin.addons.catalog.llm_parsing.name': 'Разбор с помощью ИИ',
+  'admin.addons.catalog.llm_parsing.description': 'Читает брони, которые не понимает встроенный анализатор, с помощью выбранной вами модели ИИ',
   'admin.addons.enabled': 'Включено',
   'admin.addons.disabled': 'Отключено',
   'admin.addons.type.trip': 'Поездка',
@@ -370,6 +631,7 @@ const admin: TranslationStrings = {
   'admin.addons.integrationHint': 'Фоновые сервисы и API-интеграции без отдельной страницы',
   'admin.addons.toast.updated': 'Дополнение обновлено',
   'admin.addons.toast.error': 'Не удалось обновить дополнение',
+  'admin.addons.group.count': 'Включено {enabled} из {total}',
   'admin.addons.noAddons': 'Нет доступных дополнений',
   'admin.weather.title': 'Данные о погоде',
   'admin.weather.badge': 'С 24 марта 2026',
@@ -504,8 +766,7 @@ const admin: TranslationStrings = {
   'admin.addons.catalog.journey.description':
     'Отслеживание поездок и дневник путешествий с отметками, фото и ежедневными историями',
   'admin.addons.catalog.collections.name': 'Коллекции',
-  'admin.addons.catalog.collections.description':
-    'Личная библиотека мест — сохраняйте места из разных поездок в именованные списки, копируйте в любую поездку, делитесь с другими',
+  'admin.addons.catalog.collections.description': 'Собирайте места из любых поездок в именованные списки и используйте их снова',
   'admin.passkey.title': 'Вход по passkey',
   'admin.passkey.cardHint': 'Разрешите пользователям входить с помощью passkeys (WebAuthn). По умолчанию выключено.',
   'admin.passkey.login': 'Включить вход по passkey',
@@ -537,6 +798,9 @@ const admin: TranslationStrings = {
   'admin.defaultSettings.mapboxStylePlaceholder': 'Выберите стиль…',
   'admin.defaultSettings.mapbox3d': '3D-здания и рельеф',
   'admin.defaultSettings.mapboxQuality': 'Режим высокого качества',
+  'admin.defaultSettings.cartoKey': 'Общий ключ CARTO',
+  'admin.defaultSettings.cartoKeyHint':
+    'Используется для каждого пользователя, который не ввёл собственный ключ, так весь сервер получает тайлы CARTO без водяного знака. Хранится в зашифрованном виде.',
   'admin.group.users': 'Users',
   'admin.group.config': 'Configuration',
   'admin.group.integration': 'Integrations',
@@ -545,5 +809,9 @@ const admin: TranslationStrings = {
   'admin.invite.tripNone': 'Без поездки',
   'admin.invite.tripHint': 'Новый пользователь автоматически добавляется в эту поездку при регистрации по ссылке.',
   'admin.invite.boundTo': 'добавляет в {trip}',
+  'admin.placesUsageTitle': 'Для чего используется ключ',
+  'admin.mapsKeyHintShort': 'Добавляет фото, оценки и часы работы. Каждый запрос тогда идёт в Google.',
+  'admin.amapKeyHintShort': 'Для поиска мест в материковом Китае. Нужен ключ веб-сервиса, а не ключ JS API.',
+  'admin.collab.links.subtitle': 'Общие ссылки и закладки',
 };
 export default admin;

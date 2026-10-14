@@ -8,6 +8,9 @@
     <!-- Pre-paint appearance (FOUC fix). External classic script so it runs
          before first paint AND complies with the prod CSP (script-src 'self'). -->
     <script src="/theme-boot.js"></script>
+    <!-- Recovers a shell whose entry module cannot load (#2524). Classic for the
+         same reasons, and ahead of the entry, which it has to watch. -->
+    <script src="/shell-guard.js"></script>
 
     <!-- PWA / iOS -->
     <meta name="theme-color" content="#09090b" />
@@ -19,15 +22,7 @@
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=MuseoModerno:wght@400;700;800&display=swap" rel="stylesheet" />
-
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin="" />
+    <!-- Fonts are bundled from @fontsource in src/main.tsx, see the note there. -->
   </head>
   <body>
     <div id="root"></div>

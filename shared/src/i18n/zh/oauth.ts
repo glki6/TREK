@@ -3,7 +3,8 @@ import type { TranslationStrings } from '../types';
 const oauth: TranslationStrings = {
   'oauth.scope.group.trips': '行程',
   'oauth.scope.group.places': '地点',
-  'oauth.scope.group.atlas': 'Atlas',
+  'oauth.scope.group.collections': '收藏夹',
+  'oauth.scope.group.atlas': '足迹',
   'oauth.scope.group.packing': '行李',
   'oauth.scope.group.todos': '待办事项',
   'oauth.scope.group.budget': '预算',
@@ -11,7 +12,7 @@ const oauth: TranslationStrings = {
   'oauth.scope.group.collab': '协作',
   'oauth.scope.group.notifications': '通知',
   'oauth.scope.group.vacay': '假期',
-  'oauth.scope.group.geo': 'Geo',
+  'oauth.scope.group.geo': '地图服务',
   'oauth.scope.group.weather': '天气',
   'oauth.scope.group.journey': '旅程',
   'oauth.scope.trips:read.label': '查看行程和行程计划',
@@ -26,9 +27,13 @@ const oauth: TranslationStrings = {
   'oauth.scope.places:read.description': '读取地点、每日分配、标签和分类',
   'oauth.scope.places:write.label': '管理地点',
   'oauth.scope.places:write.description': '创建、更新和删除地点、分配和标签',
-  'oauth.scope.atlas:read.label': '查看 Atlas',
+  'oauth.scope.collections:read.label': '查看收藏夹',
+  'oauth.scope.collections:read.description': '读取收藏夹及其中的地点、评分、标签和成员',
+  'oauth.scope.collections:write.label': '管理收藏夹',
+  'oauth.scope.collections:write.description': '创建/编辑收藏夹，保存、评分、标注、复制地点，以及分享列表',
+  'oauth.scope.atlas:read.label': '查看足迹',
   'oauth.scope.atlas:read.description': '读取已访问国家、地区和心愿清单',
-  'oauth.scope.atlas:write.label': '管理 Atlas',
+  'oauth.scope.atlas:write.label': '管理足迹',
   'oauth.scope.atlas:write.description': '标记已访问国家和地区，管理心愿清单',
   'oauth.scope.packing:read.label': '查看行李清单',
   'oauth.scope.packing:read.description': '读取行李物品、包袋和分类负责人',
@@ -68,24 +73,39 @@ const oauth: TranslationStrings = {
   'oauth.scope.journey:write.description': '创建、更新和删除旅程及其条目',
   'oauth.scope.journey:share.label': '管理旅程链接',
   'oauth.scope.journey:share.description': '创建、更新和撤销旅程的公开分享链接',
-  'oauth.authorize.authorizing': 'Authorizing…', // en-fallback
-  'oauth.authorize.loading': 'Loading…', // en-fallback
-  'oauth.authorize.errorTitle': 'Authorization Error', // en-fallback
-  'oauth.authorize.loginTitle': 'Sign in to continue', // en-fallback
-  'oauth.authorize.loginDescription': '{client} wants access to your TREK account. Please sign in first.', // en-fallback
-  'oauth.authorize.loginButton': 'Sign in to TREK', // en-fallback
-  'oauth.authorize.requestLabel': 'Authorization Request', // en-fallback
-  'oauth.authorize.requestDescription': 'This application is requesting access to your TREK account.', // en-fallback
-  'oauth.authorize.trustNote': 'Only grant access to applications you trust. Your data stays on your server.', // en-fallback
-  'oauth.authorize.selectScope': 'Select at least one scope', // en-fallback
-  'oauth.authorize.approveOneScope': 'Approve ({count} scope)', // en-fallback
-  'oauth.authorize.approveManyScopes': 'Approve ({count} scopes)', // en-fallback
-  'oauth.authorize.approveAccess': 'Approve Access', // en-fallback
-  'oauth.authorize.deny': 'Deny', // en-fallback
-  'oauth.authorize.choosePermissions': 'Choose which permissions to grant', // en-fallback
-  'oauth.authorize.permissionsRequested': 'Permissions requested', // en-fallback
-  'oauth.authorize.alwaysIncluded': 'Always included', // en-fallback
-  'oauth.authorize.alwaysTool.listTrips': 'List your trips so the AI can discover trip IDs', // en-fallback
-  'oauth.authorize.alwaysTool.getTripSummary': 'Read a trip overview needed to use any other tool', // en-fallback
+  'oauth.authorize.authorizing': '正在授权…',
+  'oauth.authorize.loading': '正在加载…',
+  'oauth.authorize.errorTitle': '授权错误',
+  'oauth.authorize.loginTitle': '登录后继续',
+  'oauth.authorize.loginDescription': '{client} 想要访问你的 TREK 账户，请先登录。',
+  'oauth.authorize.loginButton': '登录 TREK',
+  'oauth.authorize.requestLabel': '授权请求',
+  'oauth.authorize.requestDescription': '此应用正在请求访问你的 TREK 账户。',
+  'oauth.authorize.trustNote': '只向你信任的应用授权，你的数据仍保留在自己的服务器上。',
+  'oauth.authorize.selectScope': '请至少选择一项权限范围',
+  'oauth.authorize.approveOneScope': '批准（{count} 项权限）',
+  'oauth.authorize.approveManyScopes': '批准（{count} 项权限）',
+  'oauth.authorize.approveAccess': '批准访问',
+  'oauth.authorize.deny': '拒绝',
+  'oauth.authorize.choosePermissions': '选择要授予的权限',
+  'oauth.authorize.permissionsRequested': '请求的权限',
+  'oauth.authorize.alwaysIncluded': '始终包含',
+  'oauth.authorize.alwaysTool.listTrips': '列出你的行程，以使 AI 找到行程 ID',
+  'oauth.authorize.alwaysTool.getTripSummary': '读取行程概览，这是使用其他工具所需的信息',
+  'oauth.scope.group.files': '文件',
+  'oauth.scope.group.settings': '设置',
+  'oauth.scope.files:read.label': '查看行程文件',
+  'oauth.scope.files:read.description': '列出行程的文档：名称、大小、上传者以及关联的对象',
+  'oauth.scope.files:write.label': '管理行程文件',
+  'oauth.scope.files:write.description': '重命名和描述文件，关联到预订和地点，标记星标并移入回收站',
+  'oauth.scope.files:content.label': '读取文件内容',
+  'oauth.scope.files:content.description': '读取已上传文档的内容，例如预订 PDF 或票据',
+  'oauth.scope.settings:read.label': '查看你的偏好设置',
+  'oauth.scope.settings:read.description': '读取单位、时间格式、语言、默认货币和起始页',
+  'oauth.scope.settings:write.label': '更改你的偏好设置',
+  'oauth.scope.settings:write.description': '更改单位、时间格式、语言、默认货币和起始页。绝不涉及已保存的 API 密钥',
+  'oauth.scope.group.plugins': '插件',
+  'oauth.scope.plugins:use.label': '运行插件工具',
+  'oauth.scope.plugins:use.description': '允许此客户端调用由管理员安装并批准的插件所发布的工具。每个插件都以其已获授予的权限运行，而不是以此令牌的权限范围运行',
 };
 export default oauth;

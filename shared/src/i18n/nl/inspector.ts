@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': 'Toevoegen aan dag',
   'inspector.confirmedRes': 'Bevestigde reservering',
   'inspector.pendingRes': 'Reservering in behandeling',
-  'inspector.google': 'Navigeren',
-  'inspector.openStreetMap': 'Bekijken',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'Navigatie',
+  'inspector.openWith': 'Openen met',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': 'Website openen',
   'inspector.saveToCollection': 'In collectie opslaan',
   'inspector.savedToCollection': 'Opgeslagen',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': 'Reservering bewerken',
   'inspector.participants': 'Deelnemers',
   'inspector.trackStats': 'Routegegevens',
+  'inspector.trackColor': 'Routekleur',
+  'inspector.trackColorAuto': 'Automatische kleur',
+  'inspector.trackColorCustom': 'Kies een aangepaste kleur',
 };
 export default inspector;

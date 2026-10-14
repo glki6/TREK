@@ -1,10 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { HttpException } from '@nestjs/common';
 import { DaysController } from '../../../src/nest/days/days.controller';
-import { DayNotesController } from '../../../src/nest/days/day-notes.controller';
-import { DayReorderError } from '../../../src/services/dayService';
+import { DayNotesController } from '../../../src/nest/day-notes/day-notes.controller';
+import { DayNoteCreateDto, DayNoteUpdateDto } from '../../../src/nest/day-notes/day-notes.dto';
+import { DayReorderError, DayAppendError, NO_DATES_MESSAGE, type DatedDayAppend } from '../../../src/nest/days/days.service';
+import { DayCreateDto } from '../../../src/nest/days/days.dto';
+import { DayDeleteError, type DayRemoval, type DayRemovalService } from '../../../src/nest/days/day-removal.service';
+import type { DayReorderDto } from '../../../src/nest/days/days.dto';
 import type { DaysService } from '../../../src/nest/days/days.service';
-import type { DayNotesService } from '../../../src/nest/days/day-notes.service';
+import type { DayNotesService } from '../../../src/nest/day-notes/day-notes.service';
 import type { User } from '../../../src/types';
 
 const user = { id: 1, role: 'user', email: 'u@example.test' } as User;
@@ -22,66 +26,127 @@ function thrown(fn: () => unknown): { status: number; body: unknown } {
 function daysSvc(o: Partial<DaysService> = {}): DaysService {
   return { verifyTripAccess: vi.fn().mockReturnValue(trip), canEdit: vi.fn().mockReturnValue(true), broadcast: vi.fn(), ...o } as unknown as DaysService;
 }
+function removalSvc(o: Partial<DayRemovalService> = {}): DayRemovalService {
+  return { remove: vi.fn(), announce: vi.fn(), ...o } as unknown as DayRemovalService;
+}
 function notesSvc(o: Partial<DayNotesService> = {}): DayNotesService {
   return { verifyTripAccess: vi.fn().mockReturnValue(trip), canEdit: vi.fn().mockReturnValue(true), broadcast: vi.fn(), ...o } as unknown as DayNotesService;
 }
 
+// reorder() keeps the legacy raw-body guard on orderedIds, which DayReorderDto's type
+// says can never fire: over HTTP the ZodValidationPipe rejects such a body first. These
+// unit tests call the handler directly, so they can still reach the guard, and the
+// payload is cast instead of being made to satisfy the DTO.
+function rawReorderBody(body: Record<string, unknown>): DayReorderDto {
+  return body as unknown as DayReorderDto;
+}
+
 describe('DaysController (parity with the legacy /api/trips/:tripId/days route)', () => {
-  it('404 when trip not accessible', () => {
-    const svc = daysSvc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) });
-    expect(thrown(() => new DaysController(svc).list(user, '5'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
-  });
+  // The 404 "Trip not found" and 403 "No permission" cases moved to
+  // trip-access.guard.test.ts with the check itself: TripAccessGuard resolves :tripId
+  // for the whole controller now, so a handler is only ever reached for a trip the
+  // user may see. What is left here is what the handlers themselves still decide.
 
   it('GET / returns the list service result verbatim (the { days } envelope)', () => {
     const svc = daysSvc({ list: vi.fn().mockReturnValue({ days: [{ id: 1 }] }) } as Partial<DaysService>);
-    expect(new DaysController(svc).list(user, '5')).toEqual({ days: [{ id: 1 }] });
+    expect(new DaysController(svc, removalSvc()).list(user, '5')).toEqual({ days: [{ id: 1 }] });
   });
 
-  it('POST / 403 without day_edit, then creates + broadcasts', () => {
-    expect(thrown(() => new DaysController(daysSvc({ canEdit: vi.fn().mockReturnValue(false) })).create(user, '5', {}))).toEqual({ status: 403, body: { error: 'No permission' } });
+  it('POST / creates + broadcasts', () => {
     const create = vi.fn().mockReturnValue({ id: 9 }); const broadcast = vi.fn();
-    expect(new DaysController(daysSvc({ create, broadcast } as Partial<DaysService>)).create(user, '5', { date: '2026-07-01' }, 'sock')).toEqual({ day: { id: 9 } });
+    expect(new DaysController(daysSvc({ create, broadcast } as Partial<DaysService>), removalSvc()).create(user, '5', { date: '2026-07-01' }, 'sock')).toEqual({ day: { id: 9 } });
     expect(create).toHaveBeenCalledWith('5', '2026-07-01', undefined);
     expect(broadcast).toHaveBeenCalledWith('5', 'day:created', { day: { id: 9 } }, 'sock');
   });
 
-  it('POST / 404 when the trip is not accessible', () => {
-    const svc = daysSvc({ verifyTripAccess: vi.fn().mockReturnValue(null) });
-    expect(thrown(() => new DaysController(svc).create(user, '5', {}))).toEqual({ status: 404, body: { error: 'Trip not found' } });
-  });
 
-  it('POST / with a position inserts + broadcasts day:reordered', () => {
+  it('POST / with a position inserts, broadcasts day:reordered, then the grown trip', () => {
     const insert = vi.fn().mockReturnValue({ id: 12 }); const create = vi.fn(); const broadcast = vi.fn();
-    const svc = daysSvc({ insert, create, broadcast } as Partial<DaysService>);
-    expect(new DaysController(svc).create(user, '5', { position: 0 }, 'sock')).toEqual({ day: { id: 12 } });
+    const getTripForViewer = vi.fn().mockReturnValue({ id: 5, end_date: '2026-07-04' });
+    const svc = daysSvc({ insert, create, broadcast, getTripForViewer } as Partial<DaysService>);
+    expect(new DaysController(svc, removalSvc()).create(user, '5', { position: 0 }, 'sock'))
+      .toEqual({ day: { id: 12 }, trip: { id: 5, end_date: '2026-07-04' } });
     expect(insert).toHaveBeenCalledWith('5', 0);
     expect(create).not.toHaveBeenCalled();
-    expect(broadcast).toHaveBeenCalledWith('5', 'day:reordered', { day: { id: 12 } }, 'sock');
+    expect(getTripForViewer).toHaveBeenCalledWith('5', 1);
+    expect(broadcast.mock.calls).toEqual([
+      ['5', 'day:reordered', { day: { id: 12 } }, 'sock'],
+      ['5', 'trip:updated', { trip: { id: 5, end_date: '2026-07-04' } }, 'sock'],
+    ]);
+
+    // A trip that is gone by the time it is re-read is not announced.
+    broadcast.mockClear();
+    getTripForViewer.mockReturnValue(undefined);
+    new DaysController(svc, removalSvc()).create(user, '5', { position: 1 }, 'sock');
+    expect(broadcast.mock.calls.map(call => call[1])).toEqual(['day:reordered']);
+  });
+
+  describe('POST / dated', () => {
+    const appended: DatedDayAppend = {
+      day: { id: 14, trip_id: 5, day_number: 4, date: '2026-07-04', assignments: [], notes_items: [] } as DatedDayAppend['day'],
+      endDate: '2026-07-04', boundaries: null, trip: { id: 5, end_date: '2026-07-04' },
+    };
+
+    it('appends as the caller, announces with and without the socket, and answers with the day and the trip', () => {
+      const appendDated = vi.fn().mockReturnValue(appended);
+      const announceDatedAppend = vi.fn();
+      const broadcast = vi.fn(); const insert = vi.fn(); const create = vi.fn();
+      const svc = daysSvc({ appendDated, announceDatedAppend, broadcast, insert, create } as Partial<DaysService>);
+
+      expect(new DaysController(svc, removalSvc()).create(user, '5', { dated: true, notes: 'Late checkout' }, 'sock'))
+        .toEqual({ day: appended.day, trip: appended.trip });
+      expect(appendDated).toHaveBeenCalledWith('5', 1, 'Late checkout');
+      expect(insert).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+
+      const [sent, senders] = announceDatedAppend.mock.calls[0];
+      expect(sent).toBe(appended);
+      senders.all('roadtripBoundary:changed', { boundaries: [] });
+      senders.others('day:reordered', { day: appended.day });
+      expect(broadcast.mock.calls).toEqual([
+        ['5', 'roadtripBoundary:changed', { boundaries: [] }, undefined],
+        ['5', 'day:reordered', { day: appended.day }, 'sock'],
+      ]);
+    });
+
+    it('400 with the service sentence for a trip without dates, and nothing is announced', () => {
+      const announceDatedAppend = vi.fn();
+      const svc = daysSvc({
+        appendDated: vi.fn(() => { throw new DayAppendError(NO_DATES_MESSAGE); }), announceDatedAppend,
+      } as Partial<DaysService>);
+      expect(thrown(() => new DaysController(svc, removalSvc()).create(user, '5', { dated: true }, 'sock')))
+        .toEqual({ status: 400, body: { error: NO_DATES_MESSAGE } });
+      expect(announceDatedAppend).not.toHaveBeenCalled();
+    });
+
+    it('rethrows anything else unchanged', () => {
+      const boom = new Error('db is down');
+      const svc = daysSvc({ appendDated: vi.fn(() => { throw boom; }) } as Partial<DaysService>);
+      expect(() => new DaysController(svc, removalSvc()).create(user, '5', { dated: true })).toThrow(boom);
+    });
+
+    it('the DTO refuses dated next to a position or a date before the handler runs', () => {
+      expect(DayCreateDto.schema.safeParse({ dated: true, position: 2 }).success).toBe(false);
+      expect(DayCreateDto.schema.safeParse({ dated: true, date: '2026-07-04' }).success).toBe(false);
+      expect(DayCreateDto.schema.safeParse({ dated: true }).success).toBe(true);
+    });
   });
 
   describe('PUT /reorder', () => {
-    it('404 when the trip is not accessible', () => {
-      const svc = daysSvc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) });
-      expect(thrown(() => new DaysController(svc).reorder(user, '5', { orderedIds: [1, 2] }))).toEqual({ status: 404, body: { error: 'Trip not found' } });
-    });
 
-    it('403 without day_edit', () => {
-      const svc = daysSvc({ canEdit: vi.fn().mockReturnValue(false) });
-      expect(thrown(() => new DaysController(svc).reorder(user, '5', { orderedIds: [1, 2] }))).toEqual({ status: 403, body: { error: 'No permission' } });
-    });
 
     it('400 when orderedIds is missing', () => {
-      expect(thrown(() => new DaysController(daysSvc()).reorder(user, '5', {}))).toEqual({ status: 400, body: { error: 'orderedIds must be an array' } });
+      expect(thrown(() => new DaysController(daysSvc(), removalSvc()).reorder(user, '5', rawReorderBody({})))).toEqual({ status: 400, body: { error: 'orderedIds must be an array' } });
     });
 
     it('400 when orderedIds is not an array', () => {
-      expect(thrown(() => new DaysController(daysSvc()).reorder(user, '5', { orderedIds: 'nope' as never }))).toEqual({ status: 400, body: { error: 'orderedIds must be an array' } });
+      expect(thrown(() => new DaysController(daysSvc(), removalSvc()).reorder(user, '5', rawReorderBody({ orderedIds: 'nope' })))).toEqual({ status: 400, body: { error: 'orderedIds must be an array' } });
     });
 
     it('maps a DayReorderError to 400 with its message', () => {
       const reorder = vi.fn(() => { throw new DayReorderError('orderedIds must be a permutation of the trip day ids.'); });
       const svc = daysSvc({ reorder } as Partial<DaysService>);
-      expect(thrown(() => new DaysController(svc).reorder(user, '5', { orderedIds: [9] }))).toEqual({
+      expect(thrown(() => new DaysController(svc, removalSvc()).reorder(user, '5', { orderedIds: [9] }))).toEqual({
         status: 400, body: { error: 'orderedIds must be a permutation of the trip day ids.' },
       });
     });
@@ -90,57 +155,99 @@ describe('DaysController (parity with the legacy /api/trips/:tripId/days route)'
       const boom = new Error('db is down');
       const reorder = vi.fn(() => { throw boom; });
       const svc = daysSvc({ reorder } as Partial<DaysService>);
-      expect(() => new DaysController(svc).reorder(user, '5', { orderedIds: [1, 2] })).toThrow(boom);
+      expect(() => new DaysController(svc, removalSvc()).reorder(user, '5', { orderedIds: [1, 2] })).toThrow(boom);
     });
 
     it('reorders and broadcasts day:reordered', () => {
       const reorder = vi.fn(); const broadcast = vi.fn();
       const svc = daysSvc({ reorder, broadcast } as Partial<DaysService>);
-      expect(new DaysController(svc).reorder(user, '5', { orderedIds: [2, 1] }, 'sock')).toEqual({ success: true });
+      expect(new DaysController(svc, removalSvc()).reorder(user, '5', { orderedIds: [2, 1] }, 'sock')).toEqual({ success: true });
       expect(reorder).toHaveBeenCalledWith('5', [2, 1]);
       expect(broadcast).toHaveBeenCalledWith('5', 'day:reordered', { orderedIds: [2, 1] }, 'sock');
     });
   });
 
   it('PUT /:id 404 when the day is missing, else updates', () => {
-    expect(thrown(() => new DaysController(daysSvc({ getDay: vi.fn().mockReturnValue(undefined) } as Partial<DaysService>)).update(user, '5', '9', {}))).toEqual({ status: 404, body: { error: 'Day not found' } });
+    expect(thrown(() => new DaysController(daysSvc({ getDay: vi.fn().mockReturnValue(undefined) } as Partial<DaysService>), removalSvc()).update(user, '5', '9', {}))).toEqual({ status: 404, body: { error: 'Day not found' } });
     const update = vi.fn().mockReturnValue({ id: 9, title: 'T' });
     const svc = daysSvc({ getDay: vi.fn().mockReturnValue({ id: 9 }), update } as Partial<DaysService>);
-    expect(new DaysController(svc).update(user, '5', '9', { title: 'T' })).toEqual({ day: { id: 9, title: 'T' } });
+    expect(new DaysController(svc, removalSvc()).update(user, '5', '9', { title: 'T' })).toEqual({ day: { id: 9, title: 'T' } });
   });
 
-  it('DELETE /:id 404 when missing, else success', () => {
-    expect(thrown(() => new DaysController(daysSvc({ getDay: vi.fn().mockReturnValue(undefined) } as Partial<DaysService>)).remove(user, '5', '9'))).toEqual({ status: 404, body: { error: 'Day not found' } });
-    const svc = daysSvc({ getDay: vi.fn().mockReturnValue({ id: 9 }), remove: vi.fn() } as Partial<DaysService>);
-    expect(new DaysController(svc).remove(user, '5', '9')).toEqual({ success: true });
+  describe('DELETE /:id', () => {
+    const removed: DayRemoval = {
+      dayId: 9, orderedIds: [8, 10], stayIds: [], reservationIds: [], budgetItemIds: [], mirrors: [],
+      boundaries: null, endDate: '2026-07-02', trip: { id: 5, end_date: '2026-07-02' },
+    };
+
+    it('404 when the day is not on the trip, before anything is removed', () => {
+      const removal = removalSvc();
+      expect(thrown(() => new DaysController(daysSvc({ getDay: vi.fn().mockReturnValue(undefined) } as Partial<DaysService>), removal).remove(user, '5', '9')))
+        .toEqual({ status: 404, body: { error: 'Day not found' } });
+      expect(removal.remove).not.toHaveBeenCalled();
+    });
+
+    it('400 with the service sentence for the last day, and nothing is announced', () => {
+      const removal = removalSvc({ remove: vi.fn(() => { throw new DayDeleteError('A trip needs at least one day.'); }) });
+      const svc = daysSvc({ getDay: vi.fn().mockReturnValue({ id: 9 }) } as Partial<DaysService>);
+      expect(thrown(() => new DaysController(svc, removal).remove(user, '5', '9', 'sock')))
+        .toEqual({ status: 400, body: { error: 'A trip needs at least one day.' } });
+      expect(removal.announce).not.toHaveBeenCalled();
+    });
+
+    it('rethrows anything else unchanged', () => {
+      const boom = new Error('db is down');
+      const removal = removalSvc({ remove: vi.fn(() => { throw boom; }) });
+      const svc = daysSvc({ getDay: vi.fn().mockReturnValue({ id: 9 }) } as Partial<DaysService>);
+      expect(() => new DaysController(svc, removal).remove(user, '5', '9')).toThrow(boom);
+    });
+
+    it('removes as the caller, announces with and without the socket, and answers with the trip', () => {
+      const broadcast = vi.fn();
+      const removal = removalSvc({ remove: vi.fn().mockReturnValue(removed) });
+      const svc = daysSvc({ getDay: vi.fn().mockReturnValue({ id: 9 }), broadcast } as Partial<DaysService>);
+
+      expect(new DaysController(svc, removal).remove(user, '5', '9', 'sock'))
+        .toEqual({ success: true, trip: { id: 5, end_date: '2026-07-02' } });
+      expect(removal.remove).toHaveBeenCalledWith('5', '9', { userId: 1, socketId: 'sock' });
+
+      const [tripId, sentRemoval, senders] = vi.mocked(removal.announce).mock.calls[0];
+      expect([tripId, sentRemoval, senders.socketId]).toEqual(['5', removed, 'sock']);
+      senders.all('budget:deleted', { itemId: 3 });
+      senders.others('day:deleted', { dayId: 9 });
+      expect(broadcast.mock.calls).toEqual([
+        ['5', 'budget:deleted', { itemId: 3 }, undefined],
+        ['5', 'day:deleted', { dayId: 9 }, 'sock'],
+      ]);
+    });
   });
 });
 
 describe('DayNotesController (parity with the legacy /api/.../days/:dayId/notes route)', () => {
-  it('400 on an over-long text BEFORE the trip-access check (middleware order)', () => {
-    const verifyTripAccess = vi.fn().mockReturnValue(undefined); // would 404 if reached
-    const svc = notesSvc({ verifyTripAccess });
-    expect(thrown(() => new DayNotesController(svc).create(user, '5', '3', { text: 'x'.repeat(501) }))).toEqual({
-      status: 400, body: { error: 'text must be 500 characters or less' },
-    });
-    expect(verifyTripAccess).not.toHaveBeenCalled();
+  // The legacy in-controller length guard moved to the global ZodValidationPipe
+  // (day-notes.dto.ts over the @trek/shared schemas) — like the old guard it
+  // rejects before the trip-access check. The pipe path is exercised end-to-end
+  // in tests/e2e/days.e2e.test.ts; here we pin the caps on the DTO schemas.
+  it('DTO schemas carry the length caps and moveDayNote nulls', () => {
+    expect(DayNoteCreateDto.schema.safeParse({ text: 'x'.repeat(501) }).success).toBe(false);
+    // The body cap moved to 2000 with #1629 (formatted Markdown); the title did not.
+    expect(DayNoteCreateDto.schema.safeParse({ text: 'ok', time: 'y'.repeat(2001) }).success).toBe(false);
+    expect(DayNoteCreateDto.schema.safeParse({ text: 'ok', time: 'y'.repeat(2000) }).success).toBe(true);
+    expect(DayNoteCreateDto.schema.safeParse({ text: 'ok', time: null, icon: null }).success).toBe(true);
+    expect(DayNoteUpdateDto.schema.safeParse({ time: 'y'.repeat(2001) }).success).toBe(false);
+    expect(DayNoteUpdateDto.schema.safeParse({ time: null }).success).toBe(true);
+    expect(DayNoteUpdateDto.schema.safeParse({ color: '#dc2626' }).success).toBe(true);
   });
 
-  it('400 on an over-long time', () => {
-    expect(thrown(() => new DayNotesController(notesSvc()).create(user, '5', '3', { text: 'ok', time: 'y'.repeat(251) }))).toEqual({
-      status: 400, body: { error: 'time must be 250 characters or less' },
-    });
-  });
-
-  it('404 trip, 403 permission, 404 day, 400 empty text, then creates', () => {
-    expect(thrown(() => new DayNotesController(notesSvc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) })).create(user, '5', '3', { text: 'ok' }))).toEqual({ status: 404, body: { error: 'Trip not found' } });
-    expect(thrown(() => new DayNotesController(notesSvc({ canEdit: vi.fn().mockReturnValue(false) })).create(user, '5', '3', { text: 'ok' }))).toEqual({ status: 403, body: { error: 'No permission' } });
+  // Trip access and day_edit are TripAccessGuard's now (trip-access.guard.test.ts);
+  // what stays here is what this handler decides for itself.
+  it('404 day, 400 empty text, then creates', () => {
     expect(thrown(() => new DayNotesController(notesSvc({ dayExists: vi.fn().mockReturnValue(false) } as Partial<DayNotesService>)).create(user, '5', '3', { text: 'ok' }))).toEqual({ status: 404, body: { error: 'Day not found' } });
     expect(thrown(() => new DayNotesController(notesSvc({ dayExists: vi.fn().mockReturnValue(true) } as Partial<DayNotesService>)).create(user, '5', '3', { text: '  ' }))).toEqual({ status: 400, body: { error: 'Text required' } });
     const create = vi.fn().mockReturnValue({ id: 7 }); const broadcast = vi.fn();
     const svc = notesSvc({ dayExists: vi.fn().mockReturnValue(true), create, broadcast } as Partial<DayNotesService>);
     expect(new DayNotesController(svc).create(user, '5', '3', { text: 'Lunch', time: '12:00' }, 'sock')).toEqual({ note: { id: 7 } });
-    expect(create).toHaveBeenCalledWith('3', '5', 'Lunch', '12:00', undefined, undefined);
+    expect(create).toHaveBeenCalledWith('3', '5', 'Lunch', '12:00', undefined, undefined, undefined);
     expect(broadcast).toHaveBeenCalledWith('5', 'dayNote:created', { dayId: 3, note: { id: 7 } }, 'sock');
   });
 

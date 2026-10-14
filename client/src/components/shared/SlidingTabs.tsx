@@ -3,7 +3,18 @@ import React, { useLayoutEffect, useRef, useState, type CSSProperties } from 're
 export interface SlidingTab<T extends string> {
   id: T
   label: React.ReactNode
+  /**
+   * Native tooltip. Opt-in and never derived from the label: a tooltip that only
+   * repeats the text next to the cursor is noise, so a caller sets this solely
+   * when the tab shows something the label does not spell out.
+   */
   title?: string
+  /**
+   * Accessible name, for a tab whose visible label is an abbreviation. Silent on
+   * screen, unlike `title`, so it carries the full name without putting a
+   * tooltip under the cursor.
+   */
+  ariaLabel?: string
   icon?: React.ComponentType<{ size?: number; className?: string }>
   count?: number
 }
@@ -30,16 +41,43 @@ export function SlidingTabs<T extends string>({
   const [indicator, setIndicator] = useState<{ left: number; width: number; ready: boolean }>({ left: 0, width: 0, ready: false })
 
   useLayoutEffect(() => {
-    const active = tabRefs.current.get(activeTab)
-    const container = containerRef.current
-    if (!active || !container) return
-    const containerRect = container.getBoundingClientRect()
-    const activeRect = active.getBoundingClientRect()
-    setIndicator({
-      left: activeRect.left - containerRect.left + container.scrollLeft,
-      width: activeRect.width,
-      ready: true,
+    const measure = (): void => {
+      const active = tabRefs.current.get(activeTab)
+      const container = containerRef.current
+      if (!active || !container) return
+      const containerRect = container.getBoundingClientRect()
+      const activeRect = active.getBoundingClientRect()
+      const left = activeRect.left - containerRect.left + container.scrollLeft
+      const width = activeRect.width
+      setIndicator(prev =>
+        prev.ready && prev.left === left && prev.width === width
+          ? prev
+          : { left, width, ready: true },
+      )
+    }
+
+    measure()
+
+    // Re-measure once web fonts settle — on a reload the first measure runs against
+    // fallback-font metrics, so the (bold) active label reflows and the pill drifts.
+    let cancelled = false
+    document.fonts?.ready?.then(() => {
+      if (!cancelled) measure()
     })
+
+    // Re-measure on layout/size changes: container (window resize) + active label reflow.
+    let ro: ResizeObserver | undefined
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => measure())
+      if (containerRef.current) ro.observe(containerRef.current)
+      const active = tabRefs.current.get(activeTab)
+      if (active) ro.observe(active)
+    }
+
+    return () => {
+      cancelled = true
+      ro?.disconnect()
+    }
   }, [activeTab, tabs.length])
 
   const padding = size === 'sm' ? '5px 12px' : '6px 14px'
@@ -98,12 +136,13 @@ export function SlidingTabs<T extends string>({
           whiteSpace: 'nowrap',
         }
         return (
-          <button
+          <button type="button"
             key={tab.id}
             ref={el => { tabRefs.current.set(tab.id, el) }}
             onClick={() => onChange(tab.id)}
             style={btnStyle}
-            title={tab.title ?? (typeof tab.label === 'string' ? tab.label : undefined)}
+            title={tab.title}
+            aria-label={tab.ariaLabel}
           >
             {Icon && <Icon size={size === 'sm' ? 13 : 15} />}
             {tab.label}

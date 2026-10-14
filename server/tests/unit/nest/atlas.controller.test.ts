@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { HttpException } from '@nestjs/common';
+import { HttpException, RequestMethod } from '@nestjs/common';
 import type { Response } from 'express';
 import { AtlasController } from '../../../src/nest/atlas/atlas.controller';
+import { TravelStatsController } from '../../../src/nest/atlas/travel-stats.controller';
+import { JwtAuthGuard } from '../../../src/nest/auth/jwt-auth.guard';
+import { BucketItemExistsError } from '../../../src/nest/atlas/atlas.service';
 import type { AtlasService } from '../../../src/nest/atlas/atlas.service';
 import type { User } from '../../../src/types';
 
@@ -12,7 +15,11 @@ function makeController(svc: Partial<AtlasService>) {
 }
 
 function makeRes() {
-  return { setHeader: vi.fn() } as unknown as Response & { setHeader: ReturnType<typeof vi.fn> };
+  return { setHeader: vi.fn(), send: vi.fn(), json: vi.fn() } as unknown as Response & {
+    setHeader: ReturnType<typeof vi.fn>;
+    send: ReturnType<typeof vi.fn>;
+    json: ReturnType<typeof vi.fn>;
+  };
 }
 
 async function thrown(fn: () => unknown): Promise<{ status: number; body: unknown }> {
@@ -53,11 +60,22 @@ describe('AtlasController (parity with the legacy /api/addons/atlas route)', () 
     });
   });
 
-  it('GET /countries/geo delegates to the service', () => {
-    const fc = { type: 'FeatureCollection', features: [{ id: 'NO' }] };
-    const countryGeo = vi.fn().mockReturnValue(fc);
-    expect(makeController({ countryGeo }).countryGeo()).toBe(fc);
-    expect(countryGeo).toHaveBeenCalledWith();
+  it('GET /countries/geo serves the gzipped admin-0 bundle with Content-Encoding', () => {
+    const gz = Buffer.from('gzipped-bytes');
+    const countryGeoGz = vi.fn().mockReturnValue(gz);
+    const res = makeRes();
+    makeController({ countryGeoGz }).countryGeo(res);
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Encoding', 'gzip');
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'public, max-age=86400');
+    expect(res.send).toHaveBeenCalledWith(gz);
+  });
+
+  it('GET /countries/geo falls back to an empty FeatureCollection when the bundle is missing', () => {
+    const countryGeoGz = vi.fn().mockReturnValue(null);
+    const res = makeRes();
+    makeController({ countryGeoGz }).countryGeo(res);
+    expect(res.json).toHaveBeenCalledWith({ type: 'FeatureCollection', features: [] });
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
   });
 
   describe('country', () => {
@@ -80,15 +98,13 @@ describe('AtlasController (parity with the legacy /api/addons/atlas route)', () 
   });
 
   describe('region', () => {
-    it('400 when name or country_code is missing', () => {
-      const markRegion = vi.fn();
-      return thrown(() => makeController({ markRegion }).markRegion(user, 'by', undefined, 'DE')).then((r) =>
-        expect(r).toEqual({ status: 400, body: { error: 'name and country_code are required' } }));
-    });
+    // The legacy 'name and country_code are required' 400 is now produced by
+    // the global ZodValidationPipe (atlas.dto.ts / markRegionRequestSchema)
+    // before the handler runs — covered by the e2e suite.
 
     it('marks a region, upper-casing both codes', () => {
       const markRegion = vi.fn();
-      expect(makeController({ markRegion }).markRegion(user, 'by', 'Bavaria', 'de')).toEqual({ success: true });
+      expect(makeController({ markRegion }).markRegion(user, 'by', { name: 'Bavaria', country_code: 'de' })).toEqual({ success: true });
       expect(markRegion).toHaveBeenCalledWith(8, 'BY', 'Bavaria', 'DE');
     });
   });
@@ -124,6 +140,26 @@ describe('AtlasController (parity with the legacy /api/addons/atlas route)', () 
         .toEqual({ item: { id: 1, name: 'Kyoto' } });
     });
 
+    it('409 when the service refuses a duplicate create (#1898)', () => {
+      const createBucketItem = vi.fn(() => { throw new BucketItemExistsError(); });
+      return thrown(() => makeController({ createBucketItem }).createBucketItem(user, { name: 'Japan' })).then((r) =>
+        expect(r).toEqual({ status: 409, body: { error: 'Already on your bucket list' } }));
+    });
+
+    it('409 when the service refuses a duplicate update (#1898)', () => {
+      const updateBucketItem = vi.fn(() => { throw new BucketItemExistsError(); });
+      return thrown(() => makeController({ updateBucketItem }).updateBucketItem(user, '1', { target_date: '2027-05' })).then((r) =>
+        expect(r).toEqual({ status: 409, body: { error: 'Already on your bucket list' } }));
+    });
+
+    it('lets any other create/update failure through untouched', () => {
+      const boom = new Error('disk on fire');
+      const createBucketItem = vi.fn(() => { throw boom; });
+      expect(() => makeController({ createBucketItem }).createBucketItem(user, { name: 'Japan' })).toThrow(boom);
+      const updateBucketItem = vi.fn(() => { throw boom; });
+      expect(() => makeController({ updateBucketItem }).updateBucketItem(user, '1', { name: 'Japan' })).toThrow(boom);
+    });
+
     it('404 on delete of a missing item', () => {
       const deleteBucketItem = vi.fn().mockReturnValue(false);
       return thrown(() => makeController({ deleteBucketItem }).deleteBucketItem(user, '9')).then((r) =>
@@ -135,4 +171,50 @@ describe('AtlasController (parity with the legacy /api/addons/atlas route)', () 
       expect(makeController({ deleteBucketItem }).deleteBucketItem(user, '1')).toEqual({ success: true });
     });
   });
+});
+
+// ---------------------------------------------------------------------------
+// TravelStatsController — GET /api/auth/travel-stats.
+//
+// The path lives under /api/auth on purpose (the client calls it there and
+// moving it would break); the code sits in atlas/ because getTravelStats reads
+// Atlas data. These cases pin both halves: the delegation, and the fact that
+// the controller keeps the auth prefix.
+// ---------------------------------------------------------------------------
+
+describe('TravelStatsController', () => {
+  it('ATLAS-TRAVEL-001: delegates to AtlasService.getTravelStats with the caller id', () => {
+    const getTravelStats = vi.fn().mockReturnValue({ countries: ['JP'], totalTrips: 2 });
+    const controller = new TravelStatsController({ getTravelStats } as unknown as AtlasService);
+
+    expect(controller.travelStats(user)).toEqual({ countries: ['JP'], totalTrips: 2 });
+    expect(getTravelStats).toHaveBeenCalledWith(8);
+  });
+
+  it('ATLAS-TRAVEL-002: passes the payload through untouched', () => {
+    const payload = { countries: [], cities: [], coords: [], totalTrips: 0, totalDays: 0, totalPlaces: 0, totalDistanceKm: 0 };
+    const controller = new TravelStatsController({ getTravelStats: () => payload } as unknown as AtlasService);
+
+    expect(controller.travelStats(user)).toBe(payload);
+  });
+
+  it('ATLAS-TRAVEL-003: still answers on /api/auth/travel-stats, so the move is not a breaking change', () => {
+    expect(Reflect.getMetadata('path', TravelStatsController)).toBe('api/auth');
+    expect(Reflect.getMetadata('path', TravelStatsController.prototype.travelStats)).toBe('travel-stats');
+    expect(Reflect.getMetadata('method', TravelStatsController.prototype.travelStats)).toBe(RequestMethod.GET);
+  });
+
+  // No module-registration check here: importing AtlasModule drags AtlasMcp and
+  // the whole MCP SDK chain into what is otherwise a plain controller test, and
+  // it fails to resolve when the file runs on its own. PROFILE-014 covers the
+  // registration better anyway — it calls the route through the full app.
+  it('ATLAS-TRAVEL-004: keeps the JwtAuthGuard the route had on AuthController', () => {
+    // Array shape asserted first on purpose: expect(undefined).toContain(SomeClass)
+    // passes in this vitest version, so the plain form would stop guarding the
+    // moment the decorator disappeared. Same reason module-providers.ts exists.
+    const guards = Reflect.getMetadata('__guards__', TravelStatsController) as unknown[] | undefined;
+    expect(Array.isArray(guards)).toBe(true);
+    expect(guards).toEqual(expect.arrayContaining([JwtAuthGuard]));
+  });
+
 });

@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': '日に追加',
   'inspector.confirmedRes': '確定済み予約',
   'inspector.pendingRes': '保留中の予約',
-  'inspector.google': 'ナビゲーション',
-  'inspector.openStreetMap': '表示',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'ナビゲーション',
+  'inspector.openWith': 'アプリで開く',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': 'Webサイトを開く',
   'inspector.saveToCollection': 'コレクションに保存',
   'inspector.savedToCollection': '保存済み',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': '予約を編集',
   'inspector.participants': '参加者',
   'inspector.trackStats': '統計を記録',
+  'inspector.trackColor': 'トラックの色',
+  'inspector.trackColorAuto': '自動の色',
+  'inspector.trackColorCustom': 'カスタムカラーを選択',
 };
 export default inspector;

@@ -1,9 +1,10 @@
-import type { CSSProperties, Dispatch, SetStateAction } from 'react'
+import { Fragment, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
 import { Trash2, Pencil, GripVertical } from 'lucide-react'
 import type { BudgetItem } from '../../types'
+import { usePluginViewContributions, PluginCardFooter } from '../Plugins/PluginContributions'
 import { currencyDecimals } from '../../utils/formatters'
 import { CustomDatePicker } from '../shared/CustomDateTimePicker'
-import { calcPP, calcPD, calcPPD } from './BudgetPanel.helpers'
+import { calcPP, calcPD, calcPPD, hasCustomMemberSplit } from './BudgetPanel.helpers'
 import InlineEditCell from './BudgetPanelInlineEditCell'
 import AddItemRow from './BudgetPanelAddItemRow'
 import BudgetMemberChips, { type TripMember } from './BudgetPanelMemberChips'
@@ -53,6 +54,7 @@ export default function BudgetCategoryTable({ cat, grouped, categoryColor, canEd
   handleRenameCategory, handleDeleteCategory, handleDeleteItem, handleUpdateField, handleAddItem,
   tripId, currency, locale, t, fmt, hasMultipleMembers, tripMembers, setBudgetItemMembers, toggleBudgetMemberPaid, th, td }: BudgetCategoryTableProps) {
   const items = grouped.get(cat) || []
+  const contribFor = usePluginViewContributions('costs', tripId)
   const subtotal = items.reduce((s, x) => s + (x.total_price || 0), 0)
   const color = categoryColor(cat)
   return (
@@ -109,7 +111,7 @@ export default function BudgetCategoryTable({ cat, grouped, categoryColor, canEd
                       <>
                         <span style={{ fontWeight: 600, fontSize: 'calc(13px * var(--fs-scale-body, 1))' }}>{cat}</span>
                         {canEdit && (
-                          <button onClick={() => setEditingCat({ name: cat, value: cat })}
+                          <button type="button" onClick={() => setEditingCat({ name: cat, value: cat })}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', display: 'flex', padding: 1 }}
                             onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}>
                             <Pencil size={10} />
@@ -121,7 +123,7 @@ export default function BudgetCategoryTable({ cat, grouped, categoryColor, canEd
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 'calc(13px * var(--fs-scale-body, 1))', fontWeight: 500, opacity: 0.9 }}>{fmt(subtotal, currency)}</span>
                     {canEdit && (
-                      <button onClick={() => handleDeleteCategory(cat)} title={t('budget.deleteCategory')}
+                      <button type="button" onClick={() => handleDeleteCategory(cat)} title={t('budget.deleteCategory')}
                         style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer', padding: '3px 6px', display: 'flex', alignItems: 'center', opacity: 0.6 }}
                         onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.6'}>
                         <Trash2 size={13} />
@@ -149,12 +151,17 @@ export default function BudgetCategoryTable({ cat, grouped, categoryColor, canEd
                     </thead>
                     <tbody>
                       {items.map(item => {
-                        const pp = calcPP(item.total_price, item.persons)
+                        // A custom (uneven) split has no single per-person figure — the per-member
+                        // amounts are shown via the member chips — so blank those columns (#1458).
+                        const customSplit = hasCustomMemberSplit(item)
+                        const pp = customSplit ? null : calcPP(item.total_price, item.persons)
                         const pd = calcPD(item.total_price, item.days)
-                        const ppd = calcPPD(item.total_price, item.persons, item.days)
+                        const ppd = customSplit ? null : calcPPD(item.total_price, item.persons, item.days)
                         const hasMembers = (item.members?.length ?? 0) > 0
+                        const contributions = contribFor(item.id)
                         return (
-                          <tr key={item.id}
+                          <Fragment key={item.id}>
+                          <tr
                             style={{
                               transition: 'background 0.1s, opacity 0.15s',
                               opacity: dragItem === item.id ? 0.4 : 1,
@@ -218,11 +225,11 @@ export default function BudgetCategoryTable({ cat, grouped, categoryColor, canEd
                                   readOnly={!canEdit}
                                 />
                               ) : (
-                                <InlineEditCell value={item.persons} type="number" decimals={0} onSave={v => handleUpdateField(item.id, 'persons', v != null ? parseInt(v as string) || null : null)} style={{ textAlign: 'center' }} placeholder="-" locale={locale} editTooltip={t('budget.editTooltip')} readOnly={!canEdit} />
+                                <InlineEditCell value={item.persons} type="number" decimals={0} onSave={v => handleUpdateField(item.id, 'persons', v != null ? Number.parseInt(v as string) || null : null)} style={{ textAlign: 'center' }} placeholder="-" locale={locale} editTooltip={t('budget.editTooltip')} readOnly={!canEdit} />
                               )}
                             </td>
                             <td className="hidden sm:table-cell" style={{ ...td, textAlign: 'center' }}>
-                              <InlineEditCell value={item.days} type="number" decimals={0} onSave={v => handleUpdateField(item.id, 'days', v != null ? parseInt(v as string) || null : null)} style={{ textAlign: 'center' }} placeholder="-" locale={locale} editTooltip={t('budget.editTooltip')} readOnly={!canEdit} />
+                              <InlineEditCell value={item.days} type="number" decimals={0} onSave={v => handleUpdateField(item.id, 'days', v != null ? Number.parseInt(v as string) || null : null)} style={{ textAlign: 'center' }} placeholder="-" locale={locale} editTooltip={t('budget.editTooltip')} readOnly={!canEdit} />
                             </td>
                             <td className="hidden md:table-cell" style={{ ...td, textAlign: 'center', color: pp != null ? 'var(--text-secondary)' : 'var(--text-faint)' }}>{pp != null ? fmt(pp, currency) : '-'}</td>
                             <td className="hidden md:table-cell" style={{ ...td, textAlign: 'center', color: pd != null ? 'var(--text-secondary)' : 'var(--text-faint)' }}>{pd != null ? fmt(pd, currency) : '-'}</td>
@@ -239,7 +246,7 @@ export default function BudgetCategoryTable({ cat, grouped, categoryColor, canEd
                             <td className="hidden sm:table-cell" style={td}><InlineEditCell value={item.note} onSave={v => handleUpdateField(item.id, 'note', v)} placeholder={t('budget.table.note')} locale={locale} editTooltip={t('budget.editTooltip')} readOnly={!canEdit} /></td>
                             <td style={{ ...td, textAlign: 'center' }}>
                               {canEdit && (
-                              <button onClick={() => handleDeleteItem(item.id)} title={t('common.delete')}
+                              <button type="button" onClick={() => handleDeleteItem(item.id)} title={t('common.delete')}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-faint)', borderRadius: 4, display: 'inline-flex', transition: 'color 0.15s' }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = '#d1d5db'}>
                                 <Trash2 size={14} />
@@ -247,6 +254,14 @@ export default function BudgetCategoryTable({ cat, grouped, categoryColor, canEd
                               )}
                             </td>
                           </tr>
+                          {contributions.length > 0 && (
+                            <tr>
+                              <td colSpan={10} style={{ padding: '0 8px 6px 20px' }}>
+                                <PluginCardFooter items={contributions} tripId={tripId} />
+                              </td>
+                            </tr>
+                          )}
+                          </Fragment>
                         )
                       })}
                       {canEdit && <AddItemRow onAdd={data => handleAddItem(cat, data)} t={t} />}

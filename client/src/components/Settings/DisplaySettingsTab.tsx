@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Languages, Map, ChevronDown, Check } from 'lucide-react'
+import { Languages, Map, ChevronDown, Check, Rocket } from 'lucide-react'
 import { SUPPORTED_LANGUAGES, useTranslation } from '../../i18n'
-import { useSettingsStore } from '../../store/settingsStore'
+import { useSettingsStore, DEFAULT_SETTINGS } from '../../store/settingsStore'
 import { useToast } from '../shared/Toast'
 import CustomSelect from '../shared/CustomSelect'
-import { CURRENCIES, SYMBOLS } from '../Budget/BudgetPanel.constants'
+import { SYMBOLS, currenciesWith } from '../Budget/BudgetPanel.constants'
 import Section from './Section'
+import { TRIP_TAB_IDS, TRIP_TAB_LABEL_KEYS } from '../../constants/tripTabs'
+import { DEFAULT_START_PAGE, DEFAULT_START_TRIP_TAB } from '../../utils/startDestination'
 import type { DistanceUnit } from '../../types'
 
 export default function DisplaySettingsTab(): React.ReactElement {
   const { settings, updateSetting } = useSettingsStore()
   const { t } = useTranslation()
   const toast = useToast()
-  const [tempUnit, setTempUnit] = useState<string>(settings.temperature_unit || 'celsius')
-  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>(settings.distance_unit || 'metric')
+  const [tempUnit, setTempUnit] = useState<string>(settings.temperature_unit || DEFAULT_SETTINGS.temperature_unit)
+  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>(settings.distance_unit || DEFAULT_SETTINGS.distance_unit)
   const [langOpen, setLangOpen] = useState(false)
   const langDropdownRef = useRef<HTMLDivElement | null>(null)
 
@@ -27,26 +29,83 @@ export default function DisplaySettingsTab(): React.ReactElement {
   }, [langOpen])
 
   useEffect(() => {
-    setTempUnit(settings.temperature_unit || 'celsius')
+    setTempUnit(settings.temperature_unit || DEFAULT_SETTINGS.temperature_unit)
   }, [settings.temperature_unit])
 
   useEffect(() => {
-    setDistanceUnit(settings.distance_unit || 'metric')
+    setDistanceUnit(settings.distance_unit || DEFAULT_SETTINGS.distance_unit)
   }, [settings.distance_unit])
+
+  const startPage = settings.start_page === 'active_trip' ? 'active_trip' : DEFAULT_START_PAGE
+  const startTripTab = settings.start_trip_tab || DEFAULT_START_TRIP_TAB
 
   return (
     <>
+      <Section title={t('settings.general.startup')} icon={Rocket}>
+      {/* Where opening TREK lands */}
+      <div>
+        <label className="block text-sm font-medium mb-2 text-content-secondary">{t('settings.startPage')}</label>
+        <div className="flex gap-3">
+          {([
+            { value: 'dashboard', label: t('settings.startPageDashboard') },
+            { value: 'active_trip', label: t('settings.startPageActiveTrip') },
+          ] as const).map(opt => (
+            <button type="button"
+              key={opt.value}
+              onClick={async () => {
+                try { await updateSetting('start_page', opt.value) }
+                catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('common.error')) }
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 20px', borderRadius: 10, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 500,
+                border: startPage === opt.value ? '2px solid var(--text-primary)' : '2px solid var(--border-primary)',
+                background: startPage === opt.value ? 'var(--bg-hover)' : 'var(--bg-card)',
+                color: 'var(--text-primary)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs mt-1 text-content-faint">{t('settings.startPageHint')}</p>
+      </div>
+
+      {/* Which planner tab the trip opens on — only meaningful for 'active_trip' */}
+      {startPage === 'active_trip' && (
+        <div>
+          <label className="block text-sm font-medium mb-2 text-content-secondary">{t('settings.startTripTab')}</label>
+          <CustomSelect
+            value={startTripTab}
+            onChange={async v => {
+              try { await updateSetting('start_trip_tab', String(v)) }
+              catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('common.error')) }
+            }}
+            options={TRIP_TAB_IDS.map(id => ({ value: id, label: t(TRIP_TAB_LABEL_KEYS[id]) }))}
+          />
+          <p className="text-xs text-content-faint mt-2">{t('settings.startTripTabHint')}</p>
+        </div>
+      )}
+      </Section>
+
       <Section title={t('settings.general.languageRegion')} icon={Languages}>
       {/* Display currency */}
       <div>
         <label className="block text-sm font-medium mb-2 text-content-secondary">{t('settings.currency')}</label>
+        {/* Unset ('') means "no personal preference": Costs then shows each trip in its
+            own currency, instead of forcing every trip through one display currency. */}
         <CustomSelect
-          value={settings.default_currency || 'EUR'}
+          value={settings.default_currency || ''}
           onChange={async v => {
             try { await updateSetting('default_currency', String(v)) }
             catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('common.error')) }
           }}
-          options={CURRENCIES.map(c => ({ value: c, label: `${c} — ${SYMBOLS[c] || c}` }))}
+          options={[
+            { value: '', label: t('settings.currencyTrip') },
+            ...currenciesWith(settings.default_currency || '').map(c => ({ value: c, label: `${c} — ${SYMBOLS[c] || c}` })),
+          ]}
           searchable
         />
         <p className="text-xs text-content-faint mt-2">{t('settings.currencyHint')}</p>
@@ -58,7 +117,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
         {/* Desktop: Button grid */}
         <div className="hidden sm:flex flex-wrap gap-3">
           {SUPPORTED_LANGUAGES.map(opt => (
-            <button
+            <button type="button"
               key={opt.value}
               onClick={async () => {
                 try { await updateSetting('language', opt.value) }
@@ -142,7 +201,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
             { value: 'celsius', label: '°C Celsius' },
             { value: 'fahrenheit', label: '°F Fahrenheit' },
           ].map(opt => (
-            <button
+            <button type="button"
               key={opt.value}
               onClick={async () => {
                 setTempUnit(opt.value)
@@ -173,7 +232,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
             { value: 'metric', label: 'km Metric' },
             { value: 'imperial', label: 'mi Imperial' },
           ] as const).map(opt => (
-            <button
+            <button type="button"
               key={opt.value}
               onClick={async () => {
                 setDistanceUnit(opt.value)
@@ -204,7 +263,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
             { value: '24h', short: '24h', example: '14:30' },
             { value: '12h', short: '12h', example: '2:30 PM' },
           ].map(opt => (
-            <button
+            <button type="button"
               key={opt.value}
               onClick={async () => {
                 try { await updateSetting('time_format', opt.value) }
@@ -237,7 +296,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
             { value: true, label: t('settings.on') || 'On' },
             { value: false, label: t('settings.off') || 'Off' },
           ].map(opt => (
-            <button
+            <button type="button"
               key={String(opt.value)}
               onClick={async () => {
                 try { await updateSetting('map_booking_labels', opt.value) }
@@ -260,6 +319,37 @@ export default function DisplaySettingsTab(): React.ReactElement {
         <p className="text-xs mt-1 text-content-faint">{t('settings.bookingLabelsHint')}</p>
       </div>
 
+      {/* Always show booking routes */}
+      <div>
+        <label className="block text-sm font-medium mb-2 text-content-secondary">{t('settings.alwaysShowRoutes')}</label>
+        <div className="flex gap-3">
+          {[
+            { value: true, label: t('settings.on') || 'On' },
+            { value: false, label: t('settings.off') || 'Off' },
+          ].map(opt => (
+            <button type="button"
+              key={String(opt.value)}
+              onClick={async () => {
+                try { await updateSetting('map_always_show_routes', opt.value) }
+                catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('common.error')) }
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 20px', borderRadius: 10, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 'calc(14px * var(--fs-scale-body, 1))', fontWeight: 500,
+                border: (settings.map_always_show_routes === true) === opt.value ? '2px solid var(--text-primary)' : '2px solid var(--border-primary)',
+                background: (settings.map_always_show_routes === true) === opt.value ? 'var(--bg-hover)' : 'var(--bg-card)',
+                color: 'var(--text-primary)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs mt-1 text-content-faint">{t('settings.alwaysShowRoutesHint')}</p>
+      </div>
+
       {/* Explore places on the map (POI category pill) */}
       <div>
         <label className="block text-sm font-medium mb-2 text-content-secondary">{t('settings.mapPoiPill')}</label>
@@ -268,7 +358,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
             { value: true, label: t('settings.on') || 'On' },
             { value: false, label: t('settings.off') || 'Off' },
           ].map(opt => (
-            <button
+            <button type="button"
               key={String(opt.value)}
               onClick={async () => {
                 try { await updateSetting('map_poi_pill_enabled', opt.value) }
@@ -299,7 +389,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
             { value: true, label: t('settings.on') || 'On' },
             { value: false, label: t('settings.off') || 'Off' },
           ].map(opt => (
-            <button
+            <button type="button"
               key={String(opt.value)}
               onClick={async () => {
                 try { await updateSetting('blur_booking_codes', opt.value) }
@@ -329,7 +419,7 @@ export default function DisplaySettingsTab(): React.ReactElement {
             { value: true, label: t('settings.on') || 'On' },
             { value: false, label: t('settings.off') || 'Off' },
           ].map(opt => (
-            <button
+            <button type="button"
               key={String(opt.value)}
               onClick={async () => {
                 try { await updateSetting('optimize_from_accommodation', opt.value) }

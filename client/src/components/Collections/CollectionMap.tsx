@@ -2,6 +2,8 @@ import React from 'react'
 import { MapViewAuto } from '../Map/MapViewAuto'
 import type { CollectionPlace } from '@trek/shared'
 import { mappablePlaces } from '../../pages/collections/collectionsModel'
+import { useTileUrl } from '../../hooks/useTileUrl'
+import { OFM_DARK, OFM_POSITRON } from '../../constants/mapDefaults'
 
 interface CollectionMapProps {
   places: CollectionPlace[]
@@ -20,23 +22,21 @@ interface CollectionMapProps {
  */
 export default function CollectionMap({ places, selectedPlaceId, onOpenPlace, onDeselect, dark }: CollectionMapProps): React.ReactElement {
   const pts = mappablePlaces(places)
-  const center: [number, number] = pts.length > 0
-    ? [pts[0].lat as number, pts[0].lng as number]
-    : [48.8566, 2.3522]
-  const tileUrl = dark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+  const tileUrl = useTileUrl(dark ? OFM_DARK : OFM_POSITRON)
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <MapViewAuto
         places={pts}
         selectedPlaceId={selectedPlaceId}
-        hoverDisabled
+        // Hover was off here, so a wall of round photos gave no way to tell what any of
+        // them were without clicking. The trip map has said what a marker is all along;
+        // this one adds the rating, because "which of these did I like" is exactly the
+        // question a small picture cannot answer.
         onMarkerClick={onOpenPlace}
         onMapClick={onDeselect ? () => onDeselect() : undefined}
-        center={center}
-        zoom={pts.length > 0 ? 6 : 3}
+        // No center/zoom: the map frames itself on the collection's places at mount, and
+        // falls back to the world view for a collection with none.
         tileUrl={tileUrl}
         fitKey={pts.length}
       />

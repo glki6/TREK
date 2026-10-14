@@ -4,8 +4,6 @@ The **MCP Access** panel shows all active MCP OAuth sessions and API tokens acro
 
 This panel is only visible when the **MCP addon** is enabled in the [Admin-Addons](Admin-Addons) panel.
 
-<!-- TODO: screenshot: OAuth client and token list in MCP Access panel -->
-
 ![MCP Access](assets/MCPAccess.png)
 
 ## OAuth Sessions
@@ -16,7 +14,7 @@ OAuth sessions are created when a user authorizes an MCP client via the OAuth 2.
 
 | Column | Description |
 |--------|-------------|
-| Client name | The name of the registered OAuth client. Granted scopes are shown as badges below the name (up to 6 are shown; click "+N more" to expand) |
+| Client | The name of the registered OAuth client. Granted scopes are shown as badges below the name (up to 6 are shown; click "+N more" to expand) |
 | Owner | The username of the user who authorized the session |
 | Created | Date the session was established |
 | (actions) | Trash icon button to revoke |

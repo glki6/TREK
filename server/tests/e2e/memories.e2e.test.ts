@@ -23,6 +23,9 @@ const { db } = vi.hoisted(() => {
   tmp.exec('PRAGMA journal_mode = WAL');
   tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0);`);
+  // StorageRegistryService (behind StorageModule, now in this module chain) reads
+  // this at onModuleInit.
+  tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
   return { db: tmp };
 });
 
@@ -35,34 +38,36 @@ const { unified, immich, synology } = vi.hoisted(() => ({
   unified: {
     listTripPhotos: vi.fn(), addTripPhotos: vi.fn(), setTripPhotoSharing: vi.fn(),
     removeTripPhoto: vi.fn(), listTripAlbumLinks: vi.fn(), createTripAlbumLink: vi.fn(), removeAlbumLink: vi.fn(),
+    // The album-sync orchestration moved here from the provider modules when the
+    // immich -> unified import cycle was broken.
+    syncImmichAlbum: vi.fn(), syncSynologyAlbum: vi.fn(),
   },
   immich: {
     getConnectionSettings: vi.fn(), saveImmichSettings: vi.fn(), setImmichAutoUpload: vi.fn(),
     testConnection: vi.fn(), getConnectionStatus: vi.fn(), browseTimeline: vi.fn(), searchPhotos: vi.fn(),
-    streamImmichAsset: vi.fn(), listAlbums: vi.fn(), getAlbumPhotos: vi.fn(), syncAlbumAssets: vi.fn(),
+    streamImmichAsset: vi.fn(), listAlbums: vi.fn(), getAlbumPhotos: vi.fn(), collectAlbumSelection: vi.fn(),
     getAssetInfo: vi.fn(), isValidAssetId: vi.fn(),
   },
   synology: {
     getSynologySettings: vi.fn(), updateSynologySettings: vi.fn(), getSynologyStatus: vi.fn(),
     testSynologyConnection: vi.fn(), listSynologyAlbums: vi.fn(), getSynologyAlbumPhotos: vi.fn(),
-    syncSynologyAlbumLink: vi.fn(), searchSynologyPhotos: vi.fn(), getSynologyAssetInfo: vi.fn(),
+    collectSynologyAlbumSelection: vi.fn(), searchSynologyPhotos: vi.fn(), getSynologyAssetInfo: vi.fn(),
     streamSynologyAsset: vi.fn(),
   },
 }));
-vi.mock('../../src/services/memories/unifiedService', () => unified);
-vi.mock('../../src/services/memories/immichService', () => immich);
-vi.mock('../../src/services/memories/synologyService', () => synology);
-
+// The three provider services and the access check are injected since the fold,
+// so they are overridden at the container instead of mocked by module path.
 const { canAccessUserPhoto } = vi.hoisted(() => ({ canAccessUserPhoto: vi.fn() }));
-vi.mock('../../src/services/memories/helpersService', async () => {
-  const actual = await vi.importActual<typeof import('../../src/services/memories/helpersService')>(
-    '../../src/services/memories/helpersService',
-  );
-  return { ...actual, canAccessUserPhoto };
-});
 
+import { DatabaseModule } from '../../src/nest/database/database.module';
 import { MemoriesModule } from '../../src/nest/memories/memories.module';
+import { UnifiedMemoriesService } from '../../src/nest/memories/unified-memories.service';
+import { ImmichService } from '../../src/nest/memories/immich.service';
+import { SynologyService } from '../../src/nest/memories/synology.service';
+import { MemoriesAccessService } from '../../src/nest/memories/memories-access.service';
+import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
+import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 
 const BASE = '/api/integrations/memories';
 const UNIFIED = `${BASE}/unified`;
@@ -74,10 +79,18 @@ describe('Memories e2e (real auth guard + temp SQLite)', () => {
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [MemoriesModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [DatabaseModule, RealtimeModule, MemoriesModule] })
+      .overrideProvider(UnifiedMemoriesService).useValue(unified)
+      .overrideProvider(ImmichService).useValue(immich)
+      .overrideProvider(SynologyService).useValue(synology)
+      .overrideProvider(MemoriesAccessService).useValue({ canAccessUserPhoto })
+      .compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());
+    // Mirror the production APP_PIPE (app.module.ts): DTO-typed bodies validate
+    // by metatype, exactly as they do under buildApp().
+    nest.useGlobalPipes(new ZodValidationPipe());
     await nest.init();
     return nest;
   }
@@ -200,6 +213,33 @@ describe('Memories e2e (real auth guard + temp SQLite)', () => {
       expect(bad.body).toEqual({ error: 'Invalid Immich URL: bad' });
     });
 
+    it('PUT settings hands the self-signed switch to the save, and leaves it undefined when absent (#2475)', async () => {
+      immich.saveImmichSettings.mockResolvedValue({ success: true });
+      const on = await request(server).put(`${IMMICH}/settings`).set('Cookie', sessionCookie(1)).send({ immich_url: 'https://x', immich_api_key: 'k', allow_insecure_tls: true });
+      expect(on.status).toBe(200);
+      expect(immich.saveImmichSettings).toHaveBeenLastCalledWith(1, 'https://x', 'k', expect.anything(), true);
+
+      await request(server).put(`${IMMICH}/settings`).set('Cookie', sessionCookie(1)).send({ immich_url: 'https://x', immich_api_key: 'k' });
+      expect(immich.saveImmichSettings).toHaveBeenLastCalledWith(1, 'https://x', 'k', expect.anything(), undefined);
+    });
+
+    it('400 PUT settings and /test with a switch value that is not a boolean, before the service runs', async () => {
+      const put = await request(server).put(`${IMMICH}/settings`).set('Cookie', sessionCookie(1)).send({ immich_url: 'https://x', immich_api_key: 'k', allow_insecure_tls: 'true' });
+      expect(put.status).toBe(400);
+      const test = await request(server).post(`${IMMICH}/test`).set('Cookie', sessionCookie(1)).send({ immich_url: 'https://x', immich_api_key: 'k', allow_insecure_tls: 1 });
+      expect(test.status).toBe(400);
+      expect(immich.saveImmichSettings).not.toHaveBeenCalled();
+      expect(immich.testConnection).not.toHaveBeenCalled();
+    });
+
+    it('200 /test probes with the switch the form carries', async () => {
+      immich.testConnection.mockResolvedValue({ connected: false, error: 'HTTP 404' });
+      const res = await request(server).post(`${IMMICH}/test`).set('Cookie', sessionCookie(1)).send({ immich_url: 'https://x', immich_api_key: 'k', allow_insecure_tls: true });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ connected: false, error: 'HTTP 404' });
+      expect(immich.testConnection).toHaveBeenCalledWith('https://x', 'k', true);
+    });
+
     it('CRITICAL: 200 /status with { connected: false } on failure', async () => {
       immich.getConnectionStatus.mockResolvedValue({ connected: false, error: 'Not configured' });
       const res = await request(server).get(`${IMMICH}/status`).set('Cookie', sessionCookie(1));
@@ -289,12 +329,12 @@ describe('Memories e2e (real auth guard + temp SQLite)', () => {
     });
 
     it('200 album sync (POST stays 200) / 404 envelope', async () => {
-      immich.syncAlbumAssets.mockResolvedValue({ success: true, added: 3, total: 10 });
+      unified.syncImmichAlbum.mockResolvedValue({ success: true, added: 3, total: 10 });
       const ok = await request(server).post(`${IMMICH}/trips/5/album-links/7/sync`).set('Cookie', sessionCookie(1));
       expect(ok.status).toBe(200);
       expect(ok.body).toEqual({ success: true, added: 3, total: 10 });
 
-      immich.syncAlbumAssets.mockResolvedValue({ error: 'Album link not found', status: 404 });
+      unified.syncImmichAlbum.mockResolvedValue({ error: 'Album link not found', status: 404 });
       const bad = await request(server).post(`${IMMICH}/trips/5/album-links/9/sync`).set('Cookie', sessionCookie(1));
       expect(bad.status).toBe(404);
       expect(bad.body).toEqual({ error: 'Album link not found' });
@@ -364,11 +404,22 @@ describe('Memories e2e (real auth guard + temp SQLite)', () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ assets: [], total: 0, hasMore: false });
       // page=3 -> (3-1)=2; size=20 -> limit=20; offset = 2 * 20 = 40
-      expect(synology.searchSynologyPhotos).toHaveBeenCalledWith(1, undefined, undefined, 40, 20);
+      expect(synology.searchSynologyPhotos).toHaveBeenCalledWith(1, undefined, undefined, 40, 20, 0);
+    });
+
+    it('200 search carries the zone the dates are meant in, separately from the row offset', async () => {
+      synology.searchSynologyPhotos.mockResolvedValue({ success: true, data: { assets: [], total: 0, hasMore: false } });
+      const res = await request(server)
+        .post(`${SYNO}/search`)
+        .set('Cookie', sessionCookie(1))
+        .send({ from: '2026-03-15', to: '2026-03-15', offset: 5, utc_offset_minutes: 600 });
+      expect(res.status).toBe(200);
+      // Two numbers that mean nothing alike and must not swap places (#2336).
+      expect(synology.searchSynologyPhotos).toHaveBeenCalledWith(1, '2026-03-15', '2026-03-15', 5, 100, 600);
     });
 
     it('200 album sync (POST stays 200)', async () => {
-      synology.syncSynologyAlbumLink.mockResolvedValue({ success: true, data: { added: 2, total: 5 } });
+      unified.syncSynologyAlbum.mockResolvedValue({ success: true, data: { added: 2, total: 5 } });
       const res = await request(server).post(`${SYNO}/trips/5/album-links/7/sync`).set('Cookie', sessionCookie(1));
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ added: 2, total: 5 });

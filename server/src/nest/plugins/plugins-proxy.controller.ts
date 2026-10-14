@@ -1,8 +1,9 @@
 import { All, Controller, Param, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { extractToken, verifyJwtAndLoadUser } from '../../middleware/auth';
+import { extractToken, verifyJwtAndLoadUser } from '../auth/jwt-verify';
 import { pluginsEnabled } from './kill-switch';
 import { PluginRuntimeService } from './plugin-runtime.service';
+import { Public } from '../auth/public.decorator';
 
 /**
  * Proxies a plugin's own HTTP routes at /api/plugins/:id/* (#plugins, M2).
@@ -21,6 +22,30 @@ import { PluginRuntimeService } from './plugin-runtime.service';
 // passthrough; every reply is forced to nosniff + attachment below. fetch-based
 // consumers (the plugin's own client) are unaffected — fetch ignores both.
 const SAFE_RESPONSE_HEADERS = new Set(['content-type', 'cache-control']);
+
+// Inbound header allowlist for `auth:false` routes (webhooks). A plugin can verify a
+// provider's signature, but ONLY over an explicit allowlist that NEVER carries an
+// auth/session credential — mirroring the response-header allowlist above. Cookie,
+// Authorization, X-Socket-Id and every forwarded-auth header are deliberately absent,
+// so a forwarded header can never leak a TREK session or be replayed. Signature +
+// event headers from the common providers (GitHub/Stripe/Svix/GitLab/generic) pass.
+const SAFE_INBOUND_HEADERS = new Set([
+  'content-type', 'user-agent', 'x-request-id', 'x-idempotency-key',
+  'x-hub-signature', 'x-hub-signature-256', 'x-github-event', 'x-github-delivery',
+  'stripe-signature',
+  'svix-id', 'svix-timestamp', 'svix-signature',
+  'x-gitlab-event', 'x-gitlab-token',
+  'x-signature', 'x-signature-256', 'x-webhook-signature', 'x-event-type',
+]);
+
+function pickInboundHeaders(raw: Record<string, unknown> | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    if (!SAFE_INBOUND_HEADERS.has(k.toLowerCase())) continue;
+    out[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v ?? '');
+  }
+  return out;
+}
 
 // Origin used only to parse a plugin-supplied redirect target. Any host works as
 // long as it can never match a real one, so a target that stays "same-origin"
@@ -46,6 +71,7 @@ function toRelativeLocation(loc: unknown): string | null {
   }
 }
 
+@Public('auth is data-driven per plugin route (route.auth in the manifest), asserted in the handler')
 @Controller('api/plugins/:pluginId')
 export class PluginsProxyController {
   constructor(private readonly runtime: PluginRuntimeService) {}
@@ -66,7 +92,7 @@ export class PluginsProxyController {
     }
 
     // Per-route auth: default-on; `auth:false` routes are public (OAuth cb/webhook).
-    let user: { id: number; username: string; is_admin?: boolean } | null = null;
+    let user: { id: number; username: string; role?: 'admin' | 'user' } | null = null;
     if (route.auth) {
       const token = extractToken(req);
       const loaded = token ? verifyJwtAndLoadUser(token) : null;
@@ -88,7 +114,16 @@ export class PluginsProxyController {
             path: sub,
             query: req.query,
             body: req.body ?? null,
-            user: user ? { id: user.id, username: user.username, isAdmin: !!user.is_admin } : null,
+            // Webhook (auth:false) routes also receive the raw request bytes (base64,
+            // so a non-UTF-8 signed body survives) — the plugin decodes and verifies a
+            // provider's HMAC over the exact payload; the parsed JSON can't be
+            // re-serialised identically.
+            rawBodyBase64: route.auth === false ? ((req as { rawBody?: Buffer }).rawBody?.toString('base64') ?? null) : undefined,
+            // Only auth:false routes (webhooks) get inbound headers, and only the
+            // allowlisted, credential-free subset — an authenticated route never
+            // needs them and must not see even the safe ones.
+            headers: route.auth === false ? pickInboundHeaders(req.headers as Record<string, unknown>) : {},
+            user: user ? { id: user.id, username: user.username, isAdmin: user.role === 'admin' } : null,
           },
         },
         // Bind the authenticated session user as the acting user for any trip

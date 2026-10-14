@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { useTripStore } from '../../src/store/tripStore';
+import { placesApi } from '../../src/api/client';
 import { resetAllStores } from '../helpers/store';
 import { buildTrip, buildDay, buildPlace, buildPackingItem, buildTodoItem, buildTag, buildCategory, buildAssignment, buildDayNote, buildBudgetItem, buildReservation, buildTripFile } from '../helpers/factories';
 import { server } from '../helpers/msw/server';
@@ -326,6 +327,21 @@ describe('tripStore', () => {
       expect(result).toEqual(updatedTrip);
       expect(useTripStore.getState().trip).toEqual(updatedTrip);
     });
+
+    it('FE-TRIP-011: updateTrip reloads reservations (re-anchored server-side on date changes, #1288)', async () => {
+      const updatedTrip = buildTrip({ id: 1, start_date: '2025-05-31', end_date: '2025-06-05' });
+      const reservation = buildReservation({ id: 7, trip_id: 1, day_id: 21 });
+
+      server.use(
+        http.put('/api/trips/1', () => HttpResponse.json({ trip: updatedTrip })),
+        http.get('/api/trips/1/days', () => HttpResponse.json({ days: [] })),
+        http.get('/api/trips/1/reservations', () => HttpResponse.json({ reservations: [reservation] })),
+      );
+
+      await useTripStore.getState().updateTrip(1, { start_date: '2025-05-31' });
+
+      expect(useTripStore.getState().reservations).toEqual([reservation]);
+    });
   });
 
   describe('setSelectedDay', () => {
@@ -351,6 +367,39 @@ describe('tripStore', () => {
       const tags = useTripStore.getState().tags;
       expect(tags).toHaveLength(2);
       expect(tags[tags.length - 1].name).toBe('New Tag');
+    });
+  });
+
+  describe('uploadPlaceImage', () => {
+    it('FE-TRIP-012: uploads the file and applies the returned place to places + embedded assignment', async () => {
+      const original = buildPlace({ id: 5, trip_id: 1, image_url: null });
+      const assignment = buildAssignment({ id: 30, day_id: 40, place: original });
+      useTripStore.setState({ places: [original], assignments: { '40': [assignment] } });
+
+      const updated = { ...original, image_url: '/uploads/places/mock.jpg' };
+      const spy = vi.spyOn(placesApi, 'uploadImage').mockResolvedValue({ place: updated });
+
+      const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+      const result = await useTripStore.getState().uploadPlaceImage(1, 5, file);
+
+      expect(spy).toHaveBeenCalledWith(1, 5, file);
+      expect(result).toEqual(updated);
+
+      const state = useTripStore.getState();
+      expect(state.places.find(p => p.id === 5)?.image_url).toBe('/uploads/places/mock.jpg');
+      expect(state.assignments['40'][0].place.image_url).toBe('/uploads/places/mock.jpg');
+
+      spy.mockRestore();
+    });
+
+    it('FE-TRIP-013: propagates an error when the upload fails', async () => {
+      useTripStore.setState({ places: [buildPlace({ id: 6, trip_id: 1 })] });
+      const spy = vi.spyOn(placesApi, 'uploadImage').mockRejectedValue(new Error('boom'));
+
+      const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+      await expect(useTripStore.getState().uploadPlaceImage(1, 6, file)).rejects.toThrow();
+
+      spy.mockRestore();
     });
   });
 

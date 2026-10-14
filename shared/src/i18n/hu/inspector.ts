@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': 'Hozzáadás a naphoz',
   'inspector.confirmedRes': 'Megerősített foglalás',
   'inspector.pendingRes': 'Függőben lévő foglalás',
-  'inspector.google': 'Navigáció',
-  'inspector.openStreetMap': 'Megtekintés',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'Navigáció',
+  'inspector.openWith': 'Megnyitás ezzel',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': 'Weboldal megnyitása',
   'inspector.saveToCollection': 'Mentés gyűjteménybe',
   'inspector.savedToCollection': 'Mentve',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': 'Foglalás szerkesztése',
   'inspector.participants': 'Résztvevők',
   'inspector.trackStats': 'Útvonal adatok',
+  'inspector.trackColor': 'Útvonal színe',
+  'inspector.trackColorAuto': 'Automatikus szín',
+  'inspector.trackColorCustom': 'Egyéni szín kiválasztása',
 };
 export default inspector;

@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': 'Add to Day',
   'inspector.confirmedRes': 'Confirmed Reservation',
   'inspector.pendingRes': 'Pending Reservation',
-  'inspector.google': 'Navigate',
-  'inspector.openStreetMap': 'View',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'Navigation',
+  'inspector.openWith': 'Open with',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': 'Open Website',
   'inspector.saveToCollection': 'Save to Collection',
   'inspector.savedToCollection': 'Saved',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': 'Edit Reservation',
   'inspector.participants': 'Participants',
   'inspector.trackStats': 'Track Stats',
+  'inspector.trackColor': 'Track color',
+  'inspector.trackColorAuto': 'Automatic color',
+  'inspector.trackColorCustom': 'Choose custom color',
 };
 export default inspector;

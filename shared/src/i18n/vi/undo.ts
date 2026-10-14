@@ -14,10 +14,12 @@ const undo: TranslationStrings = {
   'undo.lock': 'Đã bật khóa địa điểm',
   'undo.importGpx': 'GPX nhập khẩu',
   'undo.importKeyholeMarkup': 'KMZ/KML nhập khẩu',
+  'undo.importFiles': 'Nhập tệp',
   'undo.importGoogleList': 'Google Maps nhập khẩu',
   'undo.importNaverList': 'Nhập bản đồ Naver',
   'undo.importBooking': 'Nhập xác nhận đặt chỗ',
   'undo.addPlace': 'Đã thêm địa điểm',
   'undo.done': 'Hoàn tác: {action}',
+  'undo.failed': 'Không thể hoàn tác: {action}',
 };
 export default undo;

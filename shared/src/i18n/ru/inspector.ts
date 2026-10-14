@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': 'Добавить в день',
   'inspector.confirmedRes': 'Подтверждённое бронирование',
   'inspector.pendingRes': 'Ожидающее бронирование',
-  'inspector.google': 'Навигация',
-  'inspector.openStreetMap': 'Просмотр',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'Навигация',
+  'inspector.openWith': 'Открыть в',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': 'Открыть сайт',
   'inspector.saveToCollection': 'Сохранить в коллекцию',
   'inspector.savedToCollection': 'Сохранено',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': 'Редактировать бронирование',
   'inspector.participants': 'Участники',
   'inspector.trackStats': 'Данные маршрута',
+  'inspector.trackColor': 'Цвет маршрута',
+  'inspector.trackColorAuto': 'Автоматический цвет',
+  'inspector.trackColorCustom': 'Выбрать свой цвет',
 };
 export default inspector;

@@ -28,6 +28,10 @@ const it: NotificationLocale = {
       title: 'Invito Vacay Fusion',
       body: `${p.actor} ti ha invitato a fondere i piani vacanza. Apri TREK per accettare o rifiutare.`,
     }),
+    vacay_share: (p) => ({
+      title: 'Calendario Vacay condiviso',
+      body: `${p.actor} ha condiviso con te il suo calendario ferie. Apri TREK per vederlo.`,
+    }),
     collection_invite: (p) => ({
       title: 'Invito a una raccolta',
       body: `${p.actor} ti ha invitato a condividere una raccolta. Apri TREK per accettare o rifiutare.`,
@@ -48,10 +52,17 @@ const it: NotificationLocale = {
       title: 'Nuova versione TREK disponibile',
       body: `TREK ${p.version} è ora disponibile. Visita il pannello di amministrazione per aggiornare.`,
     }),
+    replica_failure: (p) => ({
+      title: "Errore di replica dell'archiviazione",
+      body:
+        `Scrittura sulla replica non riuscita su '${p.backend}': ${p.op} di ${p.key} — ${p.error}.` +
+        (p.suppressed !== '0' ? ` Altri ${p.suppressed} errori sono stati soppressi dall'ultima notifica.` : ''),
+    }),
     synology_session_cleared: () => ({
       title: 'Sessione Synology rimossa',
       body: 'Il tuo account o URL Synology è cambiato. Sei stato disconnesso da Synology Photos.',
     }),
+    plugin_notification: (p) => ({ title: p.title ?? '', body: p.body ?? '' }),
   },
   passwordReset: {
     subject: 'Reimposta la tua password',

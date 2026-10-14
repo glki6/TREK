@@ -15,9 +15,11 @@
 - [[Login and Registration|Login-and-Registration]]
 - [[OIDC SSO|OIDC-SSO]]
 - [[Two-Factor Authentication|Two-Factor-Authentication]]
+- [[Passkeys]]
 - [[Password Reset|Password-Reset]]
 - [[User Settings|User-Settings]]
-- [[Display Settings|Display-Settings]]
+- [[General Settings|Display-Settings]]
+- [[Appearance Settings|Appearance-Settings]]
 - [[Map Settings|Map-Settings]]
 - [[Notifications]]
 - [[Offline Mode and PWA|Offline-Mode-and-PWA]]
@@ -29,6 +31,7 @@
 - [[Trip Members and Sharing|Trip-Members-and-Sharing]]
 - [[Trip Planner Overview|Trip-Planner-Overview]]
 - [[Places and Search|Places-and-Search]]
+- [[TREK Places API|TREK-Places-API]]
 - [[Day Plans and Notes|Day-Plans-and-Notes]]
 - [[Map Features|Map-Features]]
 - [[Route Optimization|Route-Optimization]]
@@ -39,12 +42,15 @@
 - [[AI Booking Import|AI-Booking-Import]]
 - [[Transport: Flights, Trains, Cars|Transport-Flights-Trains-Cars]]
 - [[Accommodations]]
-- [[Budget Tracking|Budget-Tracking]]
+- [[Costs|Budget-Tracking]]
+- [[Currencies]]
 - [[Packing Lists|Packing-Lists]]
 - [[Packing Templates|Packing-Templates]]
 - [[Todos and Tasks|Todos-and-Tasks]]
 - [[Documents and Files|Documents-and-Files]]
+- [[Document Sync|Document-Sync]]
 - [[Tags and Categories|Tags-and-Categories]]
+- [[Calendar Feeds|Calendar-Feeds]]
 
 ## Photos & Media
 - [[Photo Providers|Photo-Providers]]
@@ -65,6 +71,7 @@
 - [[Atlas]]
 - [[Journey Journal|Journey-Journal]]
 - [[Collections]]
+- [[Road Trip|Road-Trip]]
 - [[Dashboard Widgets|Dashboard-Widgets]]
 
 ## Plugins
@@ -73,6 +80,10 @@
 - [[Plugin Cookbook|Plugin-Cookbook]]
 - [[Plugin Permissions|Plugin-Permissions]]
 - [[Publishing a Plugin|Plugin-Publishing]]
+
+## Integrations
+- [[Public API|Public-API]]
+- [[Dawarich]]
 
 ## AI / MCP
 - [[MCP Overview|MCP-Overview]]
@@ -89,6 +100,8 @@
 - [[Admin: Categories|Admin-Categories]]
 - [[Admin: Packing Templates|Admin-Packing-Templates]]
 - [[Admin: Permissions|Admin-Permissions]]
+- [[Admin: Plugins|Admin-Plugins]]
+- [[Admin: Storage|Admin-Storage]]
 - [[Admin: MCP Tokens|Admin-MCP-Tokens]]
 - [[Admin: GitHub Releases|Admin-GitHub-Releases]]
 
@@ -101,6 +114,7 @@
 - [[Security Hardening|Security-Hardening]]
 
 ## Help
+- [[In-App Help|In-App-Help]]
 - [[FAQ]]
 - [[Troubleshooting]]
 

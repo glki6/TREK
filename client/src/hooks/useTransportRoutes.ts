@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Reservation, ReservationEndpoint } from '../types'
 import { calculateRouteWithLegs } from '../components/Map/RouteCalculator'
+import { MAX_DRIVE_KM } from '@trek/shared/roadtrip'
+import { haversineKm } from '../utils/geo'
 
 /**
  * Real road-network geometry for road-based transport bookings (car, bus, taxi,
@@ -20,20 +22,12 @@ const ROAD_PROFILE: Record<string, 'driving' | 'cycling'> = {
   bicycle: 'cycling',
 }
 
-// Beyond this straight-line distance a car/taxi/bike (or even coach) booking is
-// almost always a data quirk or an inter-continental hop the road router can't
-// resolve — keep the straight line and don't hammer the public OSRM demo.
-const MAX_ROUTE_KM = 2000
-
-function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const R = 6371
-  const dLat = (b.lat - a.lat) * Math.PI / 180
-  const dLng = (b.lng - a.lng) * Math.PI / 180
-  const la1 = a.lat * Math.PI / 180
-  const la2 = b.lat * Math.PI / 180
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2
-  return 2 * R * Math.asin(Math.sqrt(h))
-}
+// Beyond this straight-line distance a single leg of a car/taxi/bike (or even coach)
+// booking is almost always a data quirk or an inter-continental hop the road router
+// can't resolve — keep the straight line and don't hammer the public OSRM demo.
+// Shared with the day-route builder, which draws the same conclusion about a
+// booking endpoint that landed next to a local stop (#2133).
+const MAX_ROUTE_KM = MAX_DRIVE_KM
 
 function orderedWaypoints(r: Reservation): ReservationEndpoint[] {
   return (r.endpoints || [])
@@ -54,35 +48,54 @@ export function useTransportRoutes(reservations: Reservation[]): Map<number, [nu
   // id → waypoint signature already fetched/attempted, so an unchanged booking
   // is never re-requested even as the reservations array identity churns.
   const attemptedRef = useRef<Map<number, string>>(new Map())
-  // Aborted only on unmount — a reservations change must not cancel an
-  // in-flight route we still want.
-  const abortRef = useRef<AbortController | null>(null)
-  if (!abortRef.current) abortRef.current = new AbortController()
-  useEffect(() => () => abortRef.current?.abort(), [])
 
   useEffect(() => {
+    // Captured once: this is the same Map instance for the hook's whole
+    // lifetime (only ever mutated in place, never reassigned), so closing over
+    // it here — rather than reading `attemptedRef.current` again inside the
+    // cleanup below — is equivalent and keeps the cleanup lint-clean.
+    const attempted = attemptedRef.current
     const jobs: { id: number; profile: 'driving' | 'cycling'; points: { lat: number; lng: number }[] }[] = []
     for (const r of reservations) {
       const profile = ROAD_PROFILE[r.type]
       if (!profile) continue
       const wps = orderedWaypoints(r)
       if (wps.length < 2) continue
-      let dist = 0
-      for (let i = 0; i < wps.length - 1; i++) dist += haversineKm(wps[i], wps[i + 1])
-      if (dist > MAX_ROUTE_KM) continue
+      // Per leg, not over the whole booking: a road trip with stops is long by design
+      // and its total would trip a limit meant to catch a single impossible hop. It is
+      // one leg spanning an ocean that the road router cannot resolve, not the sum (#1797).
+      let tooFar = false
+      for (let i = 0; i < wps.length - 1; i++) {
+        if (haversineKm(wps[i], wps[i + 1]) > MAX_ROUTE_KM) { tooFar = true; break }
+      }
+      if (tooFar) continue
       const key = `${profile}:${wps.map(w => `${w.lat},${w.lng}`).join('|')}`
-      if (attemptedRef.current.get(r.id) === key) continue
-      attemptedRef.current.set(r.id, key)
+      if (attempted.get(r.id) === key) continue
+      attempted.set(r.id, key)
       jobs.push({ id: r.id, profile, points: wps.map(w => ({ lat: w.lat, lng: w.lng })) })
     }
     if (!jobs.length) return
 
+    // A fresh controller per effect run (never a ref-cached singleton): React
+    // StrictMode's dev-only mount->cleanup->remount cycle runs this effect's
+    // cleanup once before the real, lasting mount — a controller reused across
+    // that cleanup would already be permanently aborted by the time the real
+    // mount's fetch starts, so its request would fail instantly every time.
+    const controller = new AbortController()
+    // Ids this run's jobs have finished for (success or a genuine, non-abort
+    // failure) — checked synchronously in cleanup below, so it stays empty for
+    // a cleanup that fires before any of them settle (StrictMode's simulated
+    // cleanup always does, since it runs in the same tick, before any await
+    // resolves) and is already populated for one that fires afterward (e.g. an
+    // unrelated deps change once this run's fetches are long done).
+    const settledIds = new Set<number>()
     let cancelled = false
     void (async () => {
       // Sequential to stay gentle on the shared public router.
       for (const job of jobs) {
         try {
-          const result = await calculateRouteWithLegs(job.points, { signal: abortRef.current?.signal, profile: job.profile })
+          const result = await calculateRouteWithLegs(job.points, { signal: controller.signal, profile: job.profile })
+          settledIds.add(job.id)
           if (cancelled) return
           if (result.coordinates.length >= 2) {
             setRoutes(prev => {
@@ -92,11 +105,22 @@ export function useTransportRoutes(reservations: Reservation[]): Map<number, [nu
             })
           }
         } catch {
-          // Leave it unrouted — the overlay keeps the straight line.
+          // A genuine failure (not this run being cancelled) also counts as
+          // settled — leave it marked attempted, the overlay keeps the
+          // straight line. If it WAS the cancellation that rejected this
+          // fetch, cleanup already ran (synchronously, before this catch) and
+          // un-marked it via `settledIds` never having gained this id in time.
+          if (!cancelled) settledIds.add(job.id)
         }
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      controller.abort()
+      for (const job of jobs) {
+        if (!settledIds.has(job.id)) attempted.delete(job.id)
+      }
+    }
   }, [reservations])
 
   return routes

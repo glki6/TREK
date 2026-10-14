@@ -2,8 +2,6 @@
 
 The Permissions panel, located at the bottom of the **Users** tab, controls which role level is required to perform each action. Changes apply immediately across the entire instance.
 
-<!-- TODO: screenshot: permissions matrix with role dropdowns -->
-
 ![Permissions panel](assets/PermissionSettings.png)
 
 ## Role model
@@ -62,7 +60,7 @@ Actions are grouped into five categories:
 | `budget_edit` | Create, edit, or delete budget items |
 | `packing_edit` | Manage packing items and bags |
 | `collab_edit` | Create notes, polls, and send messages |
-| `share_manage` | Create or delete public share links |
+| `share_manage` | Read, create or delete public share links and calendar feed links |
 
 ## Changing permissions
 

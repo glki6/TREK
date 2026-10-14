@@ -12,7 +12,7 @@ Portainer must be installed and connected to your Docker environment. Use **Stac
 
 1. In Portainer, go to **Stacks → Add stack**.
 2. Give the stack a name (e.g. `trek`).
-3. Select **Web editor** and paste the compose file from [docker-compose.yml](https://github.com/mauriceboe/TREK/blob/main/docker-compose.yml).
+3. Select **Web editor** and paste the compose file from [docker-compose.yml](https://github.com/liketrek/TREK/blob/main/docker-compose.yml).
 
 ![Web editor with the docker-compose content pasted in](assets/portainer-stack-save.png)
 
@@ -26,9 +26,15 @@ Portainer must be installed and connected to your Docker environment. Use **Stac
 
 ## Compose Content
 
-See https://github.com/mauriceboe/TREK/blob/main/docker-compose.yml
+See https://github.com/liketrek/TREK/blob/main/docker-compose.yml
 
-Set at minimum `ENCRYPTION_KEY`, `TZ`, and `APP_URL` in the **Environment variables** section of the stack editor. Generate an encryption key with:
+Set at minimum `ENCRYPTION_KEY`, `TZ`, and `ALLOWED_ORIGINS` in the **Environment variables** section of the stack editor. Portainer's stack variables are only substituted into `${...}` placeholders in the compose file, they are not injected into the container, and the shipped compose file interpolates exactly four: `ENCRYPTION_KEY`, `TZ`, `LOG_LEVEL`, and `ALLOWED_ORIGINS`.
+
+Every other variable ships commented out, so setting it here does nothing. To use one — `APP_URL`, for example, which OIDC needs and which email notification links are built from — uncomment its line in the **Web editor** and put the value there directly, or change it to `- APP_URL=${APP_URL:-}` so the stack variable is picked up.
+
+> Change a variable later by editing the **stack** and redeploying it — never by editing the container in place. Portainer's container editor rewrites the container's start-up command as well, which leaves it unable to boot; see [Troubleshooting](Troubleshooting#container-wont-start-syntax-error-end-of-file-unexpected-expecting-fi).
+
+Generate an encryption key with:
 
 ```bash
 openssl rand -hex 32
@@ -41,10 +47,10 @@ Three tag strategies are available:
 | Tag | Example | Behavior |
 |---|---|---|
 | `latest` | `mauriceboe/trek:latest` | Always the newest release across all major versions |
-| Major version | `mauriceboe/trek:3` | Latest release pinned to that major version |
-| Full version | `mauriceboe/trek:3.0.15` | Exact release; never changes |
+| Major version | `mauriceboe/trek:4` | Latest release pinned to that major version |
+| Full version | `mauriceboe/trek:4.0.0` | Exact release; never changes |
 
-Use `latest` or a major-version tag (e.g. `3`) if you want automatic updates on redeploy. Use a full version tag (e.g. `3.0.15`) if you want explicit control over which release runs.
+Use `latest` or a major-version tag (e.g. `4`) if you want automatic updates on redeploy. Use a full version tag (e.g. `4.0.0`) if you want explicit control over which release runs.
 
 ## Updating
 
@@ -54,13 +60,13 @@ How you update depends on the tag you chose:
 
 ![Re-pull image and redeploy switch ticked, with arrows pointing to the switch and the Update button](assets/portainer-force-pull.png)
 
-**Pinned full-version tag** — Edit the stack, change the tag in the `image:` line (e.g. `3.0.15` → `3.0.16`), then click **Update the stack**. No need to toggle the re-pull switch — a tag change forces a fresh pull.
+**Pinned full-version tag** — Edit the stack, change the tag in the `image:` line (e.g. `4.0.0` → `4.0.1`), then click **Update the stack**. No need to toggle the re-pull switch — a tag change forces a fresh pull.
 
 ![Edit stack page with an arrow pointing to the image tag in the compose editor](assets/portainer-update-version.png)
 
 ![Edit stack page with an arrow pointing to the Update the stack button](assets/portainer-update-stack.png)
 
-> Back up your data before any update. Go to **Admin Panel → Backups** or copy your `./data` and `./uploads` directories. See [Backups](Backups).
+> Back up your data before any update. Go to **Admin Panel → Backup** or copy your `./data` and `./uploads` directories. See [Backups](Backups).
 
 ## Volumes
 

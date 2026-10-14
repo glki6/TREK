@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} arşivde',
   'dashboard.newTrip': 'Yeni Seyahat',
   'dashboard.newTripSub': 'Sıfırdan yeni bir seyahat planla',
+  'dashboard.subscribeAllTrips': 'Tüm seyahatlere abone ol',
+  'dashboard.subscribeAllTripsDesc':
+    'Tüm etkin seyahatlerin için tek bir takvim akışı, otomatik olarak senkronize tutulur. Arşivlenmiş seyahatler ve 90 günden fazla önce sona ermiş seyahatler hariç tutulur.',
   'dashboard.gridView': 'Izgara görünümü',
   'dashboard.listView': 'Liste görünümü',
   'dashboard.currency': 'Para birimi',
@@ -98,6 +101,34 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': '{photographer} tarafından çekilen Unsplash fotoğrafını kullan',
   'dashboard.titleRequired': 'Başlık gerekli',
   'dashboard.endDateError': 'Bitiş tarihi başlangıçtan sonra olmalı',
+  'dashboard.tripTooLong': 'Bir seyahat en fazla {days} gün sürebilir',
+  'dashboard.dateShiftTitle': 'Yeni başlangıç tarihi',
+  'dashboard.dateShiftIntro':
+    'Bu seyahatin başlangıç tarihini değiştirdiniz. Planlarınız yeni tarihlere nasıl uyum sağlasın?',
+  'dashboard.dateShiftKeepBookings': 'Rezervasyonları kendi tarihlerinde tut',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Gün planları yeni tarihlerle birlikte taşınır; rezervasyonlar ve konaklamalar ise seyahatin kapsamında kaldıkları sürece orijinal tarihlerinde kalır.',
+  'dashboard.dateShiftAll': 'Her şeyi kaydır',
+  'dashboard.dateShiftAllDesc': 'Rezervasyonlar ve konaklamalar dahil tüm plan yeni tarihlerle birlikte taşınır.',
+  'dashboard.dateShiftHint':
+    'İpucu: planın yalnızca bir kısmını kaydırmak için planlayıcıda “Günleri yeniden sırala”yı açın, seyahatin bitişinden sonraki günü tarihini gösteren düğmeyle ekleyin ve o günü boşluğun olacağı yere taşıyın.',
+  'dashboard.shrinkTitle': 'Günler kaldırılsın mı?',
+  'dashboard.shrinkIntro': 'Yeni tarihler kaydedilince bu günler kaldırılır:',
+  'dashboard.shrinkMoreDays': '+{count} daha',
+  'dashboard.shrinkLastDays': 'İlk günler değil, son günler kaldırılır',
+  'dashboard.shrinkLastDaysHint':
+    'Gün planları yeni tarihlerle birlikte kayar, bu yüzden başlangıç değişse bile her zaman planın son günleri kaldırılır.',
+  'dashboard.shrinkBookingsHint':
+    'Rezervasyonlar altında kalırlar. Tarihi hâlâ seyahatin içinde olan rezervasyon o güne geri döner.',
+  'dashboard.shrinkBookingsShiftHint': 'Rezervasyonlar altında, bir güne bağlı olmadan kalırlar.',
+  'dashboard.shrinkStayHint': 'Giriş veya çıkış kaldırılan bir güne denk geldiği için konaklamanın tamamı kaldırılır.',
+  'dashboard.shrinkStayBookedHint':
+    'Giriş veya çıkış kaldırılan bir güne denk geldiği için konaklamanın tamamı kaldırılır. “{booking}” rezervasyonu ve harcaması Rezervasyonlar altında kalır.',
+  'dashboard.shrinkStayBookingHint':
+    'Giriş veya çıkış kaldırılan bir güne denk geldiği için konaklamanın tamamı kaldırılır. “{booking}” rezervasyonu Rezervasyonlar altında kalır.',
+  'dashboard.shrinkConfirm': 'Günleri kaldır ve kaydet',
+  'dashboard.shrinkUnknown':
+    'Bu seyahatin günleri kontrol edilemedi. Yeni tarihler daha az gün içeriyorsa kaydetmek son günleri ve bunlara planlanan her şeyi kaldırır.',
   'dashboard.greeting.morning': 'Günaydın,',
   'dashboard.greeting.afternoon': 'İyi günler,',
   'dashboard.greeting.evening': 'İyi akşamlar,',
@@ -107,6 +138,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Yerler',
   'dashboard.mobile.buddies': 'Arkadaşlar',
   'dashboard.mobile.newTrip': 'Yeni Seyahat',
+  'dashboard.mobile.addCoverImage': 'Kapak görseli ekle',
   'dashboard.mobile.currency': 'Para birimi',
   'dashboard.mobile.timezone': 'Saat dilimi',
   'dashboard.mobile.upcomingTrips': 'Yaklaşan Seyahatler',
@@ -121,6 +153,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Yarın',
   'dashboard.mobile.inDays': '{count} gün içinde',
   'dashboard.mobile.inMonths': '{count} ay içinde',
+  'dashboard.mobile.spotlightDayOf': 'Gün {day}/{total}',
+  'dashboard.mobile.spotlightDayOne': '{count} gün',
+  'dashboard.mobile.spotlightDaysMany': '{count} gün',
   'dashboard.mobile.completed': 'Tamamlandı',
   'dashboard.mobile.currencyConverter': 'Döviz çevirici',
   'dashboard.filter.planned': 'Planlanan',

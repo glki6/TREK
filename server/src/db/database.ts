@@ -1,6 +1,9 @@
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { readEnv } from '../app-config';
+import { openDatabase } from './connection';
+import { applyDurabilityPragmas } from './durability';
 import { createTables } from './schema';
 import { runMigrations } from './migrations';
 import { runSeeds } from './seeds';
@@ -8,16 +11,16 @@ import { Place, Tag } from '../types';
 
 // In test mode each vitest worker gets an isolated in-memory DB so that
 // parallel forks can't race on the same file or share migration state.
-const isTest = process.env.NODE_ENV === 'test';
+const isTest = readEnv().app.isTest;
 
 let dbPath: string;
 if (isTest) {
   dbPath = ':memory:';
-} else if (process.env.TREK_DB_FILE) {
+} else if (readEnv().db.trekDbFile) {
   // Explicit DB file (used by the Playwright E2E harness to run against an
   // isolated, throwaway database instead of the real data/travel.db). Purely
   // additive — when unset the default path below is used exactly as before.
-  dbPath = process.env.TREK_DB_FILE;
+  dbPath = readEnv().db.trekDbFile!;
   const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 } else {
@@ -37,10 +40,17 @@ function initDb(): void {
     _db = null;
   }
 
-  _db = new Database(dbPath);
-  _db.exec('PRAGMA journal_mode = WAL');
+  _db = openDatabase(dbPath);
+  // Ahead of the journal switch now: changing journal_mode needs an exclusive
+  // lock, which a sibling process (reset-admin, the rotation script) may hold.
   _db.exec('PRAGMA busy_timeout = 5000');
+  const durability = applyDurabilityPragmas(_db);
   _db.exec('PRAGMA foreign_keys = ON');
+  // Reported so an operator can see whether their setting took — the test DB is
+  // :memory: and has no journal file, so there is nothing to report there.
+  if (dbPath !== ':memory:') {
+    console.log(`[DB] journal_mode=${durability.journalMode}, synchronous=${durability.synchronous}`);
+  }
 
   createTables(_db);
   runMigrations(_db);
@@ -62,7 +72,7 @@ const db = new Proxy({} as Database.Database, {
   },
 });
 
-if (process.env.DEMO_MODE?.toLowerCase() === 'true') {
+if (readEnv().demo.enabled) {
   try {
     const { seedDemoData } = require('../demo/demo-seed');
     seedDemoData(_db);
@@ -96,6 +106,9 @@ interface PlaceWithCategory extends Place {
 interface PlaceWithTags extends Place {
   category: { id: number; name: string; color: string; icon: string } | null;
   tags: Tag[];
+  ratings: { user_id: number; username: string; avatar: string | null; rating: number }[];
+  rating_avg: number | null;
+  rating_count: number;
 }
 
 function getPlaceWithTags(placeId: number | string): PlaceWithTags | null {
@@ -114,6 +127,14 @@ function getPlaceWithTags(placeId: number | string): PlaceWithTags | null {
     WHERE pt.place_id = ?
   `).all(placeId) as Tag[];
 
+  // Collaborative ratings (#1435): every voter with username/avatar for the
+  // who-voted tooltip; the displayed value is the average.
+  const ratings = db.prepare(`
+    SELECT pr.user_id, u.username, u.avatar, pr.rating FROM place_ratings pr
+    JOIN users u ON pr.user_id = u.id
+    WHERE pr.place_id = ? ORDER BY pr.created_at
+  `).all(placeId) as { user_id: number; username: string; avatar: string | null; rating: number }[];
+
   return {
     ...place,
     category: place.category_id ? {
@@ -123,17 +144,21 @@ function getPlaceWithTags(placeId: number | string): PlaceWithTags | null {
       icon: place.category_icon!,
     } : null,
     tags,
+    ratings,
+    rating_avg: ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : null,
+    rating_count: ratings.length,
   };
 }
 
 interface TripAccess {
   id: number;
   user_id: number;
+  currency: string | null;
 }
 
 function canAccessTrip(tripId: number | string, userId: number): TripAccess | undefined {
   return db.prepare(`
-    SELECT t.id, t.user_id FROM trips t
+    SELECT t.id, t.user_id, t.currency FROM trips t
     LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
     WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)
   `).get(userId, tripId, userId) as TripAccess | undefined;
@@ -143,11 +168,6 @@ function isOwner(tripId: number | string, userId: number): boolean {
   return !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
 }
 
-try {
-  const { backfillFlightEndpoints } = require('../services/airportService');
-  backfillFlightEndpoints();
-} catch (err) {
-  console.error('[DB] Flight endpoint backfill failed:', err);
-}
 
 export { db, closeDb, reinitialize, getPlaceWithTags, canAccessTrip, isOwner };
+export type { TripAccess, PlaceWithTags };

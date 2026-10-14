@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} archivados',
   'dashboard.newTrip': 'Nuevo viaje',
   'dashboard.newTripSub': 'Planifica un nuevo viaje desde cero',
+  'dashboard.subscribeAllTrips': 'Suscribirse a todos los viajes',
+  'dashboard.subscribeAllTripsDesc':
+    'Un feed de calendario para todos tus viajes activos, sincronizado automáticamente. Excluye los viajes archivados y los que terminaron hace más de 90 días.',
   'dashboard.gridView': 'Vista de cuadrícula',
   'dashboard.listView': 'Vista de lista',
   'dashboard.currency': 'Divisa',
@@ -84,6 +87,35 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Usar foto de Unsplash de {photographer}',
   'dashboard.titleRequired': 'El título es obligatorio',
   'dashboard.endDateError': 'La fecha de fin debe ser posterior a la de inicio',
+  'dashboard.tripTooLong': 'Un viaje puede durar como máximo {days} días',
+  'dashboard.dateShiftTitle': 'Nueva fecha de inicio',
+  'dashboard.dateShiftIntro':
+    'Has cambiado cuándo empieza este viaje. ¿Cómo deben seguir tus planes las nuevas fechas?',
+  'dashboard.dateShiftKeepBookings': 'Mantener las reservas en sus fechas',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Los planes de cada día se mueven con las nuevas fechas, mientras que las reservas y los alojamientos permanecen en sus fechas originales siempre que sigan formando parte del viaje.',
+  'dashboard.dateShiftAll': 'Mover todo',
+  'dashboard.dateShiftAllDesc':
+    'Todo el itinerario se mueve con las nuevas fechas, incluidas las reservas y los alojamientos.',
+  'dashboard.dateShiftHint':
+    'Consejo: para mover solo una parte del itinerario, abre «Reordenar días» en el planificador, añade el día siguiente al final del viaje con el botón que muestra su fecha y mueve ese día al lugar donde debe quedar el hueco.',
+  'dashboard.shrinkTitle': '¿Quitar días?',
+  'dashboard.shrinkIntro': 'Al guardar las nuevas fechas se quitan estos días:',
+  'dashboard.shrinkMoreDays': '+{count} más',
+  'dashboard.shrinkLastDays': 'Se quitan los últimos días, no los primeros',
+  'dashboard.shrinkLastDaysHint':
+    'Los planes de cada día se mueven con las nuevas fechas, así que siempre se quitan los últimos días del plan, también cuando cambia el inicio.',
+  'dashboard.shrinkBookingsHint':
+    'Se quedan en Reservas. Las que tienen una fecha que sigue dentro del viaje vuelven a ese día.',
+  'dashboard.shrinkBookingsShiftHint': 'Se quedan en Reservas, sin día.',
+  'dashboard.shrinkStayHint': 'La entrada o la salida es un día que se quita, así que se quita la estancia entera.',
+  'dashboard.shrinkStayBookedHint':
+    'La entrada o la salida es un día que se quita, así que se quita la estancia entera. Su reserva «{booking}» y su gasto se quedan en Reservas.',
+  'dashboard.shrinkStayBookingHint':
+    'La entrada o la salida es un día que se quita, así que se quita la estancia entera. Su reserva «{booking}» se queda en Reservas.',
+  'dashboard.shrinkConfirm': 'Quitar días y guardar',
+  'dashboard.shrinkUnknown':
+    'No se pudieron comprobar los días de este viaje. Si las nuevas fechas tienen menos días, al guardar se quitan los últimos días y todo lo planificado en ellos.',
   'dashboard.greeting.morning': 'Buenos días,',
   'dashboard.greeting.afternoon': 'Buenas tardes,',
   'dashboard.greeting.evening': 'Buenas noches,',
@@ -93,6 +125,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Lugares',
   'dashboard.mobile.buddies': 'Compañeros',
   'dashboard.mobile.newTrip': 'Nuevo viaje',
+  'dashboard.mobile.addCoverImage': 'Añadir portada',
   'dashboard.mobile.currency': 'Moneda',
   'dashboard.mobile.timezone': 'Zona horaria',
   'dashboard.mobile.upcomingTrips': 'Próximos viajes',
@@ -107,6 +140,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Mañana',
   'dashboard.mobile.inDays': 'En {count} días',
   'dashboard.mobile.inMonths': 'En {count} meses',
+  'dashboard.mobile.spotlightDayOf': 'Día {day} de {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} día',
+  'dashboard.mobile.spotlightDaysMany': '{count} días',
   'dashboard.mobile.completed': 'Completado',
   'dashboard.mobile.currencyConverter': 'Conversor de monedas',
   'dashboard.filter.planned': 'Planificados',

@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} в архіві',
   'dashboard.newTrip': 'Нова поїздка',
   'dashboard.newTripSub': 'Сплануйте нову поїздку з нуля',
+  'dashboard.subscribeAllTrips': 'Підписатися на всі поїздки',
+  'dashboard.subscribeAllTripsDesc':
+    'Один календарний фід для всіх ваших активних поїздок, що автоматично синхронізується. Не включає архівовані поїздки та поїздки, що завершилися понад 90 днів тому.',
   'dashboard.gridView': 'Плитка',
   'dashboard.listView': 'Список',
   'dashboard.currency': 'Валюта',
@@ -100,6 +103,33 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Використати фото Unsplash від {photographer}',
   'dashboard.titleRequired': "Назва обов'язкова",
   'dashboard.endDateError': 'Дата закінчення повинна бути пізніше дати початку',
+  'dashboard.tripTooLong': 'Подорож може тривати не більше {days} днів',
+  'dashboard.dateShiftTitle': 'Нова дата початку',
+  'dashboard.dateShiftIntro': 'Ви змінили дату початку поїздки. Як ваші плани мають перейти на нові дати?',
+  'dashboard.dateShiftKeepBookings': 'Залишити бронювання на своїх датах',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Плани днів переміщуються разом із новими датами, а бронювання та проживання залишаються на своїх початкових датах, поки ті все ще входять до поїздки.',
+  'dashboard.dateShiftAll': 'Перемістити все',
+  'dashboard.dateShiftAllDesc': 'Весь маршрут переміщується на нові дати, включно з бронюваннями та проживанням.',
+  'dashboard.dateShiftHint':
+    'Порада: щоб зсунути лише частину маршруту, відкрийте в планувальнику «Змінити порядок днів», додайте день після завершення подорожі кнопкою з його датою й перемістіть цей день туди, де має з’явитися проміжок.',
+  'dashboard.shrinkTitle': 'Видалити дні?',
+  'dashboard.shrinkIntro': 'Під час збереження нових дат буде видалено ці дні:',
+  'dashboard.shrinkMoreDays': 'ще +{count}',
+  'dashboard.shrinkLastDays': 'Видаляються останні дні, а не перші',
+  'dashboard.shrinkLastDaysHint':
+    'Плани днів переносяться разом із новими датами, тому завжди видаляються останні дні плану, навіть якщо зсунувся початок.',
+  'dashboard.shrinkBookingsHint':
+    'Вони залишаться в Бронюваннях. Бронювання, дата якого ще входить у подорож, повернеться на цей день.',
+  'dashboard.shrinkBookingsShiftHint': 'Вони залишаться в Бронюваннях, без дня.',
+  'dashboard.shrinkStayHint': 'Заїзд або виїзд припадає на день, що видаляється, тому проживання видаляється повністю.',
+  'dashboard.shrinkStayBookedHint':
+    'Заїзд або виїзд припадає на день, що видаляється, тому проживання видаляється повністю. Його бронювання «{booking}» і витрата за ним залишаться в Бронюваннях.',
+  'dashboard.shrinkStayBookingHint':
+    'Заїзд або виїзд припадає на день, що видаляється, тому проживання видаляється повністю. Його бронювання «{booking}» залишиться в Бронюваннях.',
+  'dashboard.shrinkConfirm': 'Видалити дні й зберегти',
+  'dashboard.shrinkUnknown':
+    'Не вдалося перевірити дні цієї подорожі. Якщо в нових датах менше днів, під час збереження буде видалено останні дні й усе, що на них заплановано.',
   'dashboard.greeting.morning': 'Доброго ранку,',
   'dashboard.greeting.afternoon': 'Доброго дня,',
   'dashboard.greeting.evening': 'Доброго вечора,',
@@ -109,6 +139,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Місця',
   'dashboard.mobile.buddies': 'Учасники',
   'dashboard.mobile.newTrip': 'Нова поїздка',
+  'dashboard.mobile.addCoverImage': 'Додати обкладинку',
   'dashboard.mobile.currency': 'Валюта',
   'dashboard.mobile.timezone': 'Часовий пояс',
   'dashboard.mobile.upcomingTrips': 'Найближчі поїздки',
@@ -123,6 +154,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Завтра',
   'dashboard.mobile.inDays': 'Через {count} дн.',
   'dashboard.mobile.inMonths': 'Через {count} міс.',
+  'dashboard.mobile.spotlightDayOf': 'День {day} з {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} день',
+  'dashboard.mobile.spotlightDaysMany': '{count} днів',
   'dashboard.mobile.completed': 'Завершено',
   'dashboard.mobile.currencyConverter': 'Конвертер валют',
   'dashboard.filter.planned': 'Заплановані',

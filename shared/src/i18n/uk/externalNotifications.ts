@@ -28,6 +28,10 @@ const uk: NotificationLocale = {
       title: 'Запрошення Vacay Fusion',
       body: `${p.actor} запрошує вас об'єднати плани відпустки. Відкрийте TREK, щоб прийняти або відхилити.`,
     }),
+    vacay_share: (p) => ({
+      title: 'Календар Vacay надано',
+      body: `${p.actor} поділився з вами своїм календарем відпусток. Відкрийте TREK, щоб переглянути.`,
+    }),
     collection_invite: (p) => ({
       title: 'Запрошення до колекції',
       body: `${p.actor} запрошує вас поділитися колекцією. Відкрийте TREK, щоб прийняти або відхилити.`,
@@ -48,10 +52,17 @@ const uk: NotificationLocale = {
       title: 'Доступна нова версія TREK',
       body: `TREK ${p.version} тепер доступний. Перейдіть до панелі адміністратора для оновлення.`,
     }),
+    replica_failure: (p) => ({
+      title: 'Збій репліки сховища',
+      body:
+        `Помилка запису в репліку '${p.backend}': ${p.op} для ${p.key} — ${p.error}.` +
+        (p.suppressed !== '0' ? ` Із моменту останнього сповіщення приховано ще ${p.suppressed} помилок.` : ''),
+    }),
     synology_session_cleared: () => ({
       title: 'Сеанс Synology скинуто',
       body: 'Ваш обліковий запис або URL Synology змінився. Ви вийшли з Synology Photos.',
     }),
+    plugin_notification: (p) => ({ title: p.title ?? '', body: p.body ?? '' }),
   },
   passwordReset: {
     subject: 'Скидання пароля',

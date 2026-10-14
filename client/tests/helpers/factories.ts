@@ -112,6 +112,7 @@ export function buildPlace(overrides: Partial<Place> = {}): Place {
     google_place_id: null,
     osm_id: null,
     route_geometry: null,
+    route_color: null,
     place_time: null,
     end_time: null,
     duration_minutes: 60,
@@ -260,9 +261,6 @@ export function buildCategory(overrides: Partial<Category> = {}): Category {
 export function buildSettings(overrides: Partial<Settings> = {}): Settings {
   return {
     map_tile_url: '',
-    default_lat: 48.8566,
-    default_lng: 2.3522,
-    default_zoom: 10,
     dark_mode: false,
     default_currency: 'USD',
     language: 'en',

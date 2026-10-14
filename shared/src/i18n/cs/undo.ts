@@ -14,10 +14,12 @@ const undo: TranslationStrings = {
   'undo.lock': 'Zámek místa přepnut',
   'undo.importGpx': 'Import GPX',
   'undo.importKeyholeMarkup': 'Import KMZ/KML',
+  'undo.importFiles': 'Import souborů',
   'undo.importGoogleList': 'Import z Google Maps',
   'undo.importNaverList': 'Import z Naver Maps',
   'undo.addPlace': 'Místo přidáno',
   'undo.done': 'Vráceno zpět: {action}',
+  'undo.failed': 'Nelze vrátit zpět: {action}',
   'undo.importBooking': 'Import potvrzení rezervace',
 };
 export default undo;

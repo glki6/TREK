@@ -1,9 +1,10 @@
 /**
- * Unit tests for MCP sessionManager — SESS-001 to SESS-010.
- * Covers revokeUserSessions and revokeUserSessionsForClient.
+ * Unit tests for MCP sessionManager — SESS-001 to SESS-020.
+ * Covers revokeUserSessions, revokeUserSessionsForClient, evictOldestSessionForUser
+ * and invalidateMcpSessions.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sessions, revokeUserSessions, revokeUserSessionsForClient, McpSession } from '../../../src/mcp/sessionManager';
+import { sessions, revokeUserSessions, revokeUserSessionsForClient, evictOldestSessionForUser, invalidateMcpSessions, McpSession } from '../../../src/mcp/sessionManager';
 
 function makeSession(overrides: Partial<McpSession> = {}): McpSession {
   return {
@@ -14,6 +15,7 @@ function makeSession(overrides: Partial<McpSession> = {}): McpSession {
     clientId: null,
     isStaticToken: false,
     lastActivity: Date.now(),
+    lastClientIp: null,
     ...overrides,
   };
 }
@@ -117,5 +119,103 @@ describe('revokeUserSessionsForClient', () => {
 
     expect(() => revokeUserSessionsForClient(1, 'c')).not.toThrow();
     expect(sessions.has('sid-1')).toBe(false);
+  });
+});
+
+describe('evictOldestSessionForUser', () => {
+  it('SESS-011: evicts the session with the lowest lastActivity and returns its id', () => {
+    sessions.set('warm', makeSession({ userId: 1, lastActivity: 3_000 }));
+    sessions.set('cold', makeSession({ userId: 1, lastActivity: 1_000 }));
+    sessions.set('mid', makeSession({ userId: 1, lastActivity: 2_000 }));
+
+    expect(evictOldestSessionForUser(1)).toBe('cold');
+
+    expect(sessions.has('cold')).toBe(false);
+    expect(sessions.has('mid')).toBe(true);
+    expect(sessions.has('warm')).toBe(true);
+  });
+
+  it('SESS-012: never evicts another user\'s session, even if it is colder', () => {
+    sessions.set('other-user-coldest', makeSession({ userId: 2, lastActivity: 1 }));
+    sessions.set('target', makeSession({ userId: 1, lastActivity: 9_000 }));
+
+    expect(evictOldestSessionForUser(1)).toBe('target');
+
+    expect(sessions.has('target')).toBe(false);
+    expect(sessions.has('other-user-coldest')).toBe(true);
+  });
+
+  it('SESS-013: closes both the server and the transport of the evicted session', () => {
+    const s = makeSession({ userId: 1, lastActivity: 1_000 });
+    sessions.set('sid-1', s);
+
+    evictOldestSessionForUser(1);
+
+    expect(s.server.close).toHaveBeenCalledOnce();
+    expect(s.transport.close).toHaveBeenCalledOnce();
+  });
+
+  it('SESS-014: returns null when the user has no sessions', () => {
+    sessions.set('sid-1', makeSession({ userId: 2 }));
+
+    expect(evictOldestSessionForUser(1)).toBeNull();
+    expect(sessions.has('sid-1')).toBe(true);
+  });
+
+  it('SESS-015: still drops the map entry when server.close() throws', () => {
+    const s = makeSession({ userId: 1 });
+    (s.server.close as ReturnType<typeof vi.fn>).mockImplementation(() => { throw new Error('close failed'); });
+    sessions.set('sid-1', s);
+
+    expect(evictOldestSessionForUser(1)).toBe('sid-1');
+    expect(sessions.has('sid-1')).toBe(false);
+  });
+
+  it('SESS-016: still drops the map entry when transport.close() throws', () => {
+    const s = makeSession({ userId: 1 });
+    (s.transport.close as ReturnType<typeof vi.fn>).mockImplementation(() => { throw new Error('transport error'); });
+    sessions.set('sid-1', s);
+
+    expect(evictOldestSessionForUser(1)).toBe('sid-1');
+    expect(sessions.has('sid-1')).toBe(false);
+  });
+});
+
+describe('invalidateMcpSessions', () => {
+  it('SESS-017: drops every session regardless of user or client', () => {
+    sessions.set('sid-1', makeSession({ userId: 1, clientId: 'client-a' }));
+    sessions.set('sid-2', makeSession({ userId: 2, clientId: null }));
+
+    invalidateMcpSessions();
+
+    expect(sessions.size).toBe(0);
+  });
+
+  it('SESS-018: closes both halves of every session', () => {
+    const a = makeSession({ userId: 1 });
+    const b = makeSession({ userId: 2 });
+    sessions.set('sid-1', a);
+    sessions.set('sid-2', b);
+
+    invalidateMcpSessions();
+
+    expect(a.server.close).toHaveBeenCalledOnce();
+    expect(a.transport.close).toHaveBeenCalledOnce();
+    expect(b.server.close).toHaveBeenCalledOnce();
+    expect(b.transport.close).toHaveBeenCalledOnce();
+  });
+
+  it('SESS-019: still empties the map when close() throws', () => {
+    const s = makeSession({ userId: 1 });
+    (s.server.close as ReturnType<typeof vi.fn>).mockImplementation(() => { throw new Error('close failed'); });
+    sessions.set('sid-1', s);
+
+    expect(() => invalidateMcpSessions()).not.toThrow();
+    expect(sessions.size).toBe(0);
+  });
+
+  it('SESS-020: is a no-op on an empty map', () => {
+    expect(() => invalidateMcpSessions()).not.toThrow();
+    expect(sessions.size).toBe(0);
   });
 });

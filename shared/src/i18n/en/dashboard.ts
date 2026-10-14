@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} archived',
   'dashboard.newTrip': 'New Trip',
   'dashboard.newTripSub': 'Plan a new trip from scratch',
+  'dashboard.subscribeAllTrips': 'Subscribe to all trips',
+  'dashboard.subscribeAllTripsDesc':
+    'One calendar feed for all your active trips, kept in sync automatically. Excludes archived trips and trips that ended more than 90 days ago.',
   'dashboard.gridView': 'Grid view',
   'dashboard.listView': 'List view',
   'dashboard.currency': 'Currency',
@@ -98,6 +101,34 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Use Unsplash photo by {photographer}',
   'dashboard.titleRequired': 'Title is required',
   'dashboard.endDateError': 'End date must be after start date',
+  'dashboard.tripTooLong': 'A trip can span at most {days} days',
+  'dashboard.dateShiftTitle': 'New start date',
+  'dashboard.dateShiftIntro': 'You changed when this trip starts. How should your plans follow the new dates?',
+  'dashboard.dateShiftKeepBookings': 'Keep bookings on their dates',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Day plans move with the new dates, while reservations and accommodations stay on their original dates as long as those are still part of the trip.',
+  'dashboard.dateShiftAll': 'Shift everything',
+  'dashboard.dateShiftAllDesc':
+    'The entire itinerary moves with the new dates, including reservations and accommodations.',
+  'dashboard.dateShiftHint':
+    'Tip: to shift only part of your itinerary, open "Reorder days" in the planner, add the day after the trip with the button that shows its date, and move that day to where the gap belongs.',
+  'dashboard.shrinkTitle': 'Remove days?',
+  'dashboard.shrinkIntro': 'Saving the new dates removes these days:',
+  'dashboard.shrinkMoreDays': '+{count} more',
+  'dashboard.shrinkLastDays': 'The last days go, not the first',
+  'dashboard.shrinkLastDaysHint':
+    'Day plans move with the new dates, so it is always the last days of your plan that go, also when the start moved.',
+  'dashboard.shrinkBookingsHint':
+    'They stay under Bookings. One whose date is still part of the trip goes back onto that day.',
+  'dashboard.shrinkBookingsShiftHint': 'They stay under Bookings, without a day.',
+  'dashboard.shrinkStayHint': 'Checks in or out on a removed day, so the whole stay is removed.',
+  'dashboard.shrinkStayBookedHint':
+    'Checks in or out on a removed day, so the whole stay is removed. Its booking "{booking}" and its expense stay under Bookings.',
+  'dashboard.shrinkStayBookingHint':
+    'Checks in or out on a removed day, so the whole stay is removed. Its booking "{booking}" stays under Bookings.',
+  'dashboard.shrinkConfirm': 'Remove days and save',
+  'dashboard.shrinkUnknown':
+    'The days of this trip could not be checked. If the new dates hold fewer days, saving removes the last days and everything planned on them.',
   'dashboard.greeting.morning': 'Good morning,',
   'dashboard.greeting.afternoon': 'Good afternoon,',
   'dashboard.greeting.evening': 'Good evening,',
@@ -107,6 +138,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Places',
   'dashboard.mobile.buddies': 'Buddies',
   'dashboard.mobile.newTrip': 'New Trip',
+  'dashboard.mobile.addCoverImage': 'Add cover image',
   'dashboard.mobile.currency': 'Currency',
   'dashboard.mobile.timezone': 'Timezone',
   'dashboard.mobile.upcomingTrips': 'Upcoming Trips',
@@ -121,6 +153,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Tomorrow',
   'dashboard.mobile.inDays': 'In {count} days',
   'dashboard.mobile.inMonths': 'In {count} months',
+  'dashboard.mobile.spotlightDayOf': 'Day {day} of {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} day',
+  'dashboard.mobile.spotlightDaysMany': '{count} days',
   'dashboard.mobile.completed': 'Completed',
   'dashboard.mobile.currencyConverter': 'Currency Converter',
   'dashboard.filter.planned': 'Planned',

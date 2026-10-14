@@ -27,12 +27,15 @@ export type NotificationEventKey =
   | 'trip_reminder'
   | 'todo_due'
   | 'vacay_invite'
+  | 'vacay_share'
   | 'collection_invite'
   | 'photos_shared'
   | 'collab_message'
   | 'packing_tagged'
   | 'version_available'
-  | 'synology_session_cleared';
+  | 'replica_failure'
+  | 'synology_session_cleared'
+  | 'plugin_notification';
 
 export interface NotificationLocale {
   email: EmailStrings;

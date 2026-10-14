@@ -12,8 +12,10 @@ const inspector: TranslationStrings = {
   'inspector.addToDay': 'إضافة إلى اليوم',
   'inspector.confirmedRes': 'حجز مؤكد',
   'inspector.pendingRes': 'حجز قيد الانتظار',
-  'inspector.google': 'التنقل',
-  'inspector.openStreetMap': 'عرض',
+  'inspector.google': 'Google Maps',
+  'inspector.navigation': 'التنقل',
+  'inspector.openWith': 'الفتح باستخدام',
+  'inspector.openStreetMap': 'OpenStreetMap',
   'inspector.website': 'فتح الموقع الإلكتروني',
   'inspector.saveToCollection': 'حفظ في مجموعة',
   'inspector.savedToCollection': 'محفوظ',
@@ -21,5 +23,8 @@ const inspector: TranslationStrings = {
   'inspector.editRes': 'تعديل الحجز',
   'inspector.participants': 'المشاركون',
   'inspector.trackStats': 'بيانات المسار',
+  'inspector.trackColor': 'لون المسار',
+  'inspector.trackColorAuto': 'لون تلقائي',
+  'inspector.trackColorCustom': 'اختيار لون مخصص',
 };
 export default inspector;

@@ -1,8 +1,14 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { server } from './helpers/msw/server';
+
+// waitFor/findBy* default to 1s, which is enough on a dev machine but not on a
+// 4-core CI runner running the whole suite in parallel forks — a multipart POST
+// through MSW plus an IndexedDB write can exceed it. Still well inside the 15s
+// testTimeout, so a genuinely broken assertion fails, it just takes longer.
+configure({ asyncUtilTimeout: 5000 });
 
 // Mock the websocket module so stores don't try to open real connections
 vi.mock('../src/api/websocket', () => ({
@@ -15,8 +21,16 @@ vi.mock('../src/api/websocket', () => ({
   removeListener: vi.fn(),
 }));
 
-// MSW lifecycle
-beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
+// MSW lifecycle. A cross-origin request nobody mocked is the dangerous kind: 'warn'
+// lets it through, so the runner really talks to frankfurter or a tile server and settles
+// a promise after the test environment is gone (see handlers/external.ts). Those fail now.
+// An unhandled same-origin call stays a warning: that is a missing handler, not egress.
+beforeAll(() => server.listen({
+  onUnhandledRequest: (request, print) => {
+    if (new URL(request.url).origin === location.origin) print.warning();
+    else print.error();
+  },
+}));
 afterEach(() => {
   server.resetHandlers();
   cleanup();
@@ -36,20 +50,47 @@ Date.prototype.toLocaleDateString = function (locales?: Intl.LocalesArgument, op
   return _origToLocaleDateString.call(this, locales ?? 'en-US', options)
 }
 
-// window.matchMedia — used by dark mode / responsive components
+// window.matchMedia — used by dark mode / responsive components.
+// Width queries are answered from window.innerWidth, which is what a test sets
+// when it wants a phone viewport, and the lists re-evaluate on a resize event,
+// so a component that follows the breakpoint can be driven from a test the same
+// way the browser drives it. Every other query keeps the old constant false.
+const mediaLists = new Set<{ media: string; matches: boolean; listeners: Set<(e: MediaQueryListEvent) => void> }>()
+
+function widthMatches(query: string): boolean {
+  const max = /\(\s*max-width:\s*(\d+)px\s*\)/.exec(query)
+  if (max) return window.innerWidth <= Number(max[1])
+  const min = /\(\s*min-width:\s*(\d+)px\s*\)/.exec(query)
+  if (min) return window.innerWidth >= Number(min[1])
+  return false
+}
+
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+  value: vi.fn().mockImplementation((query: string) => {
+    const entry = { media: query, matches: widthMatches(query), listeners: new Set<(e: MediaQueryListEvent) => void>() }
+    mediaLists.add(entry)
+    return {
+      get matches() { return entry.matches },
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn((_type: string, fn: (e: MediaQueryListEvent) => void) => entry.listeners.add(fn)),
+      removeEventListener: vi.fn((_type: string, fn: (e: MediaQueryListEvent) => void) => entry.listeners.delete(fn)),
+      dispatchEvent: vi.fn(),
+    }
+  }),
 });
+
+window.addEventListener('resize', () => {
+  for (const entry of mediaLists) {
+    const matches = widthMatches(entry.media)
+    if (matches === entry.matches) continue
+    entry.matches = matches
+    for (const fn of entry.listeners) fn({ matches, media: entry.media } as MediaQueryListEvent)
+  }
+})
 
 // IntersectionObserver — used by lazy loading
 // Must use a class or regular function (not arrow function) so 'new IntersectionObserver()' works
@@ -86,3 +127,25 @@ if (typeof URL.createObjectURL === 'undefined') {
 
 // Element.prototype.scrollIntoView — jsdom doesn't implement it
 Element.prototype.scrollIntoView = vi.fn();
+
+// maplibre-gl-leaflet — the vector basemap every Leaflet map draws since the move
+// off CARTO. jsdom has no WebGL, so the real layer can never work here; more to
+// the point, several map tests hand react-leaflet a partial `useMap()` stub, and
+// the real layer's addTo() reaches for map.addLayer and rejects into the void.
+// Stubbed globally for the same reason ResizeObserver is: the capability does not
+// exist in this environment. Tests that assert on the layer register their own
+// mock, which takes precedence over this one.
+vi.mock('@maplibre/maplibre-gl-leaflet', () => ({
+  maplibreGL: vi.fn(() => {
+    const gl = {
+      setStyle: vi.fn(),
+      on: vi.fn(),
+      isStyleLoaded: vi.fn(() => false),
+      getStyle: vi.fn(() => ({ layers: [] })),
+      setLayoutProperty: vi.fn(),
+    };
+    const layer: Record<string, unknown> = { remove: vi.fn(), getMaplibreMap: vi.fn(() => gl) };
+    layer.addTo = vi.fn(() => layer);
+    return layer;
+  }),
+}));

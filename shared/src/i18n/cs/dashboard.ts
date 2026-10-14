@@ -10,6 +10,9 @@ const dashboard: TranslationStrings = {
   'dashboard.subtitle.archivedSuffix': ' · {count} archivováno',
   'dashboard.newTrip': 'Nová cesta',
   'dashboard.newTripSub': 'Naplánujte novou cestu od začátku',
+  'dashboard.subscribeAllTrips': 'Odebírat všechny cesty',
+  'dashboard.subscribeAllTripsDesc':
+    'Jeden kalendářový kanál pro všechny vaše aktivní cesty, automaticky udržovaný v synchronizaci. Nezahrnuje archivované cesty a cesty, které skončily před více než 90 dny.',
   'dashboard.gridView': 'Mřížka',
   'dashboard.listView': 'Seznam',
   'dashboard.currency': 'Měna',
@@ -84,6 +87,33 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Použít fotku z Unsplash od {photographer}',
   'dashboard.titleRequired': 'Název je povinný',
   'dashboard.endDateError': 'Datum konce musí být po datu začátku',
+  'dashboard.tripTooLong': 'Cesta může trvat nejvýše {days} dní',
+  'dashboard.dateShiftTitle': 'Nové datum začátku',
+  'dashboard.dateShiftIntro': 'Změnili jste začátek této cesty. Jak se mají vaše plány přizpůsobit novým termínům?',
+  'dashboard.dateShiftKeepBookings': 'Ponechat rezervace v původních termínech',
+  'dashboard.dateShiftKeepBookingsDesc':
+    'Denní plány se posunou podle nových termínů, zatímco rezervace a ubytování zůstanou v původních termínech, pokud jsou stále součástí cesty.',
+  'dashboard.dateShiftAll': 'Posunout vše',
+  'dashboard.dateShiftAllDesc': 'Celý itinerář se posune podle nových termínů, včetně rezervací a ubytování.',
+  'dashboard.dateShiftHint':
+    'Tip: pokud chcete posunout jen část itineráře, otevřete v plánovači „Změnit pořadí dnů“, přidejte den po konci cesty tlačítkem s jeho datem a přesuňte ho tam, kde má vzniknout mezera.',
+  'dashboard.shrinkTitle': 'Odebrat dny?',
+  'dashboard.shrinkIntro': 'Uložením nových dat se odeberou tyto dny:',
+  'dashboard.shrinkMoreDays': '+{count} další',
+  'dashboard.shrinkLastDays': 'Odeberou se poslední dny, ne první',
+  'dashboard.shrinkLastDaysHint':
+    'Plány dnů se posouvají s novými daty, takže se vždy odeberou poslední dny plánu, i když se posunul začátek.',
+  'dashboard.shrinkBookingsHint':
+    'Zůstanou v Rezervacích. Rezervace, jejíž datum je stále součástí cesty, se vrátí na tento den.',
+  'dashboard.shrinkBookingsShiftHint': 'Zůstanou v Rezervacích, bez dne.',
+  'dashboard.shrinkStayHint': 'Příjezd nebo odjezd připadá na odebíraný den, proto se odebere celé ubytování.',
+  'dashboard.shrinkStayBookedHint':
+    'Příjezd nebo odjezd připadá na odebíraný den, proto se odebere celé ubytování. Jeho rezervace „{booking}“ a její výdaj zůstanou v Rezervacích.',
+  'dashboard.shrinkStayBookingHint':
+    'Příjezd nebo odjezd připadá na odebíraný den, proto se odebere celé ubytování. Jeho rezervace „{booking}“ zůstane v Rezervacích.',
+  'dashboard.shrinkConfirm': 'Odebrat dny a uložit',
+  'dashboard.shrinkUnknown':
+    'Dny této cesty se nepodařilo ověřit. Pokud mají nová data méně dnů, uložení odebere poslední dny a vše, co je na nich naplánováno.',
   'dashboard.greeting.morning': 'Dobré ráno,',
   'dashboard.greeting.afternoon': 'Dobré odpoledne,',
   'dashboard.greeting.evening': 'Dobrý večer,',
@@ -93,6 +123,7 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.places': 'Místa',
   'dashboard.mobile.buddies': 'Spolucestující',
   'dashboard.mobile.newTrip': 'Nová cesta',
+  'dashboard.mobile.addCoverImage': 'Přidat úvodní obrázek',
   'dashboard.mobile.currency': 'Měna',
   'dashboard.mobile.timezone': 'Časové pásmo',
   'dashboard.mobile.upcomingTrips': 'Nadcházející cesty',
@@ -107,6 +138,9 @@ const dashboard: TranslationStrings = {
   'dashboard.mobile.tomorrow': 'Zítra',
   'dashboard.mobile.inDays': 'Za {count} dní',
   'dashboard.mobile.inMonths': 'Za {count} měsíců',
+  'dashboard.mobile.spotlightDayOf': 'Den {day} z {total}',
+  'dashboard.mobile.spotlightDayOne': '{count} den',
+  'dashboard.mobile.spotlightDaysMany': '{count} dní',
   'dashboard.mobile.completed': 'Dokončeno',
   'dashboard.mobile.currencyConverter': 'Převodník měn',
   'dashboard.filter.planned': 'Plánované',
