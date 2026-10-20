@@ -1,49 +1,29 @@
-import type { Accommodation, AssignmentsMap, Day, Place, Waypoint } from '../../types'
-import { getDayBookendHotels } from '../../utils/dayOrder'
+import type { Waypoint } from '../../types'
 import { generateGoogleMapsUrl } from './RouteCalculator'
 
 /**
- * Fork-only: open the whole itinerary in Google Maps in one go.
+ * Fork-only: the whole itinerary as one Google Maps route.
  *
  * Kept out of RouteCalculator.ts so that file can track upstream without conflicts.
  */
 
+/** A Google Maps route takes this many stops at most, the start and the end included. */
+export const GOOGLE_MAPS_MAX_STOPS = 10
+
 /**
- * Build a Google Maps directions URL for ALL stops across ALL days of a trip,
- * including hotel bookends. Useful for opening the entire itinerary in one go.
+ * Join every day's export stops (DayPlanSidebar's `dayExportStops`, so the hotel legs
+ * follow the same rules as each day's own export) into one route, in trip order. The
+ * hotel a day ends at and the next day starts from is listed once. Google opens at
+ * most GOOGLE_MAPS_MAX_STOPS stops, so a longer trip is cut there; `total` says how
+ * many the whole trip had, so the caller can say what was left out.
  */
-export function buildTripGoogleMapsUrl(
-  days: Day[],
-  assignments: AssignmentsMap,
-  accommodations: Accommodation[],
-): string | null {
-  const allStops: Waypoint[] = []
-
-  for (const day of days) {
-    // Get hotel bookends for this day via the same helper used by the per-day export
-    const bookends = getDayBookendHotels(day, days, accommodations)
-
-    // Add morning hotel if it has coordinates
-    if (bookends?.morning?.place_lat != null && bookends.morning.place_lng != null) {
-      allStops.push({ lat: bookends.morning.place_lat, lng: bookends.morning.place_lng })
-    }
-
-    // Add all places from this day in planned order (sorted on a copy: the store's
-    // arrays must not be reordered in place)
-    const dayPlaces = [...(assignments[String(day.id)] || [])]
-      .sort((a, b) => a.order_index - b.order_index)
-      .map(a => a.place as Place | undefined)
-      .filter(p => p?.lat != null && p?.lng != null) as Waypoint[]
-    allStops.push(...dayPlaces)
-
-    // Add evening hotel if it exists and differs from the last stop already added
-    if (bookends?.evening?.place_lat != null && bookends.evening.place_lng != null) {
-      const lastStop = allStops[allStops.length - 1]
-      if (!lastStop || !(lastStop.lat === bookends.evening.place_lat && lastStop.lng === bookends.evening.place_lng)) {
-        allStops.push({ lat: bookends.evening.place_lat, lng: bookends.evening.place_lng })
-      }
-    }
+export function buildTripGoogleMapsRoute(stopsByDay: Waypoint[][]): { url: string | null; shown: number; total: number } {
+  const stops: Waypoint[] = []
+  for (const stop of stopsByDay.flat()) {
+    const last = stops[stops.length - 1]
+    if (last && last.lat === stop.lat && last.lng === stop.lng) continue
+    stops.push(stop)
   }
-
-  return generateGoogleMapsUrl(allStops)
+  const shown = stops.slice(0, GOOGLE_MAPS_MAX_STOPS)
+  return { url: generateGoogleMapsUrl(shown), shown: shown.length, total: stops.length }
 }

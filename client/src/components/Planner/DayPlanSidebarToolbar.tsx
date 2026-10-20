@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronsDownUp, ChevronsUpDown, Download, Undo2, ArrowUpDown, Route as RouteIcon } from 'lucide-react'
-import { buildTripGoogleMapsUrl } from '../Map/tripGoogleMapsUrl'
+import { buildTripGoogleMapsRoute } from '../Map/tripGoogleMapsUrl'
+import GoogleMapsIcon from '../shared/GoogleMapsIcon'
 import { DayReorderPopup } from './DayReorderPopup'
 import Tooltip from '../shared/Tooltip'
 import { useToast } from '../shared/Toast'
@@ -8,7 +9,7 @@ import { TripExportModal } from './TripExportModal'
 import { isRoutableReservation } from '../../utils/reservationRoutes'
 import type { DayAddControls } from '../../utils/dayAdd'
 import type { DayDeleteQuestion } from '../../utils/dayImpactLines'
-import type { Trip, Day, Place, Category, AssignmentsMap, Reservation, DayNote, Accommodation } from '../../types'
+import type { Trip, Day, Place, Category, AssignmentsMap, Reservation, DayNote, Waypoint } from '../../types'
 
 interface DayPlanSidebarToolbarProps {
   tripId: number
@@ -46,8 +47,8 @@ interface DayPlanSidebarToolbarProps {
   onDeleteDay?: (dayId: number) => void
   /** The open delete question; the dialog asks it in place of its day list. */
   deleteDayQuestion?: DayDeleteQuestion | null
-  /** Fork: stays, for the hotel bookends in the full-trip Google Maps export. */
-  accommodations?: Accommodation[]
+  /** Fork: every day's export stops, in trip order, for the whole-trip Google Maps export. */
+  tripExportStops?: () => Waypoint[][]
 }
 
 export function DayPlanSidebarToolbar({
@@ -56,7 +57,7 @@ export function DayPlanSidebarToolbar({
   t, locale, toast,
   expandedDays, setExpandedDays, onUndo, canUndo, undoHover, setUndoHover, lastActionLabel,
   canEditDays, canManageShare = true, onReorderDays, onAddDay, dayAdd, onDeleteDay, deleteDayQuestion,
-  accommodations = [],
+  tripExportStops,
 }: DayPlanSidebarToolbarProps) {
   const [reorderOpen, setReorderOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -242,14 +243,16 @@ export function DayPlanSidebarToolbar({
             </Tooltip>
           )
         })()}
-        {/* Fork: export ALL stops from ALL days as one Google Maps route */}
-        {days.length > 0 && (
+        {/* Fork: every day's stops as one Google Maps route */}
+        {days.length > 0 && tripExportStops && (
           <Tooltip label={t('planner.exportAllStops')} placement="bottom">
             <button
               type="button"
               onClick={() => {
-                const url = buildTripGoogleMapsUrl(days, assignments, accommodations)
-                if (url) window.open(url, '_blank', 'noopener,noreferrer')
+                const { url, shown, total } = buildTripGoogleMapsRoute(tripExportStops())
+                if (!url) return
+                window.open(url, '_blank', 'noopener,noreferrer')
+                if (total > shown) toast.warning(t('planner.exportAllStopsTruncated', { max: shown, count: total }), 6000)
               }}
               aria-label={t('planner.exportAllStops')}
               style={{
@@ -259,12 +262,7 @@ export function DayPlanSidebarToolbar({
                 color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit', padding: 0,
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">
-                <path d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                <path d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                <path d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-                <path d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-              </svg>
+              <GoogleMapsIcon size={14} />
             </button>
           </Tooltip>
         )}

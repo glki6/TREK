@@ -1580,6 +1580,41 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     } as unknown as React.MouseEvent)
   }
 
+  /**
+   * The day's located stops in planned order, bookended by the accommodation
+   * the same way the drawn map route is (no bookends when "optimize from
+   * accommodation" is off), so hotels aren't dropped from an exported route
+   * (#1372) — but only when the leg is real: no hotel prepended before an early
+   * check-in-day stop, none appended after a post-check-out stop (#1465). Names
+   * ride along for the deep links that can label a pin with one.
+   *
+   * Fork: out of the day loop so the toolbar's whole-trip export hands Google
+   * Maps exactly the stops each day's own export does.
+   */
+  const dayExportStops = (day: Day): NamedWaypoint[] => {
+    const routeBookends = optimizeFromAccommodation !== false ? getDayBookendHotels(day, days, accommodations) : null
+    const dayCarriers = (mergedItemsMap[day.id] || []).filter(i => i.type === 'transport' && isCarrierTransport(i.data))
+    const dayHasLocatedCarrier = dayCarriers.some(i => hasCarrierEndpointOnDay(i.data, day.id))
+    const dayStops = getDayAssignments(day.id).filter(a => a.place?.lat != null && a.place?.lng != null)
+    // A flight, train, ferry or coach on a day without stops is the move itself,
+    // located or not: the hotels at either end are joined by it, not by a road
+    // worth handing to a map app (#2476).
+    if (dayStops.length === 0 && dayCarriers.length > 0) return []
+    const stops = dayStops.map(a => ({ lat: a.place!.lat!, lng: a.place!.lng!, name: a.place!.name }))
+    const first = dayStops[0] ? { isPlace: true, time: dayStops[0].place?.place_time ?? null, lat: dayStops[0].place!.lat!, lng: dayStops[0].place!.lng! } : undefined
+    const lastAssignment = dayStops[dayStops.length - 1]
+    const last = lastAssignment ? { isPlace: true, time: lastAssignment.place?.place_time ?? null, lat: lastAssignment.place!.lat!, lng: lastAssignment.place!.lng! } : undefined
+    // Same carrier gate as the drawn route (#2157): the exported link must not
+    // start at a hotel you only reach tonight or lead back to one you left.
+    const drawMorning = !!routeBookends && shouldDrawMorningLeg(routeBookends, day, first, dayHasLocatedCarrier)
+    const drawEvening = !!routeBookends && shouldDrawEveningLeg(routeBookends, day, last, dayHasLocatedCarrier)
+    const morning = drawMorning && routeBookends?.morning?.place_lat != null && routeBookends?.morning?.place_lng != null
+      ? { lat: routeBookends.morning.place_lat, lng: routeBookends.morning.place_lng, name: routeBookends.morning.place_name } : null
+    const evening = drawEvening && routeBookends?.evening?.place_lat != null && routeBookends?.evening?.place_lng != null
+      ? { lat: routeBookends.evening.place_lat, lng: routeBookends.evening.place_lng, name: routeBookends.evening.place_name } : null
+    return [...(morning ? [morning] : []), ...stops, ...(evening ? [evening] : [])]
+  }
+
   return (
     // Sized as a flex child as well as by height: the desktop panel puts the Days / Road
     // trip switch above this, and at height 100% alone the list ran the switch's height
@@ -1615,6 +1650,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
         dayAdd={dayAdd}
         onDeleteDay={onDeleteDay}
         deleteDayQuestion={deleteDayQuestion}
+        tripExportStops={() => days.map(dayExportStops)}
       />
 
       {/* Tagesliste */}
@@ -1668,39 +1704,11 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
             (dayCarriers.length === 0 || dayHasLocatedCarrier)
           )
           const routeToolsRoutable = da.length >= 2 || (loc != null && hasRouteBookend) || hasHotelTransfer
-          /**
-           * The day's located stops in planned order, bookended by the accommodation
-           * the same way the drawn map route is (routeBookends is null when "optimize
-           * from accommodation" is off), so hotels aren't dropped from an exported
-           * route (#1372) — but only when the leg is real: no hotel prepended before an
-           * early check-in-day stop, none appended after a post-check-out stop (#1465).
-           * Names ride along for the deep links that can label a pin with one.
-           */
-          const dayExportStops = (): NamedWaypoint[] => {
-            const dayStops = getDayAssignments(day.id).filter(a => a.place?.lat != null && a.place?.lng != null)
-            // A flight, train, ferry or coach on a day without stops is the move itself,
-            // located or not: the hotels at either end are joined by it, not by a road
-            // worth handing to a map app (#2476).
-            if (dayStops.length === 0 && dayCarriers.length > 0) return []
-            const stops = dayStops.map(a => ({ lat: a.place!.lat!, lng: a.place!.lng!, name: a.place!.name }))
-            const first = dayStops[0] ? { isPlace: true, time: dayStops[0].place?.place_time ?? null, lat: dayStops[0].place!.lat!, lng: dayStops[0].place!.lng! } : undefined
-            const lastAssignment = dayStops[dayStops.length - 1]
-            const last = lastAssignment ? { isPlace: true, time: lastAssignment.place?.place_time ?? null, lat: lastAssignment.place!.lat!, lng: lastAssignment.place!.lng! } : undefined
-            // Same carrier gate as the drawn route (#2157): the exported link must not
-            // start at a hotel you only reach tonight or lead back to one you left.
-            const drawMorning = !!routeBookends && shouldDrawMorningLeg(routeBookends, day, first, dayHasLocatedCarrier)
-            const drawEvening = !!routeBookends && shouldDrawEveningLeg(routeBookends, day, last, dayHasLocatedCarrier)
-            const morning = drawMorning && routeBookends?.morning?.place_lat != null && routeBookends?.morning?.place_lng != null
-              ? { lat: routeBookends.morning.place_lat, lng: routeBookends.morning.place_lng, name: routeBookends.morning.place_name } : null
-            const evening = drawEvening && routeBookends?.evening?.place_lat != null && routeBookends?.evening?.place_lng != null
-              ? { lat: routeBookends.evening.place_lat, lng: routeBookends.evening.place_lng, name: routeBookends.evening.place_name } : null
-            return [...(morning ? [morning] : []), ...stops, ...(evening ? [evening] : [])]
-          }
           const showRouteTools = (isSelected || (showRouteToolsWhenExpanded && isExpanded)) && routeToolsRoutable
           // Built once, for the day the tools show on. With no stop to hand over the
           // hand-offs would open nothing, so they are left out; a single stop still
           // opens as a pin (#2476).
-          const exportStops = showRouteTools ? dayExportStops() : []
+          const exportStops = showRouteTools ? dayExportStops(day) : []
           // Is this day's inline route currently on? Mobile toggles it per day (its
           // own expandedRouteDayIds entry); desktop uses the global Route toggle on
           // the selected day (#1374).
