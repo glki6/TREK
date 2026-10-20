@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'الحفاظ على الموضع أثناء تحسين المسار',
   'planner.dayDetails': 'تفاصيل اليوم',
   'planner.dayN': 'اليوم {n}',
-  'planner.exportAllStops': 'تصدير جميع المحطات',
+  'planner.exportAllStops': 'فتح جميع المحطات في خرائط Google',
+  'planner.exportAllStopsTruncated':
+    'تقبل خرائط Google {max} محطات على الأكثر، لذلك فُتحت أول {max} من أصل {count} فقط.',
 };
 export default planner;

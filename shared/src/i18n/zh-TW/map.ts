@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': '地圖來源',
   'map.overview.unrouted': '有 {count} 段無法計算路線，因此距離不完整。',
   'map.overview.dayUnrouted': '本日有 {count} 段無法計算路線',
+  'map.dayColors.show': '依日期為停靠點上色',
+  'map.dayColors.hide': '停止依日期上色',
+  'map.clustering.off': '個別顯示每個標記',
+  'map.clustering.on': '合併鄰近的標記',
 };
 export default map;

@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Crèdits del mapa',
   'map.overview.unrouted': 'No s’han pogut calcular {count} tram(s), per això les distàncies són incompletes.',
   'map.overview.dayUnrouted': 'No s’han pogut calcular {count} tram(s) d’aquest dia',
+  'map.dayColors.show': 'Acoloreix les parades per dia',
+  'map.dayColors.hide': 'Deixa d’acolorir per dia',
+  'map.clustering.off': 'Mostra cada marcador per separat',
+  'map.clustering.on': 'Agrupa els marcadors propers',
 };
 export default map;

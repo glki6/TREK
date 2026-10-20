@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Kaartvermeldingen',
   'map.overview.unrouted': '{count} etappe(s) konden niet worden berekend, de afstanden zijn onvolledig.',
   'map.overview.dayUnrouted': '{count} etappe(s) van deze dag konden niet worden berekend',
+  'map.dayColors.show': 'Stops per dag kleuren',
+  'map.dayColors.hide': 'Niet meer per dag kleuren',
+  'map.clustering.off': 'Elke markering apart tonen',
+  'map.clustering.on': 'Markeringen in de buurt groeperen',
 };
 export default map;

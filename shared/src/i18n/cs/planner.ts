@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Zachovat pozici při optimalizaci trasy',
   'planner.dayDetails': 'Podrobnosti dne',
   'planner.dayN': 'Den {n}',
-  'planner.exportAllStops': 'Exportovat všechny zastávky',
+  'planner.exportAllStops': 'Otevřít všechny zastávky v Google Mapách',
+  'planner.exportAllStopsTruncated':
+    'Google Mapy zvládnou nejvýše {max} zastávek, proto se otevřelo jen prvních {max} z {count}.',
 };
 export default planner;

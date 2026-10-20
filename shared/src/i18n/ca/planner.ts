@@ -64,5 +64,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': "Mantén la posició durant l'optimització de ruta",
   'planner.dayDetails': 'Detalls del dia',
   'planner.dayN': 'Dia {n}',
+  'planner.exportAllStops': 'Obre totes les parades a Google Maps',
+  'planner.exportAllStopsTruncated':
+    'Google Maps admet com a màxim {max} parades, així que només s’han obert les primeres {max} de {count}.',
 };
 export default planner;

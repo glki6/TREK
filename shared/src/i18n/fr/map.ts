@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Crédits de la carte',
   'map.overview.unrouted': '{count} étape(s) n’ont pas pu être calculées, les distances sont incomplètes.',
   'map.overview.dayUnrouted': '{count} étape(s) de cette journée n’ont pas pu être calculées',
+  'map.dayColors.show': 'Colorer les arrêts par jour',
+  'map.dayColors.hide': 'Ne plus colorer par jour',
+  'map.clustering.off': 'Afficher chaque marqueur séparément',
+  'map.clustering.on': 'Regrouper les marqueurs proches',
 };
 export default map;

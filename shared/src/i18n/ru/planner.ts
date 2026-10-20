@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Сохранить позицию при оптимизации маршрута',
   'planner.dayDetails': 'Подробности дня',
   'planner.dayN': 'День {n}',
-  'planner.exportAllStops': 'Экспорт всех остановок',
+  'planner.exportAllStops': 'Открыть все остановки в Google Картах',
+  'planner.exportAllStopsTruncated':
+    'Google Карты принимают не больше {max} остановок, поэтому открыты только первые {max} из {count}.',
 };
 export default planner;

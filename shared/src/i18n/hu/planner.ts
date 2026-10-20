@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Pozíció megtartása útvonal-optimalizálás során',
   'planner.dayDetails': 'Nap részletei',
   'planner.dayN': '{n}. nap',
-  'planner.exportAllStops': 'Minden megálló exportálása',
+  'planner.exportAllStops': 'Az összes megálló megnyitása a Google Térképben',
+  'planner.exportAllStopsTruncated':
+    'A Google Térkép legfeljebb {max} megállót fogad, ezért csak az első {max} nyílt meg a(z) {count} közül.',
 };
 export default planner;

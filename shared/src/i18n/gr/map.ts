@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Πηγές χάρτη',
   'map.overview.unrouted': '{count} σκέλος/η δεν μπόρεσαν να υπολογιστούν, οι αποστάσεις είναι ελλιπείς.',
   'map.overview.dayUnrouted': '{count} σκέλος/η αυτής της ημέρας δεν μπόρεσαν να υπολογιστούν',
+  'map.dayColors.show': 'Χρωματισμός στάσεων ανά ημέρα',
+  'map.dayColors.hide': 'Διακοπή χρωματισμού ανά ημέρα',
+  'map.clustering.off': 'Εμφάνιση κάθε δείκτη χωριστά',
+  'map.clustering.on': 'Ομαδοποίηση κοντινών δεικτών',
 };
 export default map;

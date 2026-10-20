@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Térkép forrásai',
   'map.overview.unrouted': '{count} szakaszt nem sikerült kiszámítani, a távolságok hiányosak.',
   'map.overview.dayUnrouted': 'Ennek a napnak {count} szakaszát nem sikerült kiszámítani',
+  'map.dayColors.show': 'Megállók színezése nap szerint',
+  'map.dayColors.hide': 'Nap szerinti színezés kikapcsolása',
+  'map.clustering.off': 'Minden jelölő külön megjelenítése',
+  'map.clustering.on': 'Közeli jelölők csoportosítása',
 };
 export default map;

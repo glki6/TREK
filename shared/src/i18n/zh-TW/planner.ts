@@ -63,6 +63,7 @@ const planner: TranslationStrings = {
   'planner.keepPosition': '路線最佳化時保持位置',
   'planner.dayDetails': '日程詳情',
   'planner.dayN': '第 {n} 天',
-  'planner.exportAllStops': '导出所有站点',
+  'planner.exportAllStops': '在 Google 地圖中開啟所有停靠點',
+  'planner.exportAllStopsTruncated': 'Google 地圖最多只能接收 {max} 個停靠點，因此只開啟了 {count} 個中的前 {max} 個。',
 };
 export default planner;

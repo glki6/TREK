@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Kartenquellen',
   'map.overview.unrouted': '{count} Etappe(n) konnten nicht berechnet werden, die Entfernungen sind unvollständig.',
   'map.overview.dayUnrouted': '{count} Etappe(n) dieses Tages konnten nicht berechnet werden',
+  'map.dayColors.show': 'Stopps nach Tag einfärben',
+  'map.dayColors.hide': 'Einfärben nach Tag beenden',
+  'map.clustering.off': 'Jeden Marker einzeln anzeigen',
+  'map.clustering.on': 'Nahe Marker gruppieren',
 };
 export default map;

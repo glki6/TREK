@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Giữ vị trí trong quá trình tối ưu hóa tuyến đường',
   'planner.dayDetails': 'Chi tiết ngày',
   'planner.dayN': 'Ngày {n}',
-  'planner.exportAllStops': 'Xuất tất cả điểm dừng',
+  'planner.exportAllStops': 'Mở tất cả điểm dừng trong Google Maps',
+  'planner.exportAllStopsTruncated':
+    'Google Maps chỉ nhận tối đa {max} điểm dừng, nên chỉ {max} điểm đầu tiên trong số {count} được mở.',
 };
 export default planner;

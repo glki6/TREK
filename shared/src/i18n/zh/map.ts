@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': '地图来源',
   'map.overview.unrouted': '有 {count} 段无法计算路线，因此距离不完整。',
   'map.overview.dayUnrouted': '本日有 {count} 段无法计算路线',
+  'map.dayColors.show': '按天为停靠点着色',
+  'map.dayColors.hide': '停止按天着色',
+  'map.clustering.off': '单独显示每个标记',
+  'map.clustering.on': '合并邻近的标记',
 };
 export default map;

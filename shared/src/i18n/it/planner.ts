@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': "Mantieni la posizione durante l'ottimizzazione del percorso",
   'planner.dayDetails': 'Dettagli del giorno',
   'planner.dayN': 'Giorno {n}',
-  'planner.exportAllStops': 'Esporta tutte le tappe',
+  'planner.exportAllStops': 'Apri tutte le tappe in Google Maps',
+  'planner.exportAllStopsTruncated':
+    'Google Maps accetta al massimo {max} tappe, quindi sono state aperte solo le prime {max} su {count}.',
 };
 export default planner;

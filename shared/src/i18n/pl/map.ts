@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Źródła mapy',
   'map.overview.unrouted': 'Nie udało się wyznaczyć {count} odcinka/odcinków, więc odległości są niepełne.',
   'map.overview.dayUnrouted': 'Nie udało się wyznaczyć {count} odcinka/odcinków tego dnia',
+  'map.dayColors.show': 'Koloruj przystanki według dnia',
+  'map.dayColors.hide': 'Wyłącz kolorowanie według dnia',
+  'map.clustering.off': 'Pokaż każdy znacznik osobno',
+  'map.clustering.on': 'Grupuj pobliskie znaczniki',
 };
 export default map;

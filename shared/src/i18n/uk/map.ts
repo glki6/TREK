@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Джерела карти',
   'map.overview.unrouted': 'Не вдалося прокласти {count} відрізок(ів), тому відстані неповні.',
   'map.overview.dayUnrouted': 'Не вдалося прокласти {count} відрізок(ів) цього дня',
+  'map.dayColors.show': 'Розфарбувати зупинки за днями',
+  'map.dayColors.hide': 'Вимкнути розфарбування за днями',
+  'map.clustering.off': 'Показувати кожну мітку окремо',
+  'map.clustering.on': 'Групувати близькі мітки',
 };
 export default map;

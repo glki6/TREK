@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Rota optimizasyonunda konumu koru',
   'planner.dayDetails': 'Gün ayrıntıları',
   'planner.dayN': '{n}. gün',
-  'planner.exportAllStops': 'Tüm durakları dışa aktar',
+  'planner.exportAllStops': 'Tüm durakları Google Haritalar’da aç',
+  'planner.exportAllStopsTruncated':
+    'Google Haritalar en fazla {max} durak alır, bu yüzden {count} duraktan yalnızca ilk {max} tanesi açıldı.',
 };
 export default planner;

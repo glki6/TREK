@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': '지도 출처',
   'map.overview.unrouted': '{count}개 구간의 경로를 계산할 수 없어 거리가 불완전합니다.',
   'map.overview.dayUnrouted': '이 날의 {count}개 구간 경로를 계산할 수 없습니다',
+  'map.dayColors.show': '날짜별로 경유지 색상 표시',
+  'map.dayColors.hide': '날짜별 색상 표시 끄기',
+  'map.clustering.off': '마커를 하나씩 표시',
+  'map.clustering.on': '가까운 마커 묶기',
 };
 export default map;

@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': '경로 최적화 중 위치 유지',
   'planner.dayDetails': '일별 상세',
   'planner.dayN': '{n}일차',
-  'planner.exportAllStops': '모든 경유지 내보내기',
+  'planner.exportAllStops': 'Google 지도에서 모든 경유지 열기',
+  'planner.exportAllStopsTruncated':
+    'Google 지도는 경유지를 최대 {max}개까지만 받을 수 있어 {count}개 중 처음 {max}개만 열었습니다.',
 };
 export default planner;

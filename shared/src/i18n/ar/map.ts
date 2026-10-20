@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'مصادر الخريطة',
   'map.overview.unrouted': 'تعذّر حساب {count} مرحلة، لذا المسافات غير مكتملة.',
   'map.overview.dayUnrouted': 'تعذّر حساب {count} مرحلة من هذا اليوم',
+  'map.dayColors.show': 'تلوين المحطات حسب اليوم',
+  'map.dayColors.hide': 'إيقاف التلوين حسب اليوم',
+  'map.clustering.off': 'إظهار كل علامة على حدة',
+  'map.clustering.on': 'تجميع العلامات المتقاربة',
 };
 export default map;

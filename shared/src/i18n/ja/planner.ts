@@ -63,6 +63,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': '最適化中も位置を保持',
   'planner.dayDetails': '日詳細',
   'planner.dayN': '{n}日目',
-  'planner.exportAllStops': '全停車地点をエクスポート',
+  'planner.exportAllStops': 'すべての立ち寄り先を Google マップで開く',
+  'planner.exportAllStopsTruncated':
+    'Google マップで開けるのは最大 {max} か所のため、{count} か所のうち最初の {max} か所だけを開きました。',
 };
 export default planner;

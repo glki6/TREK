@@ -64,6 +64,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Pertahankan posisi saat mengoptimalkan rute',
   'planner.dayDetails': 'Detail hari',
   'planner.dayN': 'Hari {n}',
-  'planner.exportAllStops': 'Ekspor semua titik',
+  'planner.exportAllStops': 'Buka semua perhentian di Google Maps',
+  'planner.exportAllStopsTruncated':
+    'Google Maps menerima paling banyak {max} perhentian, jadi hanya {max} pertama dari {count} yang dibuka.',
 };
 export default planner;

@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Kredit peta',
   'map.overview.unrouted': '{count} ruas tidak dapat dihitung, jadi jaraknya belum lengkap.',
   'map.overview.dayUnrouted': '{count} ruas pada hari ini tidak dapat dihitung',
+  'map.dayColors.show': 'Warnai perhentian per hari',
+  'map.dayColors.hide': 'Berhenti mewarnai per hari',
+  'map.clustering.off': 'Tampilkan setiap penanda terpisah',
+  'map.clustering.on': 'Kelompokkan penanda yang berdekatan',
 };
 export default map;

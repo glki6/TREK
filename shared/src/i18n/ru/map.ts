@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Источники карты',
   'map.overview.unrouted': 'Не удалось построить {count} участок(ов), поэтому расстояния неполные.',
   'map.overview.dayUnrouted': 'Не удалось построить {count} участок(ов) этого дня',
+  'map.dayColors.show': 'Раскрасить остановки по дням',
+  'map.dayColors.hide': 'Отключить раскраску по дням',
+  'map.clustering.off': 'Показывать каждый маркер отдельно',
+  'map.clustering.on': 'Группировать близкие маркеры',
 };
 export default map;

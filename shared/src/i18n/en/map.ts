@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Map credits',
   'map.overview.unrouted': '{count} leg(s) could not be routed, so the distances are incomplete.',
   'map.overview.dayUnrouted': '{count} leg(s) of this day could not be routed',
+  'map.dayColors.show': 'Color stops by day',
+  'map.dayColors.hide': 'Stop coloring by day',
+  'map.clustering.off': 'Show each marker separately',
+  'map.clustering.on': 'Group nearby markers',
 };
 export default map;

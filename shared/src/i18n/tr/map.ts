@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Harita kaynakları',
   'map.overview.unrouted': '{count} etap hesaplanamadı, bu yüzden mesafeler eksik.',
   'map.overview.dayUnrouted': 'Bu günün {count} etabı hesaplanamadı',
+  'map.dayColors.show': 'Durakları güne göre renklendir',
+  'map.dayColors.hide': 'Güne göre renklendirmeyi kapat',
+  'map.clustering.off': 'Her işaretçiyi ayrı göster',
+  'map.clustering.on': 'Yakındaki işaretçileri grupla',
 };
 export default map;

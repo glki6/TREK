@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Kartkällor',
   'map.overview.unrouted': '{count} delsträcka/or kunde inte beräknas, så avstånden är ofullständiga.',
   'map.overview.dayUnrouted': '{count} delsträcka/or för den här dagen kunde inte beräknas',
+  'map.dayColors.show': 'Färglägg stopp per dag',
+  'map.dayColors.hide': 'Sluta färglägga per dag',
+  'map.clustering.off': 'Visa varje markör för sig',
+  'map.clustering.on': 'Gruppera närliggande markörer',
 };
 export default map;

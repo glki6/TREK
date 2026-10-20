@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Créditos do mapa',
   'map.overview.unrouted': 'Não foi possível calcular {count} troço(s), por isso as distâncias estão incompletas.',
   'map.overview.dayUnrouted': 'Não foi possível calcular {count} troço(s) deste dia',
+  'map.dayColors.show': 'Colorir paradas por dia',
+  'map.dayColors.hide': 'Parar de colorir por dia',
+  'map.clustering.off': 'Mostrar cada marcador separadamente',
+  'map.clustering.on': 'Agrupar marcadores próximos',
 };
 export default map;

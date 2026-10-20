@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Zdroje mapy',
   'map.overview.unrouted': '{count} úsek(ů) se nepodařilo spočítat, vzdálenosti jsou neúplné.',
   'map.overview.dayUnrouted': '{count} úsek(ů) tohoto dne se nepodařilo spočítat',
+  'map.dayColors.show': 'Obarvit zastávky podle dne',
+  'map.dayColors.hide': 'Zrušit obarvení podle dne',
+  'map.clustering.off': 'Zobrazit každou značku zvlášť',
+  'map.clustering.on': 'Seskupit blízké značky',
 };
 export default map;

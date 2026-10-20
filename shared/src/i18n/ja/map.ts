@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': '地図のクレジット',
   'map.overview.unrouted': '{count}区間のルートを計算できなかったため、距離は不完全です。',
   'map.overview.dayUnrouted': 'この日の{count}区間のルートを計算できませんでした',
+  'map.dayColors.show': '立ち寄り先を日ごとに色分け',
+  'map.dayColors.hide': '日ごとの色分けをやめる',
+  'map.clustering.off': 'マーカーを個別に表示',
+  'map.clustering.on': '近くのマーカーをまとめる',
 };
 export default map;

@@ -28,5 +28,9 @@ const map: TranslationStrings = {
   'map.attribution': 'Nguồn bản đồ',
   'map.overview.unrouted': 'Không thể tính {count} chặng, nên khoảng cách chưa đầy đủ.',
   'map.overview.dayUnrouted': 'Không thể tính {count} chặng của ngày này',
+  'map.dayColors.show': 'Tô màu điểm dừng theo ngày',
+  'map.dayColors.hide': 'Tắt tô màu theo ngày',
+  'map.clustering.off': 'Hiện từng điểm đánh dấu riêng',
+  'map.clustering.on': 'Gom các điểm đánh dấu gần nhau',
 };
 export default map;

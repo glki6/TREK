@@ -63,6 +63,7 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Behåll positionen under ruttoptimeringen',
   'planner.dayDetails': 'Information om dagen',
   'planner.dayN': 'Dag {n}',
-  'planner.exportAllStops': 'Exportera alla stopp',
+  'planner.exportAllStops': 'Öppna alla stopp i Google Maps',
+  'planner.exportAllStopsTruncated': 'Google Maps tar högst {max} stopp, så bara de första {max} av {count} öppnades.',
 };
 export default planner;

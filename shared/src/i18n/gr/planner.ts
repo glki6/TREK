@@ -64,6 +64,8 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'Διατήρηση θέσης κατά τη βελτιστοποίηση διαδρομής',
   'planner.dayDetails': 'Λεπτομέρειες ημέρας',
   'planner.dayN': 'Ημέρα {n}',
-  'planner.exportAllStops': 'Εξαγωγή όλων των στάσεων',
+  'planner.exportAllStops': 'Άνοιγμα όλων των στάσεων στους Χάρτες Google',
+  'planner.exportAllStopsTruncated':
+    'Οι Χάρτες Google δέχονται έως {max} στάσεις, οπότε άνοιξαν μόνο οι πρώτες {max} από τις {count}.',
 };
 export default planner;
