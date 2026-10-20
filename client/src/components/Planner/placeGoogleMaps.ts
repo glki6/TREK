@@ -1,14 +1,15 @@
 import type { AssignmentPlace, Place } from '../../types'
+import { googleCidOf, googleMapsCidUrl } from './placeGoogleCid'
 
 type PlaceLike = Pick<Place | AssignmentPlace, 'name' | 'address' | 'lat' | 'lng' | 'google_place_id' | 'google_ftid' | 'google_cid'>
 const GOOGLE_FTID_RE = /^0x[0-9a-f]+:0x[0-9a-f]+$/i
 
 export function getGoogleMapsUrlForPlace(place: PlaceLike | null | undefined, detailsUrl?: string | null): string | null {
   if (!place) return null
-  // Fork: the customer id opens the rich place page and, unlike the place-id
-  // links below, is not swallowed by iOS universal links.
-  const cid = place.google_cid?.trim()
-  if (cid) return `https://maps.google.com/?cid=${encodeURIComponent(cid)}`
+  // Fork: the customer id — stored, or read off the details URL — opens
+  // the place itself in the iOS app, where the place-id search link below may not.
+  const cid = googleCidOf(place, detailsUrl)
+  if (cid) return googleMapsCidUrl(cid)
   const ftid = place.google_ftid?.trim()
   if (ftid && GOOGLE_FTID_RE.test(ftid)) {
     return `https://www.google.com/maps/place/?q=${encodeURIComponent(place.name)}&ftid=${ftid}`

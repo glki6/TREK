@@ -17,6 +17,19 @@ export interface MapsUrlPair {
 }
 
 /**
+ * Whether the Google Maps app's own scheme exists here. `comgooglemaps://` is the iOS
+ * app's: Google Maps on Android never registered it (an https link already opens the
+ * app there, through the plain Google Maps entry) and a desktop has no app to open.
+ * iPadOS 13 and later say "Macintosh", so touch is what tells an iPad from a Mac.
+ */
+export function offersGoogleMapsApp(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  if (/iPhone|iPad|iPod/.test(ua)) return true
+  return /Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1
+}
+
+/**
  * Build the Google Maps app URL pair (`comgooglemaps://` + HTTPS fallback).
  * The native scheme starts directions to the coordinates and works with no signal.
  */
@@ -30,9 +43,11 @@ export function getGoogleMapsAppUrlForPlace(place: PlaceLike | null | undefined)
 }
 
 /**
- * Try opening the native Maps URL; if the page is still alive after
- * `timeoutMs` (meaning no native handler intercepted), open the HTTPS
- * fallback in a new tab instead.
+ * Try opening the native Maps URL; if the page is still in front after `timeoutMs`
+ * (no app took over), open the HTTPS fallback in a new tab instead. The page being
+ * hidden or put away means the app took over. Losing focus does not: Safari's own
+ * "cannot open page" alert takes it when the app is missing, which is exactly when
+ * the fallback is wanted.
  */
 export function openMapsFallback(
   pair: MapsUrlPair | null,
@@ -43,24 +58,28 @@ export function openMapsFallback(
 ): void {
   if (!pair) return
 
-  let cleared = false
-  const handler = () => {
-    if (document.visibilityState !== 'visible') {
-      cleared = true
-      document.removeEventListener('visibilitychange', handler)
-    }
+  let handedOver = false
+  const view = document.defaultView
+  const stopWatching = () => {
+    document.removeEventListener('visibilitychange', onVisibility)
+    view?.removeEventListener('pagehide', onLeave)
+  }
+  const onLeave = () => {
+    handedOver = true
+    stopWatching()
+  }
+  const onVisibility = () => {
+    if (document.visibilityState !== 'visible') onLeave()
   }
 
-  document.addEventListener('visibilitychange', handler)
+  document.addEventListener('visibilitychange', onVisibility)
+  view?.addEventListener('pagehide', onLeave)
 
   setTimeout(() => {
-    if (!cleared) {
-      document.removeEventListener('visibilitychange', handler)
-      open(pair.https, '_blank')
-    }
+    if (handedOver) return
+    stopWatching()
+    open(pair.https, '_blank', 'noopener,noreferrer')
   }, timeoutMs)
 
   location.href = pair.native
-  // If the page navigates away the timeout is abandoned; if it stays (no handler
-  // installed) the timeout fires and opens the fallback.
 }

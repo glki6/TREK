@@ -30,7 +30,7 @@ afterEach(() => { vi.restoreAllMocks() })
 describe('getNavigationTargets', () => {
   it('FE-PLANNER-NAV-001: offers every app that can resolve a place with coordinates', () => {
     const targets = getNavigationTargets(place())
-    expect(targets.map(t => t.id)).toEqual(['google', 'google-app', 'waze', 'apple', 'osm', 'comaps'])
+    expect(targets.map(t => t.id)).toEqual(['google', 'waze', 'apple', 'osm', 'comaps'])
     expect(targets[0].label).toBe('Google Maps')
   })
 
@@ -58,7 +58,7 @@ describe('getNavigationTargets', () => {
   it('FE-PLANNER-NAV-004b: an Android phone does not, because nobody there wants it', () => {
     const restore = withUserAgent('Mozilla/5.0 (Linux; Android 15; Pixel 9)')
     try {
-      expect(getNavigationTargets(place()).map(t => t.id)).toEqual(['google', 'google-app', 'waze', 'osm', 'comaps'])
+      expect(getNavigationTargets(place()).map(t => t.id)).toEqual(['google', 'waze', 'osm', 'comaps'])
     } finally { restore() }
   })
 
@@ -66,6 +66,7 @@ describe('getNavigationTargets', () => {
     const restore = withUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')
     try {
       const targets = getNavigationTargets(place())
+      // Fork: an iPhone also gets the Google Maps app (placeGoogleApp.ts).
       expect(targets.map(t => t.id)).toEqual(['google', 'google-app', 'waze', 'apple', 'osm', 'comaps'])
       // q next to ll labels the pin rather than searching blindly.
       expect(targets.find(t => t.id === 'apple')!.url).toBe('https://maps.apple.com/?q=Stephansdom&ll=48.2038,16.3616')
@@ -101,32 +102,8 @@ describe('getNavigationTargets', () => {
 
   it('FE-PLANNER-NAV-009: a nameless place still reaches every app, just without a label', () => {
     const targets = getNavigationTargets(place({ name: '' }))
-    expect(targets.map(t => t.id)).toEqual(['google', 'google-app', 'waze', 'apple', 'osm', 'comaps'])
+    expect(targets.map(t => t.id)).toEqual(['google', 'waze', 'apple', 'osm', 'comaps'])
     expect(targets.find(t => t.id === 'waze')!.url).toBe('https://waze.com/ul?ll=48.2038,16.3616&navigate=yes')
-  })
-})
-
-describe('getNavigationTargets (fork additions)', () => {
-  it('FE-PLANNER-NAV-010: the Google Maps app entry uses the native scheme and falls back to the web map', () => {
-    const app = getNavigationTargets(place()).find(t => t.id === 'google-app')!
-    expect(app.label).toBe('Google Maps app')
-    expect(app.url).toBe('comgooglemaps://?daddr=48.2038,16.3616')
-    expect(app.fallbackUrl).toBe('https://www.google.com/maps?q=48.2038,16.3616&z=15')
-  })
-
-  it('FE-PLANNER-NAV-011: a place without coordinates has no app entry to start directions to', () => {
-    const ids = getNavigationTargets(place({ lat: null, lng: null, google_place_id: 'ChIJx' })).map(t => t.id)
-    expect(ids).not.toContain('google-app')
-  })
-
-  it('FE-PLANNER-NAV-012: the Google entry prefers google_cid, which iOS does not swallow as a universal link', () => {
-    const google = getNavigationTargets(place({ google_cid: '12345', google_place_id: 'ChIJx', google_ftid: '0x882b:0x8591' })).find(t => t.id === 'google')!
-    expect(google.url).toBe('https://maps.google.com/?cid=12345')
-  })
-
-  it('FE-PLANNER-NAV-013: without a google_cid the Google entry keeps upstream behaviour', () => {
-    const google = getNavigationTargets(place({ google_cid: null, google_ftid: '0x882b:0x8591' })).find(t => t.id === 'google')!
-    expect(google.url).toContain('ftid=0x882b:0x8591')
   })
 })
 
@@ -166,35 +143,5 @@ describe('openNavigationTarget', () => {
     openNavigationTarget(target)
     expect(open).not.toHaveBeenCalled()
     expect(assigned).toEqual([target.url])
-  })
-
-  describe('native-scheme targets (fork)', () => {
-    const appTarget = {
-      id: 'google-app', label: 'Google Maps app',
-      url: 'comgooglemaps://?daddr=1,2', fallbackUrl: 'https://www.google.com/maps?q=1,2&z=15',
-    } as const
-
-    afterEach(() => { vi.useRealTimers() })
-
-    it('FE-PLANNER-NAV-104: hands over to the app, then opens the web link if the page is still there', () => {
-      vi.useFakeTimers()
-      const { open, assigned } = stubDisplayMode(false)
-      openNavigationTarget(appTarget)
-      expect(assigned).toEqual([appTarget.url])
-      expect(open).not.toHaveBeenCalled()
-      vi.advanceTimersByTime(1500)
-      expect(open).toHaveBeenCalledWith(appTarget.fallbackUrl, '_blank')
-    })
-
-    it('FE-PLANNER-NAV-105: no web link when the app took over (the page was hidden)', () => {
-      vi.useFakeTimers()
-      const { open } = stubDisplayMode(false)
-      openNavigationTarget(appTarget)
-      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
-      document.dispatchEvent(new Event('visibilitychange'))
-      vi.advanceTimersByTime(5000)
-      expect(open).not.toHaveBeenCalled()
-      delete (document as unknown as Record<string, unknown>).visibilityState
-    })
   })
 })

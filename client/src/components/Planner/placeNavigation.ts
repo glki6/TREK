@@ -3,7 +3,7 @@ import type { AssignmentPlace, Place } from '../../types'
 import { getAmapUrlForPlace } from './placeAmap'
 import { getCoMapsUrlForPlace } from './placeCoMaps'
 import { getGoogleMapsUrlForPlace } from './placeGoogleMaps'
-import { getGoogleMapsAppUrlForPlace, openMapsFallback } from './placeGoogleApp'
+import { getGoogleMapsAppUrlForPlace, offersGoogleMapsApp, openMapsFallback } from './placeGoogleApp'
 import { getOpenStreetMapUrlForPlace } from './placeOpenStreetMap'
 
 type PlaceLike = Pick<Place | AssignmentPlace, 'name' | 'address' | 'lat' | 'lng' | 'google_place_id' | 'google_ftid' | 'google_cid'>
@@ -76,9 +76,9 @@ export function getNavigationTargets(
   if (googleUrl) targets.push({ id: 'google', label: 'Google Maps', url: googleUrl })
 
   // Fork: start directions in the installed Google Maps app through its native URI
-  // scheme, which works with no signal. Falls back to the web map when no app
-  // handles the scheme (desktop, or the app is not installed).
-  const googleApp = getGoogleMapsAppUrlForPlace(place)
+  // scheme, which works with no signal. Only where that scheme exists (iOS); falls
+  // back to the web map when the app is not installed.
+  const googleApp = offersGoogleMapsApp() ? getGoogleMapsAppUrlForPlace(place) : null
   if (googleApp) targets.push({ id: 'google-app', label: 'Google Maps app', url: googleApp.native, fallbackUrl: googleApp.https })
 
   if (place.lat != null && place.lng != null) {
