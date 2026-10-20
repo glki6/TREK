@@ -7,6 +7,7 @@ import { useTripStore } from '../../store/tripStore'
 import { useCanDo } from '../../store/permissionsStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { dayColor } from '../../components/Roadtrip/dayColors'
+import { useDayColors } from '../../components/Map/useDayColors'
 import { getCached, fetchPhoto } from '../../services/photoService'
 import { useToast } from '../../components/shared/Toast'
 import { Map, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train, Route } from 'lucide-react'
@@ -2775,60 +2776,11 @@ export function useTripPlanner() {
     ? inspectorStay(roadtripRoutes.days, endDayStop, selectedPlace, can('place_edit', trip) ? editRoadtripStay : undefined)
     : undefined
 
-  // ── Global place → {dayIndex, orderNumber} map (all days) ───────────
-  // Maps each place to its first day-index and position within that day.
-  // A place assigned on multiple days keeps the FIRST assignment's info;
-  // this is sufficient for marker coloring and sidebar circle indicators.
-  // accommodation-only places (no day assignments) get entries from
-  // their stay range [start_day_id, end_day_id] so they render home icons.
-  const placeDayMap = useMemo<Record<string, Array<{ dayIndex: number; orderNumber: number }>>>(() => {
-    if (days.length === 0) return {}
-
-    const sortedDays = [...days].sort(
-      (a, b) => ((a as any).day_number ?? 0) - ((b as any).day_number ?? 0),
-    )
-    // day.id → zero-based index lookup
-    const dayIndexByDayId: Record<number, number> = {}
-    sortedDays.forEach((d, i) => { dayIndexByDayId[d.id] = i })
-
-    const map: Record<string, Array<{ dayIndex: number; orderNumber: number }>> = {}
-
-    // 1. Entries from day assignments (existing logic)
-    sortedDays.forEach((day, dayIdx) => {
-      const da = assignments[String(day.id)] || []
-      const sorted = [...da].sort((a, b) => a.order_index - b.order_index)
-      sorted.forEach((assignment, pos) => {
-        if (!assignment.place?.id) return
-        const key = String(assignment.place.id)
-        // Collect all assignments — multi-day places get an array resolved at render time
-        if (!map[key]) map[key] = []
-        map[key].push({ dayIndex: dayIdx, orderNumber: pos + 1 })
-      })
-    })
-
-    // 2. entries from accommodation stay ranges (covers places with no assignments)
-    if (tripAccommodations.length > 0) {
-      for (const acc of tripAccommodations) {
-        if (!acc.place_id) continue
-        const key = String(acc.place_id)
-        const startIdx = dayIndexByDayId[acc.start_day_id]
-        const endIdx = dayIndexByDayId[acc.end_day_id]
-        if (startIdx === undefined || endIdx === undefined) continue
-        // Build span: every day in [start, end] inclusive
-        const lo = Math.min(startIdx, endIdx)
-        const hi = Math.max(startIdx, endIdx)
-        for (let di = lo; di <= hi; di++) {
-          if (!map[key]) map[key] = []
-          // Keep existing entry (assignment) with its orderNumber; add stay-only days at 0
-          if (!map[key].some(e => e.dayIndex === di)) {
-            map[key].push({ dayIndex: di, orderNumber: 0 })
-          }
-        }
-      }
-    }
-
-    return map
-  }, [days, assignments, tripAccommodations])
+  // Fork: the day-colour map mode, one model for both shells (components/Map/useDayColors.ts).
+  const dayColors = useDayColors({
+    days, assignments, accommodations: tripAccommodations, selectedDayId, detailDayId: showDayDetail?.id,
+    suppressed: roadtripActive, overview: tripOverview, route,
+  })
 
   // Build placeId → order-number map from the selected day's assignments. A service
   // stop is passed over rather than counted: the map draws it without a badge and the
@@ -2876,7 +2828,7 @@ export function useTripPlanner() {
     pushUndo, undo, canUndo, lastActionLabel, handleUndo,
     enabledAddons, collabFeatures, tripAccommodations, setTripAccommodations,
     roadtripMode, toggleRoadtripMode, roadtripActive, roadtripFeedActive, roadtripRoutes, roadtripLineColors, roadtripMapLines, roadtripMapPlaces, collapsedRoadtripDays, toggleRoadtripDay, roadtripCorridor,
-    overviewShown, toggleOverview, overviewActive, tripOverview,
+    overviewShown, toggleOverview, overviewActive, tripOverview: dayColors.overview,
     dawarichTrailShown, toggleDawarichTrail, dawarichTrail, dawarichHiddenDates, dawarichEnabled: !!enabledAddons.dawarich,
     followTrack, roadtripViaCounts,
     allowedFileTypes, tripMembers, setTripMembers, refreshMembers, loadAccommodations,
@@ -2929,7 +2881,7 @@ export function useTripPlanner() {
     handleAssignToDay, handleMoveToDay, handleRemoveAssignment, handleReorder, handleReorderDays, handleAddDay, dayAdd, handleUpdateDayTitle,
     ...dayDelete,
     handleSaveReservation, handleSaveTransport, handleDeleteReservation,
-    selectedPlace, dayOrderMap, dayPlaces, placeDayMap,
+    selectedPlace, dayOrderMap, dayPlaces, dayColors,
     mapTileUrl, fontStyle, splashDone,
   }
 }

@@ -131,10 +131,6 @@ function RouteViaMarker({ via, controls, eventHandlers, children }: {
   </Marker>
 }
 
-/**
- * Create a round photo-circle marker.
- * Shows image_url if available, otherwise category icon in colored circle.
- */
 /** Fork: day-coloured marker (numbered stop, stay, or multi-day stay pie). */
 function createDayMarkerIcon(spec: DayMarkerSpec, isSelected: boolean): L.DivIcon {
   const size = dayMarkerSize(isSelected)
@@ -147,6 +143,10 @@ function createDayMarkerIcon(spec: DayMarkerSpec, isSelected: boolean): L.DivIco
   })
 }
 
+/**
+ * Create a round photo-circle marker.
+ * Shows image_url if available, otherwise category icon in colored circle.
+ */
 function createPlaceIcon(place, orderNumbers, isSelected) {
   const cacheKey = `${place.id}:${isSelected}:${place.image_url || ''}:${place.category_color || ''}:${place.category_icon || ''}:${place.stop_type || ''}:${orderNumbers?.join(',') || ''}:${(place as { rating_avg?: number | null }).rating_avg ?? ''}`
   const cached = iconCache.get(cacheKey)
@@ -680,10 +680,12 @@ interface MemoMarkerProps {
 const MemoMarker = memo(function MemoMarker({
   place, isSelected, orderNumbers, photoUrl, onClickPlace, onHover, onHoverOut, draggable, onRegister, dayMarkerKey = null,
 }: MemoMarkerProps) {
-  const dayMarker = useMemo<DayMarkerSpec | null>(() => (dayMarkerKey ? JSON.parse(dayMarkerKey) : null), [dayMarkerKey])
-  const icon = dayMarker
-    ? createDayMarkerIcon(dayMarker, isSelected)
-    : createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
+  // Built once per spec: a fresh divIcon makes react-leaflet swap the marker's DOM.
+  const dayIcon = useMemo(
+    () => (dayMarkerKey ? createDayMarkerIcon(JSON.parse(dayMarkerKey) as DayMarkerSpec, isSelected) : null),
+    [dayMarkerKey, isSelected],
+  )
+  const icon = dayIcon ?? createPlaceIcon({ ...place, image_url: photoUrl }, orderNumbers, isSelected)
   const map = useMap()
   const cleanupRef = useRef<(() => void) | null>(null)
   // react-leaflet compares `position` by reference and calls setLatLng whenever it

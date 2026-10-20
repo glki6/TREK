@@ -329,6 +329,13 @@ function baseState(): HookState {
     selectedPlace: null,
     dayOrderMap: {},
     dayPlaces: [],
+    dayColors: {
+      active: false,
+      mapProps: { useDayColors: false, disableClustering: false, placeDayMap: {}, selectedDayIndex: null, accommodationPlaceIds: new Set<number>() },
+      lineColors: undefined,
+      colorOfDay: () => null,
+      stopBadge: () => null,
+    },
     mapTileUrl: 'https://tiles/{z}/{x}/{y}.png',
     fontStyle: { fontFamily: 'var(--font-system)' },
     splashDone: true,

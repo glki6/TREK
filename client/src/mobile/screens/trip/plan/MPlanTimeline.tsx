@@ -182,6 +182,7 @@ export default function MPlanTimeline({ planner, shell }: MPlanTimelineProps) {
             onOpenDay={() => shell.openSheet('day', { dayId: day.id })}
             onOpenStay={openStay}
             stayLabel={stayLabel}
+            dayColor={planner.dayColors.colorOfDay(day.id)}
           />
         )}
 
@@ -198,6 +199,7 @@ export default function MPlanTimeline({ planner, shell }: MPlanTimelineProps) {
                   <PlaceRow
                     assignment={row.assignment}
                     fullPlace={tl.fullPlaceOf(row.assignment)}
+                    dayBadge={planner.dayColors.stopBadge(row.assignment.id, day.id)}
                     linkedReservations={row.linkedReservations}
                     chrome={chrome}
                     reorder={reorderFor(row.item)}
@@ -428,7 +430,7 @@ function EditHeader({ tl, planner, shell }: {
  * the stay chips have a target of their own: tapping a hotel opens that stay,
  * not the day (#2210). Only the weather chip still shares the day pill's target.
  */
-function TimelineHeader({ tl, dayLabel, openLabel, weatherLabel, onOpenDay, onOpenStay, stayLabel }: {
+function TimelineHeader({ tl, dayLabel, openLabel, weatherLabel, onOpenDay, onOpenStay, stayLabel, dayColor }: {
   tl: MPlanTimelineController
   dayLabel: string
   openLabel: string
@@ -437,6 +439,8 @@ function TimelineHeader({ tl, dayLabel, openLabel, weatherLabel, onOpenDay, onOp
   onOpenDay: () => void
   onOpenStay: (chip: HotelChip) => void
   stayLabel: (chip: HotelChip) => string
+  /** Fork: the day's colour while day colours are on (components/Map/useDayColors.ts). */
+  dayColor?: string | null
 }) {
   const WeatherIcon = weatherIconFor(tl.weather?.main)
   return (
@@ -451,7 +455,7 @@ function TimelineHeader({ tl, dayLabel, openLabel, weatherLabel, onOpenDay, onOp
           aria-label={openLabel}
           className="flex flex-none items-center gap-[5px] whitespace-nowrap rounded-full bg-[color:var(--m-ic)] px-2.5 py-1 font-geist text-[0.6875rem] font-semibold"
         >
-          <CalendarDays size={12} strokeWidth={2.2} className="text-m-muted" />
+          <CalendarDays size={12} strokeWidth={2.2} className={dayColor ? undefined : 'text-m-muted'} style={dayColor ? { color: dayColor } : undefined} />
           {dayLabel}
           <ChevronRight size={11} strokeWidth={2.4} aria-hidden="true" className="text-m-faint" />
         </button>

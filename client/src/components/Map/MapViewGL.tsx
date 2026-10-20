@@ -164,6 +164,8 @@ interface Props {
   placeDayMap?: PlaceDayMap | null
   selectedDayIndex?: number | null
   accommodationPlaceIds?: Set<number> | null
+  // Fork: draw every place on its own rather than grouping them into cluster bubbles.
+  disableClustering?: boolean
   leftWidth?: number
   rightWidth?: number
   hasInspector?: boolean
@@ -705,6 +707,7 @@ export function MapViewGL({
   placeDayMap = null,
   selectedDayIndex = null,
   accommodationPlaceIds = null,
+  disableClustering = false,
   leftWidth = 0,
   rightWidth = 0,
   hasInspector = false,
@@ -1909,6 +1912,13 @@ export function MapViewGL({
     }
 
     const source = map.getSource(PLACE_CLUSTER_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined
+    // Fork: with clustering switched off every place keeps its own marker, and the
+    // bubbles go with it — their source is emptied rather than left on stale counts.
+    if (disableClustering) {
+      source?.setData({ type: 'FeatureCollection', features: [] })
+      reconcileMarkers(validPlaces)
+      return
+    }
     if (!source || typeof map.querySourceFeatures !== 'function') {
       // No cluster source (e.g. style without it / test env): fall back to the
       // original behaviour and draw a marker for every place.
@@ -1971,7 +1981,7 @@ export function MapViewGL({
       map.off('zoomend', scheduleReconcile)
       map.off('idle', scheduleReconcile)
     }
-  }, [places, selectedPlaceId, dayOrderMap, photoUrls, mapReady, glProvider, clusterLoosely, useDayColors, placeDayMap, selectedDayIndex, accommodationPlaceIds])
+  }, [places, selectedPlaceId, dayOrderMap, photoUrls, mapReady, glProvider, clusterLoosely, useDayColors, placeDayMap, selectedDayIndex, accommodationPlaceIds, disableClustering])
 
   // Search results stay separate from the planned itinerary.
   useEffect(() => {

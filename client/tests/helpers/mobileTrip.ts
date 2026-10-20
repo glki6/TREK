@@ -302,6 +302,14 @@ export function buildPlanner(overrides: Partial<TripPlanner> = {}): TripPlanner 
     selectedPlace: null,
     dayOrderMap: new Map<number, number>(),
     dayPlaces: [],
+    // Fork: the day-colour model as useDayColors returns it switched off.
+    dayColors: {
+      active: false,
+      mapProps: { useDayColors: false, disableClustering: false, placeDayMap: {}, selectedDayIndex: null, accommodationPlaceIds: new Set<number>() },
+      lineColors: undefined,
+      colorOfDay: () => null,
+      stopBadge: () => null,
+    },
 
     mapTileUrl: 'https://tile.example/{z}/{x}/{y}.png',
     fontStyle: {},

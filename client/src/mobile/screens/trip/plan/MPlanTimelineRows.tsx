@@ -1,6 +1,8 @@
 import { BedDouble, Car, ChevronDown, ChevronUp, Clock, Footprints, Pencil, Route, StickyNote, Ticket, X, Zap } from 'lucide-react'
 import type { ReactNode, MouseEvent, CSSProperties } from 'react'
 import PlaceAvatar from '../../../../components/shared/PlaceAvatar'
+import { DayStopBadge } from '../../../../components/Map/dayColorMode'
+import type { DayStopBadgeSpec } from '../../../../components/Map/useDayColors'
 import { getCategoryIcon } from '../../../../components/shared/categoryIcons'
 import MarkdownText from '../../../../components/shared/MarkdownText'
 import { BlurredCode } from '../../../../components/shared/BookingCode'
@@ -119,9 +121,11 @@ const ROW_CODE = 'flex-none whitespace-nowrap font-geist text-[0.71875rem] text-
 
 // ── b3) Place row ────────────────────────────────────────────────────────────
 
-export function PlaceRow({ assignment, fullPlace, linkedReservations, chrome, reorder, drag, onOpen, onEdit, onRemove }: {
+export function PlaceRow({ assignment, fullPlace, dayBadge, linkedReservations, chrome, reorder, drag, onOpen, onEdit, onRemove }: {
   assignment: Assignment
   fullPlace: Place | undefined
+  /** Fork: with day colours on, the stop's pin number in its day's colour instead of the photo. */
+  dayBadge?: DayStopBadgeSpec | null
   linkedReservations: Reservation[]
   chrome: RowChrome
   reorder: ReactNode
@@ -170,7 +174,7 @@ export function PlaceRow({ assignment, fullPlace, linkedReservations, chrome, re
     >
       {!chrome.editing && (
         <AvatarRing className="shadow-[0_3px_8px_-3px_rgba(0,0,0,.4)]">
-          <PlaceAvatar
+          {dayBadge ? <DayStopBadge badge={dayBadge} size={27} /> : <PlaceAvatar
             place={fullPlace ?? {
               id: place?.id ?? assignment.place_id,
               name: place?.name ?? '',
@@ -182,7 +186,7 @@ export function PlaceRow({ assignment, fullPlace, linkedReservations, chrome, re
             }}
             size={27}
             category={place?.category ? { color: place.category.color ?? undefined, icon: place.category.icon ?? undefined } : null}
-          />
+          />}
         </AvatarRing>
       )}
       <div className="min-w-0 flex-1">

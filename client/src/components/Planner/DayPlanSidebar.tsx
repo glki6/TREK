@@ -14,7 +14,8 @@ import { assignmentsApi, reservationsApi, daysApi } from '../../api/client'
 import { calculateRouteWithLegs, optimizeRoute, generateGoogleMapsUrl, generateCoMapsUrl, type NamedWaypoint } from '../Map/RouteCalculator'
 import GoogleMapsIcon from '../shared/GoogleMapsIcon'
 import PlaceAvatar from '../shared/PlaceAvatar'
-import { getDayColor } from '../../utils/dayColors'
+import { DayStopBadge } from '../Map/dayColorMode'
+import type { DayColors } from '../Map/useDayColors'
 import ConfirmDialog from '../shared/ConfirmDialog'
 import { useContextMenu, ContextMenu } from '../shared/ContextMenu'
 import Markdown from 'react-markdown'
@@ -142,10 +143,8 @@ interface DayPlanSidebarProps {
   /** Mobile: show the route tools footer (Route toggle / Optimize / travel profile) on expanded days, since selecting a day closes the sheet */
   showRouteToolsWhenExpanded?: boolean
   isMobile?: boolean
-  /** Fork: every day each place appears on, for the day-colour indicators. */
-  placeDayMap?: Record<string, Array<{ dayIndex: number; orderNumber: number }>>
-  /** Fork: colour the day badge and numbered stops with the day palette. */
-  useDayColors?: boolean
+  /** Fork: the day-colour mode (components/Map/useDayColors.ts) — colours the day badge and numbers the stops. */
+  dayColors?: DayColors
 }
 
 /**
@@ -195,8 +194,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
   onScrollTopChange,
   showRouteToolsWhenExpanded = false,
   isMobile = false,
-  placeDayMap,
-  useDayColors = false,
+  dayColors,
   } = props
   // Below lg the plan and the places sit in separate tabs, so there is nothing
   // to drag between. A coarse pointer is no longer a reason of its own: tablets
@@ -1187,8 +1185,7 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     onScrollTopChange,
     showRouteToolsWhenExpanded,
     isMobile,
-    placeDayMap,
-    useDayColors,
+    dayColors,
     dragDisabled,
     toast,
     t,
@@ -1394,8 +1391,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     onScrollTopChange,
     showRouteToolsWhenExpanded,
     isMobile,
-    placeDayMap,
-    useDayColors,
+    dayColors,
     dragDisabled,
     toast,
     t,
@@ -1718,6 +1714,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
           // that, a day whose only entry is a spanning parking would show a blank gap.
           const visibleCount = merged.filter(i => !(i.type === 'transport' && hidesOnMiddleDay(i.data, day.id))).length
           const dayTint = dayTints[day.id]
+          // Fork: the day's palette colour while day colours are on; it wins over selection and tint.
+          const dayPaletteColor = dayColors?.colorOfDay(day.id) ?? null
           // Resolved once per day: the header owns a background that its hover
           // handlers reassign imperatively, so both the base and the hover value have
           // to be tint-aware or the first hover-out would wipe the colour.
@@ -1794,9 +1792,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                       // --bg-hover so it stays the same pill component, and takes
                       // --text-secondary: the number is 11px bold, so 4.5:1 applies
                       // and --text-muted is already borderline on the untinted pill.
-                      // Fork: the day palette wins over selection and tint when day colours are on.
-                      background: useDayColors ? getDayColor(index) : (isSelected ? 'var(--accent)' : (dayTintBackground(dayTint, 'badge', '--day-tint-badge', 'var(--bg-hover)') ?? 'var(--bg-hover)')),
-                      color: useDayColors ? '#fff' : (isSelected ? 'var(--accent-text)' : (dayTinted(dayTint, 'badge') ? 'var(--text-secondary)' : 'var(--text-muted)')),
+                      background: dayPaletteColor ?? (isSelected ? 'var(--accent)' : (dayTintBackground(dayTint, 'badge', '--day-tint-badge', 'var(--bg-hover)') ?? 'var(--bg-hover)')),
+                      color: dayPaletteColor ? '#fff' : (isSelected ? 'var(--accent-text)' : (dayTinted(dayTint, 'badge') ? 'var(--text-secondary)' : 'var(--text-muted)')),
                       display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'hidden',
                     }}>
                       {/* lineHeight 1, or the digit rides the line box's leading and
@@ -2224,27 +2221,10 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               onMouseLeave={() => setLockHoverId(null)}
                               style={{ position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'flex', background: 'none', border: 'none', padding: 0, font: 'inherit' }}
                             >
+                              {/* Fork: with day colours on, the stop's number on its pin, in the day's colour. */}
                               {(() => {
-                                // Fork: with day colours on, a stop shows its day-coloured number
-                                // instead of the place photo/icon.
-                                const rawPdm = useDayColors ? placeDayMap?.[String(place.id)] : undefined
-                                if (rawPdm) {
-                                  const currentDayIdx = days.findIndex(d => d.id === day.id)
-                                  const dayInfo = rawPdm.find(a => a.dayIndex === currentDayIdx) ?? rawPdm[0]
-                                  if (dayInfo) {
-                                    return (
-                                      <div style={{
-                                        width: 28, height: 28, borderRadius: '50%',
-                                        background: getDayColor(dayInfo.dayIndex),
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        color: 'white', fontWeight: 800, fontSize: '14px', flexShrink: 0,
-                                      }}>
-                                        {dayInfo.orderNumber}
-                                      </div>
-                                    )
-                                  }
-                                }
-                                return <PlaceAvatar place={place} category={cat} size={28} />
+                                const badge = dayColors?.stopBadge(assignment.id, day.id)
+                                return badge ? <DayStopBadge badge={badge} size={28} /> : <PlaceAvatar place={place} category={cat} size={28} />
                               })()}
                               {/* Hover/locked overlay */}
                               {(lockHoverId === assignment.id || lockedIds.has(assignment.id)) && (

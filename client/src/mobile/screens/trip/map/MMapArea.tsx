@@ -3,7 +3,7 @@ import { MapViewAuto } from '../../../../components/Map/MapViewAuto'
 import { MapCompassPill, type CompassMap } from '../../../../components/Map/MapCompassPill'
 import { MAP_LAYER_SWITCHER_INSET, MAP_ROUND_CONTROL_SIZE } from '../../../../components/Map/MapLayerSwitcher'
 import { TripRouteOverviewPill, TripRouteOverviewPanel } from '../../../../components/Map/TripRouteOverview'
-import { DayColorPills, useDayColorMapProps } from '../../../../components/Map/dayColorMode'
+import { DayColorPills } from '../../../../components/Map/dayColorMode'
 import { DawarichTrailPill } from '../../../../components/Map/DawarichTrailPill'
 import PoiCategoryPill from '../../../../components/Map/PoiCategoryPill'
 import { usePoiExplore } from '../../../../components/Map/usePoiExplore'
@@ -229,14 +229,6 @@ export default function MMapArea({ planner, shell }: MMapAreaProps) {
     () => ({ points: planner.mapFocusPoints, dayId: planner.selectedDayId, live: true, shown: new WeakSet() }),
   )
   const focus = holdFocus(heldFocus, planner.mapFocusPoints, planner.selectedDayId, planner.alternativeFocusPoints)
-  // Fork: day-coloured markers and the clustering toggle, shared with the desktop planner.
-  const dayColorProps = useDayColorMapProps({
-    days: planner.days,
-    selectedDayId: planner.selectedDayId,
-    detailDayId: planner.showDayDetail?.id,
-    accommodations: planner.tripAccommodations,
-    placeDayMap: planner.placeDayMap,
-  })
   if (focus !== heldFocus) setHeldFocus(focus)
   const focusPending = focus.live && planner.mapFocusPoints.length > 0
 
@@ -361,7 +353,7 @@ export default function MMapArea({ planner, shell }: MMapAreaProps) {
         places={stageMap ? stagePlaces : planner.mapPlaces}
         dayPlaces={onStage ? undefined : planner.dayPlaces}
         route={stageMap ? stageMap.lines : planner.overviewActive ? planner.tripOverview.lines : planner.route}
-        routeColors={stageMap ? stageMap.lineColors : planner.overviewActive ? planner.tripOverview.lineColors : undefined}
+        routeColors={stageMap ? stageMap.lineColors : planner.overviewActive ? planner.tripOverview.lineColors : planner.dayColors.lineColors}
         accessLines={stageMap ? stageMap.accessLines : undefined}
         // A hit somebody tapped in the search sheet, a stop shown from its sheet, or the
         // stations the fuel search is offering take the camera while their day is on
@@ -422,7 +414,8 @@ export default function MMapArea({ planner, shell }: MMapAreaProps) {
         // and the leave would put out the road the tap has just lit.
         onChooseAlternative={onStage ? planner.setHighlightedAlternative : undefined}
         fitPadding={fitPadding}
-        {...(onStage ? null : dayColorProps)}
+        // Fork: day colours and the clustering switch; the stage has its own day palette.
+        {...(onStage ? null : planner.dayColors.mapProps)}
       />
 
       {/* Floating map chrome — only while the map view is front-most. The POI bar

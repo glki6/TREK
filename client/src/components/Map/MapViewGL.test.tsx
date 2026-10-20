@@ -1604,6 +1604,51 @@ describe('MapViewGL', () => {
     expect(drawn).not.toContainEqual([2.3, 48.3])
   })
 
+  // Fork: the map's "show each marker separately" switch (Map/dayColorMode.tsx).
+  it('FE-COMP-MAPVIEWGL-FORK-001: with clustering switched off every place keeps a pin and the bubbles are emptied', async () => {
+    loadOnAttach()
+    projectAtDayZoom()
+    const clusterSource = geoSource()
+    glMap.getSource.mockImplementation((id: string) => (id === 'trip-place-clusters' ? clusterSource : null))
+    // The source would still call 63 clustered; switched off, it is not asked.
+    glMap.querySourceFeatures.mockReturnValue([{ properties: { placeId: 61 } }, { properties: { placeId: 62 } }])
+    const places = [
+      buildMapPlace({ id: 61, lat: 48.1, lng: 2.1 }),
+      buildMapPlace({ id: 62, lat: 48.2, lng: 2.2 }),
+      buildMapPlace({ id: 63, lat: 48.3, lng: 2.3 }),
+    ]
+
+    render(<MapViewGL places={places} fitKey={1} disableClustering />)
+    await flushFrames()
+
+    expect(lastData(clusterSource).features).toEqual([])
+    const drawn = glMarkers.created.map(m => m.lngLat)
+    for (const at of [[2.1, 48.1], [2.2, 48.2], [2.3, 48.3]]) expect(drawn).toContainEqual(at)
+  })
+
+  // Fork: day colours draw the stop's number in its day's colour (Map/dayColorMarkers.ts).
+  it('FE-COMP-MAPVIEWGL-FORK-002: with day colours on a stop wears its number in its day\'s colour', async () => {
+    loadOnAttach()
+    projectAtDayZoom()
+    const clusterSource = geoSource()
+    glMap.getSource.mockImplementation((id: string) => (id === 'trip-place-clusters' ? clusterSource : null))
+    glMap.querySourceFeatures.mockReturnValue([{ properties: { placeId: 64 } }])
+
+    render(
+      <MapViewGL
+        places={[buildMapPlace({ id: 64, lat: 48.4, lng: 2.4 })]}
+        fitKey={1}
+        useDayColors
+        placeDayMap={{ 64: [{ dayIndex: 2, orderNumber: 4 }] }}
+      />,
+    )
+    await flushFrames()
+
+    const pin = glMarkers.created.find(m => m.lngLat?.[0] === 2.4)!
+    expect(pin.element.innerHTML).toContain('#3498db') // day 3 of the palette
+    expect(pin.element.textContent).toBe('4')
+  })
+
   // One building modelled as several stops — drop the bags, check in, the museum inside
   // it — puts every pin on the same spot, and all but the top one are unreachable. There
   // is no spiderfy on a GL map, so the stack draws as the one pin worth seeing (#2344).
