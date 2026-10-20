@@ -65,8 +65,9 @@ import { useAirtrailConnection } from '../../hooks/useAirtrailConnection'
 import { useIsTouch } from '../../hooks/useIsTouch'
 import { usePluginStore } from '../../store/pluginStore'
 import type { Accommodation, Assignment, TripMember, Day, Place, Reservation } from '../../types'
-import { OFM_POSITRON, DEFAULT_MAP_LAT, DEFAULT_MAP_LNG, DEFAULT_MAP_ZOOM } from '../../constants/mapDefaults'
+import { OFM_DARK, OFM_POSITRON, DEFAULT_MAP_LAT, DEFAULT_MAP_LNG, DEFAULT_MAP_ZOOM } from '../../constants/mapDefaults'
 import { useTileUrl } from '../../hooks/useTileUrl'
+import { useIsDark } from '../../hooks/useIsDark'
 import { applyStayStops } from '../../store/stayStops'
 import { placesForDays, resolvePoolAssignmentId } from './tripPlannerModel'
 import { isDeepLinkableTripTab, TRIP_TAB_LABEL_KEYS } from '../../constants/tripTabs'
@@ -2808,7 +2809,10 @@ export function useTripPlanner() {
     return da.map(a => a.place).filter(p => p?.lat && p?.lng)
   }, [selectedDayId, assignments])
 
-  const mapTileUrl = useTileUrl(OFM_POSITRON)
+  // Fork: the default basemap follows dark mode, as the collections, journey and atlas
+  // maps already do. A tile URL the user picked in the settings still wins.
+  const isDark = useIsDark()
+  const mapTileUrl = useTileUrl(isDark ? OFM_DARK : OFM_POSITRON)
 
   const fontStyle = { fontFamily: "var(--font-system)" }
 
