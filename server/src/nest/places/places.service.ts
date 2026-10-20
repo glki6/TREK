@@ -1436,8 +1436,12 @@ export class PlacesService {
 
     // ── Primary search: name-based with location bias ───────────────────────
     // Natural features (lakes, viewpoints, trails…) have a much larger extent, so
-    // they get the wide bias radius as their match tolerance too.
-    const effectiveRadius = isNaturalFeature(place.name) ? SEARCH_BIAS_RADIUS_METERS : MATCH_RADIUS_METERS;
+    // they get the wide bias radius as their match tolerance too, and their name
+    // is trusted further out than that (see EXACT_NAME_MAX_METERS). Never for an
+    // ordinary venue: a café shares its name with hundreds of others.
+    const natural = isNaturalFeature(place.name);
+    const effectiveRadius = natural ? SEARCH_BIAS_RADIUS_METERS : MATCH_RADIUS_METERS;
+    const exactName = natural ? place.name : undefined;
     const { places: results } = await this.maps.searchPlaces(
       userId,
       place.name,
@@ -1445,13 +1449,13 @@ export class PlacesService {
       { lat: target.lat, lng: target.lng, radius: effectiveRadius },
       identityOnly,
     );
-    let match = pickEnrichmentMatch(results, target, effectiveRadius, place.name);
+    let match = pickEnrichmentMatch(results, target, effectiveRadius, exactName);
 
     // ── Fallback chain (only when the primary search yields no match) ───────
     if (!match) {
       // FALLBACK 1 — search without location bias (wider net)
       const wide = await this.maps.searchPlaces(userId, place.name, lang, undefined, identityOnly);
-      match = pickEnrichmentMatch(wide.places, target, effectiveRadius, place.name);
+      match = pickEnrichmentMatch(wide.places, target, effectiveRadius, exactName);
     }
 
     if (!match && place.address) {
@@ -1488,6 +1492,8 @@ export class PlacesService {
     const gpid = trimOrNull(match.google_place_id);
     if (!gpid) return;
     const gftid = trimOrNull(match.google_ftid);
+    // Fork: the customer id the search result carried (google-cid.ts), for the iOS link.
+    const gcid = trimOrNull(match.google_cid);
 
     // COALESCE so enrichment only fills empty columns — never overwrites data the
     // import already captured (e.g. Naver's address) or anything the user edited.
@@ -1495,12 +1501,13 @@ export class PlacesService {
       `UPDATE places
      SET google_place_id = COALESCE(google_place_id, ?),
          google_ftid    = COALESCE(google_ftid, ?),
+         google_cid     = COALESCE(google_cid, ?),
          address        = COALESCE(address, ?),
          website        = COALESCE(website, ?),
          phone          = COALESCE(phone, ?),
          updated_at     = CURRENT_TIMESTAMP
      WHERE id = ? AND trip_id = ?`,
-      gpid, gftid, trimOrNull(match.address), trimOrNull(match.website), trimOrNull(match.phone), place.id, tripId,
+      gpid, gftid, gcid, trimOrNull(match.address), trimOrNull(match.website), trimOrNull(match.phone), place.id, tripId,
     );
 
     // Photo is best-effort: Google often has none, in which case getPlacePhoto
@@ -1524,13 +1531,33 @@ export class PlacesService {
     if (updated) this.realtime.broadcast(tripId, 'place:updated', { place: updated }, undefined);
   }
 
-  /** Places in a trip that have no Google identity yet — the candidates for a manual enrich pass. */
+  /**
+   * Fork: places of a trip that have no Google identity yet — the candidates for a
+   * manual enrich pass. A track imported from a GPX/KML file is a line, not a place
+   * Google could know, and a place without coordinates has nothing to match against.
+   */
   listUnenrichedPlaces(tripId: string): EnrichablePlace[] {
     return this.dbs.all<EnrichablePlace>(
       `SELECT id, name, lat, lng, google_place_id, google_ftid, address, website, phone, image_url
-       FROM places WHERE trip_id = ? AND (google_place_id IS NULL OR google_place_id = '')`,
+       FROM places
+       WHERE trip_id = ? AND (google_place_id IS NULL OR google_place_id = '')
+         AND route_geometry IS NULL AND lat IS NOT NULL AND lng IS NOT NULL`,
       tripId,
     );
+  }
+
+  /**
+   * Fork: the manual counterpart of the list-import enrichment. The map-file (KML/KMZ)
+   * import has no "enrich" option, so this is how an imported Wanderlog or My Maps file
+   * gets its Google links, photos and addresses. Runs detached like the import pass.
+   * Returns how many places were queued, or null when no Google key is configured —
+   * enrichment could resolve none of them then.
+   */
+  enrichUnlinkedPlaces(tripId: string, userId: number): number | null {
+    if (!this.maps.getMapsKey(userId)) return null;
+    const rows = this.listUnenrichedPlaces(tripId);
+    void this.enrichImportedPlaces(tripId, userId, rows);
+    return rows.length;
   }
 
   /**

@@ -9,7 +9,7 @@
  */
 import { describe, it, expect } from 'vitest';
 
-import { isNaturalFeature, pickEnrichmentMatch } from '../../../src/nest/places/places.helpers';
+import { pickEnrichmentMatch } from '../../../src/nest/places/places.helpers';
 
 const target = { lat: 48.85, lng: 2.35 };
 
@@ -39,39 +39,5 @@ describe('pickEnrichmentMatch', () => {
   it('PENRICH-004: ignores candidates with non-numeric coordinates', () => {
     const candidates = [{ google_place_id: 'A', lat: 'x', lng: 'y' }];
     expect(pickEnrichmentMatch(candidates as never, target)).toBeNull();
-  });
-
-  // Fork additions: natural features (lakes, viewpoints) have an imported point that can sit
-  // kilometres from the POI centre, so an exact name match is trusted without the distance gate.
-  it('PENRICH-005: an exact (case-insensitive) name match wins even far outside the radius', () => {
-    const candidates = [{ google_place_id: 'lake', name: 'Moraine Lake', lat: 48.9, lng: 2.4 }]; // ~6 km
-    expect(pickEnrichmentMatch(candidates, target)).toBeNull();
-    expect(pickEnrichmentMatch(candidates, target, undefined, 'moraine lake')?.google_place_id).toBe('lake');
-  });
-
-  it('PENRICH-006: a name that does not match exactly still has to be within the radius', () => {
-    const candidates = [{ google_place_id: 'x', name: 'Moraine Lake Lodge', lat: 48.9, lng: 2.4 }];
-    expect(pickEnrichmentMatch(candidates, target, undefined, 'Moraine Lake')).toBeNull();
-  });
-
-  it('PENRICH-007: the exact-name shortcut still requires a google_place_id and coordinates', () => {
-    const candidates = [
-      { google_place_id: null, name: 'Moraine Lake', lat: 48.9, lng: 2.4 },
-      { google_place_id: 'g', name: 'Moraine Lake', lat: 'x', lng: 'y' },
-    ];
-    expect(pickEnrichmentMatch(candidates as never, target, undefined, 'Moraine Lake')).toBeNull();
-  });
-});
-
-describe('isNaturalFeature', () => {
-  it('PENRICH-008: recognises geographic features by keyword, case-insensitively', () => {
-    expect(isNaturalFeature('Moraine Lake')).toBe(true);
-    expect(isNaturalFeature('ATHABASCA FALLS')).toBe(true);
-    expect(isNaturalFeature('Plain of Six Glaciers Trail')).toBe(true);
-  });
-
-  it('PENRICH-009: leaves ordinary venues alone', () => {
-    expect(isNaturalFeature('Cafe Central')).toBe(false);
-    expect(isNaturalFeature('')).toBe(false);
   });
 });

@@ -63,6 +63,7 @@ import {
   type GoogleOpeningHours,
   type OverpassPoi,
 } from './maps.helpers';
+import { googleCidFromMapsUrl } from './google-cid';
 
 // ── Google API call counter ───────────────────────────────────────────────────
 
@@ -2213,6 +2214,7 @@ export class MapsService {
       .map((p: GooglePlaceResult) => ({
       google_place_id: p.id,
       google_ftid: googleFtidFromMapsUrl(p.googleMapsUri),
+      google_cid: googleCidFromMapsUrl(p.googleMapsUri), // fork: kept by list-import enrichment
       name: p.displayName?.text || '',
       address: p.formattedAddress || '',
       // `?? null`, not `|| null`: 0 is a real coordinate (equator / prime meridian).

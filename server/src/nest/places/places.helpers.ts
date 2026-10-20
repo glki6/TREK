@@ -240,54 +240,66 @@ export const ENRICH_CONCURRENCY = 3;
 // people not to do — so it stops rather than queueing for an hour.
 export const ADDRESS_BACKFILL_MAX_PLACES = 250;
 
-/** Keywords that indicate a natural/geographic feature (larger extent → wider tolerance). */
-const NATURAL_FEATURE_KEYWORDS = [
-  'lake', 'glacier', 'falls', 'waterfall', 'canyon', 'peak', 'mountain',
-  'river', 'cliff', 'bridge', 'viewpoint', 'trail', 'pass', 'plateau',
-];
+/**
+ * Words that name a natural/geographic feature (larger extent → wider tolerance).
+ * Whole words only: as substrings they caught "Cambridge" (bridge), "Lakeside Inn"
+ * (lake) and "Compass Café" (pass), and widened the match for ordinary venues.
+ */
+const NATURAL_FEATURE_RE =
+  /\b(?:lakes?|glaciers?|falls|waterfalls?|canyons?|peaks?|mountains?|rivers?|cliffs?|bridges?|viewpoints?|trails?|pass(?:es)?|plateaus?|plateaux)\b/i;
 export function isNaturalFeature(name: string): boolean {
-  const lower = name.toLowerCase();
-  return NATURAL_FEATURE_KEYWORDS.some((kw) => lower.includes(kw));
+  return NATURAL_FEATURE_RE.test(name);
 }
 
 /**
+ * How far an exact-name hit may sit from a natural feature's imported point.
+ *
+ * A pin saved on a lake or a peak is often a viewpoint or a car park kilometres from
+ * the centre Google stores, so there the name is better evidence than the distance.
+ * But a name alone is not enough: many lakes and falls share one, and a search with
+ * no location bias ranks the famous namesake first, so without a bound "Mirror Lake"
+ * in Oregon became the one in Yosemite.
+ */
+export const EXACT_NAME_MAX_METERS = 50_000;
+
+const sameName = (a: unknown, b: string): boolean =>
+  typeof a === 'string' && a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
  * Pick the search result that is the same place as the import: it must be a
- * Google result (have a google_place_id) with coordinates within
- * MATCH_RADIUS_METERS of the imported point. When `exactNameQuery` is provided
- * and a candidate name matches exactly (case-insensitive), the distance check is
- * skipped — this handles natural features where Wanderlog viewpoints and POI
- * centres can be kilometres apart. Returns the closest such hit, or null when
- * nothing is close enough — in which case the place is left as imported rather
- * than risking a wrong-place overwrite (common-name / romanized lists).
- * Exported for unit testing.
+ * Google result (have a google_place_id) with coordinates within `maxMeters`
+ * (MATCH_RADIUS_METERS by default) of the imported point. Returns the closest
+ * such hit, or null when nothing is close enough — in which case the place is
+ * left as imported rather than risking a wrong-place overwrite (common-name /
+ * romanized lists).
+ *
+ * `exactName` is for natural features only: a candidate whose name equals it
+ * (case-insensitive) is accepted up to EXACT_NAME_MAX_METERS away and wins over
+ * a nearer candidate with another name — the lodge beside a lake is closer to a
+ * shoreline pin than the lake's own centre. Exported for unit testing.
  */
 export function pickEnrichmentMatch(
   candidates: Record<string, unknown>[],
   target: { lat: number; lng: number },
   maxMeters: number = MATCH_RADIUS_METERS,
-  exactNameQuery?: string,
+  exactName?: string,
 ): Record<string, unknown> | null {
   let best: { c: Record<string, unknown>; dist: number } | null = null;
+  let bestByName: { c: Record<string, unknown>; dist: number } | null = null;
   for (const c of candidates || []) {
     const gpid = c.google_place_id;
     const lat = c.lat;
     const lng = c.lng;
     if (typeof gpid !== 'string' || !gpid) continue;
     if (typeof lat !== 'number' || typeof lng !== 'number') continue;
-
-    // Exact name match: skip the distance check entirely for natural features.
-    if (exactNameQuery) {
-      const candidateName = typeof c.name === 'string' ? c.name : '';
-      if (candidateName.toLowerCase() === exactNameQuery.toLowerCase()) {
-        return c;
-      }
-    }
-
     const dist = haversineMetres(target.lat, target.lng, lat, lng);
+    if (exactName && sameName(c.name, exactName) && dist <= EXACT_NAME_MAX_METERS) {
+      if (!bestByName || dist < bestByName.dist) bestByName = { c, dist };
+    }
     if (dist > maxMeters) continue;
     if (!best || dist < best.dist) best = { c, dist };
   }
-  return best?.c ?? null;
+  return bestByName?.c ?? best?.c ?? null;
 }
 
 export async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {

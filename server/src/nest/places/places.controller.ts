@@ -302,6 +302,23 @@ export class PlacesController {
     }
   }
 
+  /**
+   * Fork: look up every unlinked place of the trip on Google in the background, the way
+   * a list import does with "enrich" ticked; each enriched row arrives over the
+   * websocket. 400 when no Google key is configured, since nothing could be resolved.
+   */
+  @Post('enrich')
+  @HttpCode(200)
+  enrich(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    const trip = this.requireTrip(tripId, user);
+    this.requireEdit(trip, user);
+    const queued = this.places.enrichUnlinkedPlaces(tripId, user.id);
+    if (queued === null) {
+      throw new HttpException({ error: 'A Google Maps API key is required to enrich places' }, 400);
+    }
+    return { enriched: queued, message: `${queued} places queued for enrichment` };
+  }
+
   @Post('bulk-delete')
   @HttpCode(200) // Express answers bulk-delete with res.json (200), unlike the 201 imports.
   async bulkDelete(
@@ -520,16 +537,5 @@ export class PlacesController {
       this.places.broadcast(tripId, 'budget:deleted', { itemId }, undefined);
     }
     return { success: true };
-  }
-
-  @Post('enrich')
-  @HttpCode(200)
-  enrich(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    const trip = this.requireTrip(tripId, user);
-    this.requireEdit(trip, user);
-    const rows = this.places.listUnenrichedPlaces(tripId);
-    // Fire-and-forget: enrichment runs in background via websockets for live updates
-    void this.places.enrichImportedPlaces(tripId, user.id, rows);
-    return { enriched: rows.length, message: `${rows.length} places queued for enrichment` };
   }
 }

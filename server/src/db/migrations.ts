@@ -5326,8 +5326,9 @@ function runMigrations(db: Database.Database): void {
  * whatever upstream appends next, and databases that already ran it would skip
  * upstream's step. Each statement here is idempotent and runs on every boot.
  *
- *   places.google_cid — Google Maps customer id, used by the "View" action to
- *   open the rich place page (works on iOS where place-id universal links don't).
+ *   places.google_cid — Google Maps customer id, kept by list-import enrichment from
+ *   the Places API's googleMapsUri. The "Google Maps" link opens the place by it,
+ *   which the iOS app resolves to the place itself rather than a search.
  */
 function ensureForkColumns(db: Database.Database): void {
   const hasGoogleCid = db.prepare("SELECT 1 FROM pragma_table_info('places') WHERE name = 'google_cid'").get();
