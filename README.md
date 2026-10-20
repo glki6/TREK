@@ -13,17 +13,18 @@
   <img src="docs/subtitle-dark.png" alt="your trip. your plan." height="28" />
 </picture>
 
-A feature fork of [TREK](https://github.com/mauriceboe/TREK) focused on mobile navigation and visual trip planning. On top of upstream it adds:
+A feature fork of [TREK](https://github.com/liketrek/TREK) focused on mobile navigation and visual trip planning. On top of upstream it adds:
 
-- **Google Maps app navigation** — a "Google Maps app" entry in the navigation menu that launches the installed app through the `comgooglemaps://` native URI scheme (works with no signal) and falls back to the web map when no app handles it.
-- **`google_cid` place links** — the Google Maps entry opens the rich place page by customer id when a place has one, which avoids the iOS universal-link problem.
-- **Day-coloured map markers** — a toggle that colours every stop by its day and numbers it, with home markers for stays and pie-chart markers for stays that span several days. A second toggle shows every marker individually instead of clustering them.
-- **Export the whole itinerary to Google Maps** — one button in the day plan toolbar.
-- **Better place enrichment** — natural features (lakes, viewpoints, trails) are matched by exact name, with address and reverse-geocode fallbacks, and a `POST /api/trips/:tripId/places/enrich` endpoint enriches a trip's unlinked places on demand.
+- **Google Maps app navigation** — on iPhone and iPad, a "Google Maps app" entry in the navigation menu starts directions in the installed app through its `comgooglemaps://` scheme (works with no signal) and falls back to the web map when the app is not installed. Android needs no extra entry: the plain Google Maps link already opens the app there.
+- **`google_cid` place links** — the Google Maps link opens a place by its Google customer id when TREK knows it (kept by list-import enrichment, or read off the place details), which the iOS app resolves to the place itself.
+- **Day colours** — a map toggle that colours every stop by its day and numbers it, draws each day's route in that day's colour (the whole-trip overview too), puts home markers on stays and pie-chart markers on stays that span several days, and colours the day badges and stop numbers of the day plan on desktop and phone. A second toggle shows every marker on its own instead of clustering them, on both map renderers.
+- **The whole itinerary in Google Maps** — one button in the day plan toolbar opens every day's stops as one route, with the same hotel legs as each day's own export. Google takes at most ten stops, so a longer trip is cut there, and the toolbar says so.
+- **Better place enrichment** — natural features (lakes, viewpoints, trails) are matched by their exact name up to 50 km out, with an address search and a reverse-geocode lookup as fallbacks. `POST /api/trips/:tripId/places/enrich` enriches a trip's unlinked places on demand (needs a Google Maps key), which is how a KML/KMZ import from Wanderlog or My Maps gets its Google links, photos and addresses.
+- **A dark map in dark mode** — the trip map's default basemap follows the theme, as the other maps already do. A tile URL picked in the settings still wins.
 
 Everything else, including the whole-trip route overview, is upstream's.
 
-> **Based on TREK v4.3.3.** `main` mirrors upstream; the fork's changes live on the `custom-features` branch. To update: sync `main` from `mauriceboe/TREK`, then merge it into `custom-features`.
+> **Based on TREK v4.3.3.** `main` mirrors upstream; the fork's changes live on the `custom-features` branch. To update: sync `main` from [`liketrek/TREK`](https://github.com/liketrek/TREK), then merge it into `custom-features`.
 
 <br />
 
