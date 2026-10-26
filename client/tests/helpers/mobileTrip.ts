@@ -1,5 +1,8 @@
 import { vi } from 'vitest';
 import type { TripPlanner, MTripShellApi } from '../../src/mobile/screens/trip/MTripShell';
+import type { Reservation } from '../../src/types';
+import { changeTransitRouteWith, openTransportEditorWith } from '../../src/pages/tripPlanner/transportEditorOpeners';
+import { dayColorsOff } from './dayColorsOff';
 import { buildTrip } from './factories';
 
 /**
@@ -21,10 +24,10 @@ export function buildTripActions(): Record<string, ReturnType<typeof vi.fn>> {
     'deleteDay', 'deletePlacesMany', 'deleteReservation', 'deleteTodoItem', 'insertDay', 'loadBudgetItems',
     'loadFiles', 'loadReservations', 'loadTrip', 'moveAssignment', 'moveDayNote', 'ratePlace',
     'refreshDays', 'removeAssignment', 'removePackingContributor', 'reorderAssignments',
-    'reorderDays', 'setAssignments', 'setPackingItemSharing', 'setSelectedDay',
+    'reorderDays', 'setAssignments', 'setPackedCount', 'setPackingItemSharing', 'setSelectedDay',
     'toggleBudgetMemberPaid', 'togglePackingItem', 'toggleReservationStatus', 'toggleTodoItem',
     'updateDayNote', 'updateDayTitle', 'updatePackingItem', 'updatePlace', 'updatePlacesMany',
-    'updateReservation', 'updateTodoItem', 'updateTrip', 'uploadPlaceImage',
+    'updateReservation', 'updateReservationPositions', 'updateTodoItem', 'updateTrip', 'uploadPlaceImage',
   ];
   const actions: Record<string, ReturnType<typeof vi.fn>> = {};
   for (const name of names) actions[name] = vi.fn(async () => undefined);
@@ -67,12 +70,14 @@ export function buildPlanner(overrides: Partial<TripPlanner> = {}): TripPlanner 
     reservations: [],
     budgetItems: [],
     files: [],
+    tours: [],
 
     selectedDayId: null,
     isLoading: false,
     tripActions: buildTripActions(),
     can: vi.fn(() => true),
     canUploadFiles: true,
+    isTourPlace: vi.fn(() => false),
 
     pushUndo: vi.fn(),
     undo: vi.fn(),
@@ -290,6 +295,8 @@ export function buildPlanner(overrides: Partial<TripPlanner> = {}): TripPlanner 
     confirmDeletePlaces: vi.fn(),
     confirmChangeCategory: vi.fn(),
     handleAssignToDay: vi.fn(),
+    tourDayQuestion: null,
+    answerTourDay: vi.fn(),
     handleRemoveAssignment: vi.fn(),
     handleReorder: vi.fn(),
     handleReorderDays: vi.fn(),
@@ -298,25 +305,23 @@ export function buildPlanner(overrides: Partial<TripPlanner> = {}): TripPlanner 
     handleSaveReservation: vi.fn(),
     handleSaveTransport: vi.fn(),
     handleDeleteReservation: vi.fn(),
+    // The planner's two ways into the transport editor, run on the setter spies above
+    // the way usePlannerDialogs runs them on its state.
+    openTransportEditor: vi.fn((r: Reservation) => openTransportEditorWith(planner, r)),
+    changeTransitRoute: vi.fn((r: Reservation) => changeTransitRouteWith(planner, r)),
 
     selectedPlace: null,
     dayOrderMap: new Map<number, number>(),
     dayPlaces: [],
-    // Fork: the day-colour model as useDayColors returns it switched off.
-    dayColors: {
-      active: false,
-      mapProps: { useDayColors: false, disableClustering: false, placeDayMap: {}, selectedDayIndex: null, accommodationPlaceIds: new Set<number>() },
-      lineColors: undefined,
-      colorOfDay: () => null,
-      stopBadge: () => null,
-    },
+    dayColors: dayColorsOff(), // fork
 
     mapTileUrl: 'https://tile.example/{z}/{x}/{y}.png',
     fontStyle: {},
     splashDone: true,
   };
 
-  return { ...base, ...overrides } as unknown as TripPlanner;
+  const planner = { ...base, ...overrides } as unknown as TripPlanner;
+  return planner;
 }
 
 export function buildShell(overrides: Partial<MTripShellApi> = {}): MTripShellApi {

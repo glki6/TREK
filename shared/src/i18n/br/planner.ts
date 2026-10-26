@@ -21,10 +21,12 @@ const planner: TranslationStrings = {
   'planner.days': 'Dias',
   'planner.allPlaces': 'Todos os lugares',
   'planner.totalPlaces': '{n} lugares no total',
+  'planner.totalPlaces.one': '{n} lugar no total',
   'planner.noDaysPlanned': 'Nenhum dia planejado ainda',
   'planner.editTrip': 'Editar viagem →',
   'planner.placeOne': '1 lugar',
   'planner.placeN': '{n} lugares',
+  'planner.placeN.one': '{n} lugar',
   'planner.addNote': 'Adicionar nota',
   'planner.noEntries': 'Nenhuma entrada neste dia',
   'planner.addPlace': 'Adicionar lugar/atividade',
@@ -59,12 +61,15 @@ const planner: TranslationStrings = {
   'planner.noDays': 'Nenhum dia ainda',
   'planner.editTripToAddDays': 'Edite a viagem para adicionar dias',
   'planner.dayCount': '{n} dias',
+  'planner.dayCount.one': '{n} dia',
   'planner.clickToUnlock': 'Clique para desbloquear',
   'planner.keepPosition': 'Manter posição durante a otimização da rota',
   'planner.dayDetails': 'Detalhes do dia',
   'planner.dayN': 'Dia {n}',
   'planner.exportAllStops': 'Abrir todas as paradas no Google Maps',
   'planner.exportAllStopsTruncated':
+    'O Google Maps aceita no máximo {max} paradas, então só as primeiras {max} de {count} foram abertas.',
+  'planner.exportAllStopsTruncated.one':
     'O Google Maps aceita no máximo {max} paradas, então só as primeiras {max} de {count} foram abertas.',
 };
 export default planner;

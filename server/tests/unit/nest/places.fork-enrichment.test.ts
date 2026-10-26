@@ -1,304 +1,313 @@
 /**
- * Fork-only: what this fork adds to upstream's list-import enrichment (#886) — the
- * natural-feature matching, the fallback searches, the stored Google customer id and
- * the manual enrich pass over a trip's unlinked places (POST /places/enrich).
- *
- * Kept out of places.service.test.ts / places.enrichment.test.ts so upstream's
- * suites merge without conflicts. Same harness: a real in-memory SQLite DB, the
- * service constructed directly, the maps provider stubbed per case.
+ * Fork-only: how the import enrichment finds an imported point on Google, the customer
+ * id it keeps, and the manual enrich pass (src/nest/places/place-enrichment.fork.ts,
+ * places-enrich.service.ts, maps/google-cid.ts). FORK-ENRICH-001 to FORK-ENRICH-021.
+ * The route itself is covered by tests/e2e/places-enrich.e2e.test.ts.
  */
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
-import { HttpException } from '@nestjs/common';
-import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
-import { UnsplashService } from '../../../src/nest/unsplash/unsplash.service';
-import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
-
-// An in-memory DB in place of the shared connection, read back below as `testDb`.
-vi.mock('../../../src/db/database', async () => {
-  const { default: Database } = await import('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  return {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: (placeId: number) => db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) ?? null,
-    canAccessTrip: () => true,
-    isOwner: () => true,
-  };
-});
-vi.mock('../../../src/config', () => ({
-  JWT_SECRET: 'test-secret',
-  ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
-  updateJwtSecret: () => {},
-}));
-
-import { db as testDb } from '../../../src/db/database';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
-import { resetTestDb } from '../../helpers/test-db';
-import { accommodationsOver } from '../../helpers/accommodations-service';
-import { createUser, createTrip, createPlace } from '../../helpers/factories';
-import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { DatabaseService } from '../../../src/nest/database/database.service';
-import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
-import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { PlacesService } from '../../../src/nest/places/places.service';
-import { PlacesController } from '../../../src/nest/places/places.controller';
-import type { MapsService } from '../../../src/nest/maps/maps.service';
-import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
-import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
-import type { StorageService } from '../../../src/nest/storage/storage.service';
-import type { User } from '../../../src/types';
-import { EXACT_NAME_MAX_METERS, isNaturalFeature, pickEnrichmentMatch } from '../../../src/nest/places/places.helpers';
+import { Places } from '../../../src/db/entities/Places.entity';
+import type { PlaceRow } from '../../../src/db/repositories/Places.repository';
+import { DomainError } from '../../../src/nest/common/domain-error';
 import { googleCidFromMapsUrl } from '../../../src/nest/maps/google-cid';
+import { MapsService } from '../../../src/nest/maps/maps.service';
+import {
+  EXACT_NAME_MAX_METERS,
+  findEnrichmentMatch,
+  isNaturalFeature,
+  pickNaturalFeatureMatch,
+  unlinkedPlaces,
+  type EnrichmentMaps,
+} from '../../../src/nest/places/place-enrichment.fork';
+import { PlacesEnrichService } from '../../../src/nest/places/places-enrich.service';
+import { PlacesModule } from '../../../src/nest/places/places.module';
+import { PlacesService } from '../../../src/nest/places/places.service';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { makePlace } from '../../helpers/factories/places';
+import { findRow } from '../../helpers/factories/rows';
+import { makeTrip } from '../../helpers/factories/trips';
+import { makeUser } from '../../helpers/factories/users';
+import { createTestModule, type TestModule } from '../../helpers/test-module';
+import { MikroORM } from '@mikro-orm/core';
 
-const dbs = new DatabaseService(testDb);
-const photoCacheStub = { removeIfUnreferenced: vi.fn() } as unknown as PlacePhotoCacheService;
-const storageFx = makeStorageFixture('');
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-function placesWith(maps: Partial<MapsService>): PlacesService {
-  return new PlacesService(
-    dbs,
-    new PermissionsService(dbs),
-    new RealtimeService(),
-    maps as MapsService,
-    new QueryHelpersService(dbs),
-    new UnsplashService(dbs, new RuntimeEnvService(), storageFx.storage),
-    photoCacheStub,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs)),
-    storageFx.storage,
-    accommodationsOver(dbs),
-  );
-}
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
-beforeEach(() => resetTestDb(testDb));
-afterAll(() => testDb.close());
-
-// The imported point every case is measured from.
 const target = { lat: 48.85, lng: 2.35 };
-const AT_44_M = { lat: 48.8504, lng: 2.35 };
-const AT_3_KM = { lat: 48.87, lng: 2.38 };
-const AT_6_KM = { lat: 48.9, lng: 2.4 };
-const OTHER_CONTINENT = { lat: 37.745, lng: -119.55 };
+/** A Google search hit; 0.01° of latitude is about 1.1 km. */
+const hit = (id: string, name: string, lat: number, lng = 2.35, extra: Record<string, unknown> = {}) => ({
+  google_place_id: id,
+  name,
+  lat,
+  lng,
+  ...extra,
+});
 
 describe('isNaturalFeature', () => {
   it('FORK-ENRICH-001: names a feature by whole word, singular or plural, in any case', () => {
-    for (const name of ['Moraine Lake', 'ATHABASCA FALLS', 'Plain of Six Glaciers Trail', 'Plitvice Lakes', 'Blue Mountains', 'Cliffs of Moher', 'Stelvio Pass']) {
+    for (const name of [
+      'Moraine Lake',
+      'ATHABASCA FALLS',
+      'Plain of Six Glaciers Trail',
+      'Cliffs of Moher',
+      'Brooklyn Bridge',
+    ]) {
       expect(isNaturalFeature(name), name).toBe(true);
     }
   });
 
   it('FORK-ENRICH-002: leaves venues alone, including ones a keyword only hides in', () => {
-    for (const name of ['Cafe Central', '', 'Cambridge Hotel', 'Lakeside Inn', 'Compass Café', 'Riverside Diner', 'Trailhead Brewing']) {
+    for (const name of ['Cambridge', 'Lakeside Inn', 'Compass Café', 'Trailhead Coffee', 'Café Central', '']) {
       expect(isNaturalFeature(name), name).toBe(false);
     }
   });
 });
 
-describe('pickEnrichmentMatch with an exact name', () => {
-  const lake = (id: string, at: { lat: number; lng: number }, name = 'Moraine Lake') => ({ google_place_id: id, name, ...at });
-
-  it('FORK-ENRICH-003: an exact (case-insensitive) name is trusted beyond the radius', () => {
-    expect(pickEnrichmentMatch([lake('lake', AT_6_KM)], target)).toBeNull();
-    expect(pickEnrichmentMatch([lake('lake', AT_6_KM)], target, undefined, 'moraine lake')?.google_place_id).toBe('lake');
+describe('pickNaturalFeatureMatch', () => {
+  it('FORK-ENRICH-003: an exact name, in any case, is trusted kilometres beyond the wide radius', () => {
+    expect(pickNaturalFeatureMatch([hit('lake', 'Moraine Lake', 48.9)], target, 'moraine lake')?.google_place_id).toBe(
+      'lake',
+    );
   });
 
-  it('FORK-ENRICH-004: the exact name wins over a nearer place with another name', () => {
-    const lodge = lake('lodge', AT_44_M, 'Moraine Lake Lodge');
-    expect(pickEnrichmentMatch([lodge, lake('lake', AT_3_KM)], target, 2000, 'Moraine Lake')?.google_place_id).toBe('lake');
-  });
-
-  it('FORK-ENRICH-005: of several exact-name hits the closest wins', () => {
-    expect(pickEnrichmentMatch([lake('far', AT_6_KM), lake('near', AT_3_KM)], target, undefined, 'Moraine Lake')?.google_place_id).toBe('near');
-  });
-
-  it('FORK-ENRICH-006: a namesake further than EXACT_NAME_MAX_METERS is never the place', () => {
-    expect(EXACT_NAME_MAX_METERS).toBeLessThan(1_000_000);
-    expect(pickEnrichmentMatch([lake('yosemite', OTHER_CONTINENT, 'Mirror Lake')], target, 2000, 'Mirror Lake')).toBeNull();
-  });
-
-  it('FORK-ENRICH-007: a name that is not exact still has to be within the radius', () => {
-    expect(pickEnrichmentMatch([lake('x', AT_6_KM, 'Moraine Lake Lodge')], target, undefined, 'Moraine Lake')).toBeNull();
-  });
-
-  it('FORK-ENRICH-008: an exact name still needs a google_place_id and coordinates', () => {
+  it('FORK-ENRICH-004: the exact name wins over a nearer place with another name, and the closest namesake wins', () => {
     const candidates = [
-      { google_place_id: null, name: 'Moraine Lake', ...AT_3_KM },
+      hit('lodge', 'Moraine Lake Lodge', 48.8501),
+      hit('far', 'Moraine Lake', 48.95),
+      hit('lake', 'Moraine Lake', 48.86),
+    ];
+    expect(pickNaturalFeatureMatch(candidates, target, 'Moraine Lake')?.google_place_id).toBe('lake');
+  });
+
+  it('FORK-ENRICH-005: a namesake further than EXACT_NAME_MAX_METERS is never the place', () => {
+    const farAway = 48.85 + (EXACT_NAME_MAX_METERS + 5_000) / 111_000;
+    expect(pickNaturalFeatureMatch([hit('elsewhere', 'Mirror Lake', farAway)], target, 'Mirror Lake')).toBeNull();
+  });
+
+  it('FORK-ENRICH-006: without a namesake, a hit within the wide radius is taken and nothing beyond it', () => {
+    expect(
+      pickNaturalFeatureMatch([hit('near', 'Lake shore car park', 48.86)], target, 'Moraine Lake')?.google_place_id,
+    ).toBe('near');
+    expect(pickNaturalFeatureMatch([hit('away', 'Lake shore car park', 48.9)], target, 'Moraine Lake')).toBeNull();
+  });
+
+  it('FORK-ENRICH-007: an exact name still needs a google_place_id and coordinates', () => {
+    const candidates = [
+      { google_place_id: null, name: 'Moraine Lake', lat: 48.86, lng: 2.35 },
       { google_place_id: 'g', name: 'Moraine Lake', lat: 'x', lng: 'y' },
     ];
-    expect(pickEnrichmentMatch(candidates as never, target, undefined, 'Moraine Lake')).toBeNull();
+    expect(pickNaturalFeatureMatch(candidates, target, 'Moraine Lake')).toBeNull();
   });
 });
 
 describe('googleCidFromMapsUrl', () => {
-  it('FORK-ENRICH-009: reads the decimal customer id the Places API puts in googleMapsUri', () => {
+  it('FORK-ENRICH-008: reads the decimal customer id the Places API puts in googleMapsUri', () => {
     expect(googleCidFromMapsUrl('https://maps.google.com/?cid=10403719659250533155')).toBe('10403719659250533155');
-    expect(googleCidFromMapsUrl('https://maps.google.com/?cid=123&g_mp=Cidnb29nbGUu')).toBe('123');
   });
 
-  it('FORK-ENRICH-010: anything else is no id at all', () => {
-    for (const url of [null, undefined, '', 'not a url', 'https://maps.google.com/?q=1,2', 'https://maps.google.com/?cid=0x12ab', 'https://maps.google.com/?cid=123456789012345678901']) {
+  it('FORK-ENRICH-009: anything else is no id at all', () => {
+    for (const url of [
+      undefined,
+      null,
+      '',
+      'not a url',
+      'https://maps.google.com/?cid=12ab',
+      'https://maps.google.com/?q=x',
+    ]) {
       expect(googleCidFromMapsUrl(url), String(url)).toBeNull();
     }
   });
 });
 
-describe('enrichment fallback chain', () => {
-  function seed(name: string) {
-    const { user } = createUser(testDb);
-    const trip = createTrip(testDb, user.id);
-    const place = createPlace(testDb, trip.id, { name, ...target });
-    return { user, trip, place };
+describe('findEnrichmentMatch', () => {
+  type Search = EnrichmentMaps['searchPlaces'];
+  type Reverse = EnrichmentMaps['reverseGeocode'];
+  /** Answers each search from the list in order, then nothing; the reverse lookup answers `reverseName`. */
+  function fakeMaps(
+    answers: Record<string, unknown>[][],
+    reverse: () => Promise<{ name: string | null; address: string | null }>,
+  ) {
+    const searchPlaces = vi.fn<Search>(async () => ({ places: answers.shift() ?? [], source: 'google' }));
+    const reverseGeocode = vi.fn<Reverse>(reverse);
+    return { maps: { searchPlaces, reverseGeocode } as EnrichmentMaps, searchPlaces, reverseGeocode };
   }
-  const row = (id: number) =>
-    testDb.prepare('SELECT google_place_id, google_cid, address FROM places WHERE id = ?').get(id) as {
-      google_place_id: string | null; google_cid: string | null; address: string | null;
-    };
-  const noPhoto = vi.fn(async () => ({ photoUrl: null, attribution: null }));
+  const noName = async () => ({ name: null, address: null });
 
-  it('FORK-ENRICH-011: a natural feature is found by its exact name on the unbiased search, and keeps the customer id', async () => {
-    const { user, trip, place } = seed('Moraine Lake');
-    const searchPlaces = vi.fn()
-      .mockResolvedValueOnce({ source: 'google', places: [] })
-      .mockResolvedValueOnce({ source: 'google', places: [{ google_place_id: 'lake', google_cid: '777', name: 'Moraine Lake', ...AT_6_KM }] });
-    await placesWith({ getMapsKey: () => 'key', searchPlaces, getPlacePhoto: noPhoto } as never)
-      .enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Moraine Lake', ...target }]);
-    expect(searchPlaces.mock.calls[1][3]).toBeUndefined(); // the wide search carries no location bias
-    expect(row(place.id)).toMatchObject({ google_place_id: 'lake', google_cid: '777' });
+  it('FORK-ENRICH-010: the first search that finds the place ends it: the name, biased to the point', async () => {
+    const { maps, searchPlaces, reverseGeocode } = fakeMaps([[hit('bar', 'Bar', 48.8501)]], noName);
+    expect((await findEnrichmentMatch(maps, 7, { name: 'Bar', ...target }, 'fr'))?.google_place_id).toBe('bar');
+    expect(searchPlaces).toHaveBeenCalledTimes(1);
+    expect(searchPlaces).toHaveBeenCalledWith(
+      7,
+      'Bar',
+      'fr',
+      { ...target, radius: 2000 },
+      { googleIdentityOnly: true },
+    );
+    expect(reverseGeocode).not.toHaveBeenCalled();
+  });
+
+  it('FORK-ENRICH-011: a natural feature is found by its exact name on the unbiased search', async () => {
+    const { maps, searchPlaces } = fakeMaps([[], [hit('lake', 'Moraine Lake', 48.9)]], noName);
+    expect((await findEnrichmentMatch(maps, 7, { name: 'Moraine Lake', ...target }))?.google_place_id).toBe('lake');
+    expect(searchPlaces.mock.calls[1]).toEqual([7, 'Moraine Lake', undefined, undefined, { googleIdentityOnly: true }]);
   });
 
   it('FORK-ENRICH-012: an ordinary venue is never taken for a namesake kilometres away', async () => {
-    const { user, trip, place } = seed('Starbucks');
-    const namesake = { google_place_id: 'elsewhere', name: 'Starbucks', ...AT_6_KM };
-    const searchPlaces = vi.fn().mockResolvedValue({ source: 'google', places: [namesake] });
-    const reverseGeocode = vi.fn(async () => ({ name: null, address: null }));
-    await placesWith({ getMapsKey: () => 'key', searchPlaces, reverseGeocode } as never)
-      .enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Starbucks', ...target }]);
-    expect(row(place.id).google_place_id).toBeNull();
+    const { maps } = fakeMaps([[], [hit('elsewhere', 'Café Central', 48.9)]], noName);
+    expect(await findEnrichmentMatch(maps, 7, { name: 'Café Central', ...target })).toBeNull();
   });
 
   it('FORK-ENRICH-013: the address search resolves a place its name finds nothing near', async () => {
-    const { user, trip, place } = seed('Chez Paul');
-    const searchPlaces = vi.fn()
-      .mockResolvedValueOnce({ source: 'google', places: [] })
-      .mockResolvedValueOnce({ source: 'google', places: [] })
-      .mockResolvedValueOnce({ source: 'google', places: [{ google_place_id: 'by-address', name: 'Chez Paul (bistro)', ...AT_44_M }] });
-    await placesWith({ getMapsKey: () => 'key', searchPlaces, getPlacePhoto: noPhoto } as never)
-      .enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Chez Paul', address: '13 Rue de Charonne', ...target }]);
-    expect(searchPlaces.mock.calls[2][1]).toBe('13 Rue de Charonne');
-    expect(row(place.id).google_place_id).toBe('by-address');
+    const { maps, searchPlaces } = fakeMaps([[], [], [hit('byAddress', 'Somewhere', 48.8505)]], noName);
+    const match = await findEnrichmentMatch(maps, 7, { name: 'Our hotel', address: '1 Rue X, Paris', ...target });
+    expect(match?.google_place_id).toBe('byAddress');
+    expect(searchPlaces.mock.calls[2][1]).toBe('1 Rue X, Paris');
   });
 
   it('FORK-ENRICH-014: last, the name OpenStreetMap gives the point is searched near it', async () => {
-    const { user, trip, place } = seed('Pin 12');
-    const searchPlaces = vi.fn()
-      .mockResolvedValueOnce({ source: 'google', places: [] })
-      .mockResolvedValueOnce({ source: 'google', places: [] })
-      .mockResolvedValueOnce({ source: 'google', places: [{ google_place_id: 'by-osm-name', ...AT_44_M }] });
-    const reverseGeocode = vi.fn(async () => ({ name: 'Musée Picasso', address: null }));
-    await placesWith({ getMapsKey: () => 'key', searchPlaces, reverseGeocode, getPlacePhoto: noPhoto } as never)
-      .enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Pin 12', ...target }]);
-    expect(reverseGeocode).toHaveBeenCalledWith(String(target.lat), String(target.lng), undefined, expect.objectContaining({ lane: 'background' }));
-    expect(searchPlaces.mock.calls[2][1]).toBe('Musée Picasso');
-    expect(row(place.id).google_place_id).toBe('by-osm-name');
+    const reverse = vi.fn(async () => ({ name: 'Musée Carnavalet', address: null }));
+    const { maps, searchPlaces, reverseGeocode } = fakeMaps(
+      [[], [], [hit('osm', 'Musée Carnavalet', 48.8503)]],
+      reverse,
+    );
+    expect((await findEnrichmentMatch(maps, 7, { name: 'Museum', ...target }, 'de'))?.google_place_id).toBe('osm');
+    expect(reverseGeocode).toHaveBeenCalledWith('48.85', '2.35', 'de', { lane: 'background', timeoutMs: 8000 });
+    expect(searchPlaces.mock.calls[2]).toEqual([
+      7,
+      'Musée Carnavalet',
+      'de',
+      { ...target, radius: 2000 },
+      { googleIdentityOnly: true },
+    ]);
   });
 
-  it('FORK-ENRICH-015: a customer id already stored is never overwritten', async () => {
-    const { user, trip, place } = seed('Bar');
-    testDb.prepare('UPDATE places SET google_cid = ? WHERE id = ?').run('111', place.id);
-    const searchPlaces = vi.fn().mockResolvedValue({ source: 'google', places: [{ google_place_id: 'g', google_cid: '222', ...AT_44_M }] });
-    await placesWith({ getMapsKey: () => 'key', searchPlaces, getPlacePhoto: noPhoto } as never)
-      .enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Bar', ...target }]);
-    expect(row(place.id)).toMatchObject({ google_place_id: 'g', google_cid: '111' });
-  });
-});
-
-describe('manual enrich pass', () => {
-  it('FORK-ENRICH-016: picks the trip\'s unlinked places, never its tracks, coordinate-less pins or other trips\' places', () => {
-    const { user } = createUser(testDb);
-    const trip = createTrip(testDb, user.id);
-    const other = createTrip(testDb, user.id);
-    const unlinked = createPlace(testDb, trip.id, { name: 'Unlinked' });
-    const blankId = createPlace(testDb, trip.id, { name: 'Blank id' });
-    const linked = createPlace(testDb, trip.id, { name: 'Linked' });
-    const track = createPlace(testDb, trip.id, { name: 'Morning hike' });
-    const coordless = createPlace(testDb, trip.id, { name: 'Somewhere' });
-    createPlace(testDb, other.id, { name: 'Other trip' });
-    testDb.prepare("UPDATE places SET google_place_id = '' WHERE id = ?").run(blankId.id);
-    testDb.prepare("UPDATE places SET google_place_id = 'ChIJ' WHERE id = ?").run(linked.id);
-    testDb.prepare("UPDATE places SET route_geometry = '[[48.85,2.35],[48.86,2.36]]' WHERE id = ?").run(track.id);
-    testDb.prepare('UPDATE places SET lat = NULL, lng = NULL WHERE id = ?').run(coordless.id);
-
-    const ids = placesWith({}).listUnenrichedPlaces(String(trip.id)).map(p => p.id).sort((a, b) => a - b);
-    expect(ids).toEqual([unlinked.id, blankId.id].sort((a, b) => a - b));
-  });
-
-  it('FORK-ENRICH-017: without a Google key nothing is queued and nothing is searched', () => {
-    const { user } = createUser(testDb);
-    const trip = createTrip(testDb, user.id);
-    createPlace(testDb, trip.id, { name: 'Unlinked' });
-    const searchPlaces = vi.fn();
-    expect(placesWith({ getMapsKey: () => null, searchPlaces } as never).enrichUnlinkedPlaces(String(trip.id), user.id)).toBeNull();
-    expect(searchPlaces).not.toHaveBeenCalled();
-  });
-
-  it('FORK-ENRICH-018: with a key it reports how many it queued and resolves them in the background', async () => {
-    const { user } = createUser(testDb);
-    const trip = createTrip(testDb, user.id);
-    const place = createPlace(testDb, trip.id, { name: 'Bar', ...target });
-    const searchPlaces = vi.fn().mockResolvedValue({ source: 'google', places: [{ google_place_id: 'resolved', ...AT_44_M }] });
-    const svc = placesWith({ getMapsKey: () => 'key', searchPlaces, getPlacePhoto: vi.fn(async () => ({ photoUrl: null })) } as never);
-    expect(svc.enrichUnlinkedPlaces(String(trip.id), user.id)).toBe(1);
-    await vi.waitFor(() => {
-      const got = testDb.prepare('SELECT google_place_id FROM places WHERE id = ?').get(place.id) as { google_place_id: string | null };
-      expect(got.google_place_id).toBe('resolved');
-    });
+  it('FORK-ENRICH-015: a reverse lookup that fails or knows nothing leaves the place unmatched', async () => {
+    const down = fakeMaps([], async () => Promise.reject(new Error('nominatim down')));
+    await expect(findEnrichmentMatch(down.maps, 7, { name: 'Museum', ...target })).resolves.toBeNull();
+    const unknown = fakeMaps([], noName);
+    expect(await findEnrichmentMatch(unknown.maps, 7, { name: 'Museum', ...target })).toBeNull();
+    expect(unknown.searchPlaces).toHaveBeenCalledTimes(2); // no address, and nothing to search by
   });
 });
 
-describe('POST /api/trips/:tripId/places/enrich', () => {
-  const user = { id: 1, role: 'user' } as User;
-  const storage = {} as StorageService;
-  function controller(o: Partial<Record<'verifyTripAccess' | 'canEdit' | 'enrichUnlinkedPlaces', unknown>>) {
-    const places = {
-      verifyTripAccess: vi.fn().mockReturnValue({ user_id: 1 }),
-      canEdit: vi.fn().mockReturnValue(true),
-      enrichUnlinkedPlaces: vi.fn().mockReturnValue(3),
-      ...o,
-    } as unknown as PlacesService;
-    return new PlacesController(places, new RuntimeEnvService(), storage);
-  }
-  function thrown(fn: () => unknown) {
-    try { fn(); } catch (err) {
-      expect(err).toBeInstanceOf(HttpException);
-      return { status: (err as HttpException).getStatus(), body: (err as HttpException).getResponse() };
-    }
-    throw new Error('expected throw');
-  }
+describe('unlinkedPlaces', () => {
+  it('FORK-ENRICH-016: takes the points with no Google identity, never tracks, linked or coordinate-less places', () => {
+    const row = (id: number, over: Partial<PlaceRow>) =>
+      ({ id, name: `P${id}`, lat: 1, lng: 2, google_place_id: null, route_geometry: null, ...over }) as PlaceRow;
+    const rows = [
+      row(1, {}),
+      row(2, { google_place_id: 'ChIJ' }),
+      row(3, { route_geometry: '[[1,2],[3,4]]' }),
+      row(4, { lat: null }),
+      row(5, { google_place_id: '' }),
+      row(6, { lat: 0, lng: 0 }),
+    ];
+    expect(unlinkedPlaces(rows).map((p) => p.id)).toEqual([1, 5, 6]);
+  });
+});
 
-  it('FORK-ENRICH-019: 404 for a trip the caller cannot see, 403 without edit rights', () => {
-    expect(thrown(() => controller({ verifyTripAccess: vi.fn().mockReturnValue(null) }).enrich(user, '5'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
-    const enrichUnlinkedPlaces = vi.fn();
-    expect(thrown(() => controller({ canEdit: vi.fn().mockReturnValue(false), enrichUnlinkedPlaces }).enrich(user, '5'))).toEqual({ status: 403, body: { error: 'No permission' } });
-    expect(enrichUnlinkedPlaces).not.toHaveBeenCalled();
+describe('through the places module', () => {
+  const db = createSnapshotTestDb();
+  const maps = {
+    getMapsKey: vi.fn(async (): Promise<string | null> => 'key'),
+    searchPlaces: vi.fn(async () => ({ source: 'google', places: [] as Record<string, unknown>[] })),
+    reverseGeocode: vi.fn(async () => ({ name: null, address: null })),
+    getPlacePhoto: vi.fn(async () => ({ photoUrl: null, attribution: null })),
+  };
+  let t: TestModule;
+  const orm = () => t.get(MikroORM);
+
+  beforeAll(async () => {
+    t = await createTestModule({ db, imports: [PlacesModule], overrides: [{ provide: MapsService, useValue: maps }] });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    maps.getMapsKey.mockImplementation(async () => 'key');
+  });
+  afterAll(async () => {
+    await t.close();
+    db.close();
   });
 
-  it('FORK-ENRICH-020: 400 rather than a count of places nothing will happen to when no key is set', () => {
-    expect(thrown(() => controller({ enrichUnlinkedPlaces: vi.fn().mockReturnValue(null) }).enrich(user, '5'))).toEqual({
-      status: 400, body: { error: 'A Google Maps API key is required to enrich places' },
+  async function seed() {
+    const { user } = await makeUser(orm());
+    const trip = await makeTrip(orm(), user.id);
+    return { user, trip };
+  }
+
+  it('FORK-ENRICH-017: the pass keeps the customer id the search carried, next to the place id', async () => {
+    const { user, trip } = await seed();
+    const place = await makePlace(orm(), trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 });
+    maps.searchPlaces.mockResolvedValueOnce({
+      source: 'google',
+      places: [hit('ChIJbar', 'Bar', 48.8501, 2.35, { google_cid: '123456789' })],
+    });
+
+    await t
+      .get(PlacesService)
+      .enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Bar', lat: 48.85, lng: 2.35 }]);
+
+    expect(await findRow(orm(), Places, { id: place.id })).toMatchObject({
+      google_place_id: 'ChIJbar',
+      google_cid: '123456789',
     });
   });
 
-  it('FORK-ENRICH-021: answers with how many places were queued', () => {
-    const enrichUnlinkedPlaces = vi.fn().mockReturnValue(3);
-    expect(controller({ enrichUnlinkedPlaces }).enrich(user, '5')).toEqual({ enriched: 3, message: '3 places queued for enrichment' });
-    expect(enrichUnlinkedPlaces).toHaveBeenCalledWith('5', 1);
+  it('FORK-ENRICH-018: a customer id already stored is never overwritten', async () => {
+    const { user, trip } = await seed();
+    const place = await makePlace(orm(), trip.id, { name: 'Bar', lat: 48.85, lng: 2.35, google_cid: '111' });
+    maps.searchPlaces.mockResolvedValueOnce({
+      source: 'google',
+      places: [hit('ChIJbar', 'Bar', 48.8501, 2.35, { google_cid: '999' })],
+    });
+
+    await t
+      .get(PlacesService)
+      .enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Bar', lat: 48.85, lng: 2.35 }]);
+
+    expect(await findRow(orm(), Places, { id: place.id })).toMatchObject({
+      google_place_id: 'ChIJbar',
+      google_cid: '111',
+    });
+  });
+
+  it('FORK-ENRICH-019: the manual pass refuses without a Google key, before anything is searched', async () => {
+    const { user, trip } = await seed();
+    maps.getMapsKey.mockImplementation(async () => null);
+    const queue = vi.spyOn(t.get(PlacesService), 'enrichImportedPlaces');
+
+    const refusal = await t
+      .get(PlacesEnrichService)
+      .enrichUnlinkedPlaces(String(trip.id), user.id)
+      .catch((e: unknown) => e);
+
+    expect(refusal).toBeInstanceOf(DomainError);
+    expect((refusal as DomainError).getStatus()).toBe(400);
+    expect((refusal as DomainError).getResponse()).toEqual({
+      error: 'A Google Maps API key is required to enrich places',
+    });
+    expect(queue).not.toHaveBeenCalled();
+  });
+
+  it("FORK-ENRICH-020: with a key it queues the trip's unlinked points and says how many", async () => {
+    const { user, trip } = await seed();
+    const other = await seed();
+    const open = await makePlace(orm(), trip.id, { name: 'Open', lat: 1, lng: 2 });
+    await makePlace(orm(), trip.id, { name: 'Linked', google_place_id: 'ChIJx' });
+    await makePlace(orm(), trip.id, { name: 'Track', route_geometry: '[[1,2],[3,4]]' });
+    await makePlace(orm(), trip.id, { name: 'Nowhere', lat: null, lng: null });
+    await makePlace(orm(), other.trip.id, { name: 'Not this trip' });
+    const queue = vi.spyOn(t.get(PlacesService), 'enrichImportedPlaces').mockResolvedValue();
+
+    expect(await t.get(PlacesEnrichService).enrichUnlinkedPlaces(String(trip.id), user.id)).toBe(1);
+
+    expect(queue).toHaveBeenCalledWith(String(trip.id), user.id, [
+      expect.objectContaining({ id: open.id, name: 'Open' }),
+    ]);
+  });
+
+  it('FORK-ENRICH-021: a trip with nothing to enrich queues nothing and says so', async () => {
+    const { user, trip } = await seed();
+    const queue = vi.spyOn(t.get(PlacesService), 'enrichImportedPlaces').mockResolvedValue();
+    expect(await t.get(PlacesEnrichService).enrichUnlinkedPlaces(String(trip.id), user.id)).toBe(0);
+    expect(queue).toHaveBeenCalledWith(String(trip.id), user.id, []);
   });
 });

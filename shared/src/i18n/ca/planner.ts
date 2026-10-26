@@ -4,7 +4,7 @@ const planner: TranslationStrings = {
   'planner.places': 'Llocs',
   'planner.bookings': 'Reserves',
   'planner.packingList': "Llista d'equipatge",
-  'planner.documents': 'Documents',
+  'planner.documents': 'Documents', // same-as-en
   'planner.dayPlan': 'Pla per dies',
   'planner.reservations': 'Reserves',
   'planner.minTwoPlaces': 'Calen almenys 2 llocs amb coordenades',
@@ -21,10 +21,12 @@ const planner: TranslationStrings = {
   'planner.days': 'Dies',
   'planner.allPlaces': 'Tots els llocs',
   'planner.totalPlaces': '{n} llocs en total',
+  'planner.totalPlaces.one': '{n} lloc en total',
   'planner.noDaysPlanned': 'Encara no hi ha dies planificats',
   'planner.editTrip': 'Edita el viatge →',
   'planner.placeOne': '1 lloc',
   'planner.placeN': '{n} llocs',
+  'planner.placeN.one': '{n} lloc',
   'planner.addNote': 'Afegeix una nota',
   'planner.noEntries': 'No hi ha entrades per a aquest dia',
   'planner.addPlace': 'Afegeix un lloc / activitat',
@@ -60,12 +62,15 @@ const planner: TranslationStrings = {
   'planner.noDays': 'Encara no hi ha dies',
   'planner.editTripToAddDays': 'Edita el viatge per afegir dies',
   'planner.dayCount': '{n} dies',
+  'planner.dayCount.one': '{n} dia',
   'planner.clickToUnlock': 'Fes clic per desbloquejar',
   'planner.keepPosition': "Mantén la posició durant l'optimització de ruta",
   'planner.dayDetails': 'Detalls del dia',
   'planner.dayN': 'Dia {n}',
   'planner.exportAllStops': 'Obre totes les parades a Google Maps',
   'planner.exportAllStopsTruncated':
+    'Google Maps admet com a màxim {max} parades, així que només s’han obert les primeres {max} de {count}.',
+  'planner.exportAllStopsTruncated.one':
     'Google Maps admet com a màxim {max} parades, així que només s’han obert les primeres {max} de {count}.',
 };
 export default planner;

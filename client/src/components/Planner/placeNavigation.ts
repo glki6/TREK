@@ -5,21 +5,42 @@ import { getCoMapsUrlForPlace } from './placeCoMaps'
 import { getGoogleMapsUrlForPlace } from './placeGoogleMaps'
 import { getGoogleMapsAppUrlForPlace, offersGoogleMapsApp, openMapsFallback } from './placeGoogleApp'
 import { getOpenStreetMapUrlForPlace } from './placeOpenStreetMap'
+import { useSettingsStore } from '../../store/settingsStore'
+import { isInstalledApp } from '../../utils/resumeRoute'
 
 type PlaceLike = Pick<Place | AssignmentPlace, 'name' | 'address' | 'lat' | 'lng' | 'google_place_id' | 'google_ftid' | 'google_cid'>
 
-export type NavigationAppId = 'google' | 'google-app' | 'waze' | 'apple' | 'osm' | 'comaps' | 'amap'
+export type NavigationAppId = 'google' | 'google-app' | 'waze' | 'apple' | 'osm' | 'comaps' | 'amap' | 'geo'
 
 export interface NavigationTarget {
   id: NavigationAppId
   /** Product name. Not translated in any language, so it carries no i18n key. */
   label: string
+  /** Set for the one entry that is no product (#1406): its label is this key's translation. */
+  labelKey?: string
   url: string
   /**
    * Fork: set when `url` is a native app scheme (e.g. `comgooglemaps://`). If the
    * app does not take over, this HTTPS link is opened instead.
    */
   fallbackUrl?: string
+}
+
+type Translate = (key: string) => string
+
+/** What a target is called on screen: its product name, or the translated name of the generic entry. */
+export function navigationTargetLabel(target: NavigationTarget, t: Translate): string {
+  return target.labelKey ? t(target.labelKey) : target.label
+}
+
+/**
+ * Whether the generic `geo:` link is worth offering (#1406). Android hands it to
+ * whichever map app the traveller installed (OsmAnd, Organic Maps, Magic Earth…);
+ * desktop browsers and iOS have no handler, so there the entry would lead nowhere.
+ */
+export function showsGeoUri(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent)
 }
 
 /**
@@ -65,6 +86,51 @@ export function showsAppleMaps(): boolean {
  * navigation from there is one tap.
  */
 export function getNavigationTargets(
+  place: PlaceLike | null | undefined,
+  detailsUrl?: string | null,
+): NavigationTarget[] {
+  return withPreferredApp(allNavigationTargets(place, detailsUrl), useSettingsStore.getState().settings.preferred_nav_app)
+}
+
+/**
+ * The traveller's preferred map app (#2423), when they picked one in settings:
+ * just that target, so every navigate button opens it straight away. Unset, or
+ * an app this place cannot be opened in (Amap outside China, Waze without
+ * coordinates), keeps the full list.
+ */
+export function withPreferredApp(targets: NavigationTarget[], preferred: string | null | undefined): NavigationTarget[] {
+  if (!preferred) return targets
+  const match = targets.find(target => target.id === preferred)
+  return match ? [match] : targets
+}
+
+/**
+ * The apps the settings picker offers (#2423), narrowed by platform the same
+ * way the list on a place is: Apple Maps not on Android, the generic geo: entry
+ * only there. Amap stays in, it is simply skipped for places outside China.
+ */
+export function navigationAppChoices(): { id: NavigationAppId; label: string; labelKey?: string }[] {
+  const choices: { id: NavigationAppId; label: string; labelKey?: string }[] = [
+    { id: 'google', label: 'Google Maps' },
+    // Fork: where the app's own scheme exists (iOS), it can be the app every button opens.
+    ...(offersGoogleMapsApp() ? [{ id: 'google-app' as const, label: 'Google Maps app' }] : []),
+    { id: 'waze', label: 'Waze' },
+  ]
+  if (showsAppleMaps()) choices.push({ id: 'apple', label: 'Apple Maps' })
+  choices.push({ id: 'osm', label: 'OpenStreetMap' }, { id: 'comaps', label: 'CoMaps' }, { id: 'amap', label: '高德地图' })
+  if (showsGeoUri()) choices.push({ id: 'geo', label: 'geo:', labelKey: 'inspector.otherMapApp' })
+  return choices
+}
+
+/** The settings options (#2423): "ask every time" first, then each app from navigationAppChoices. */
+export function preferredNavAppOptions(t: Translate): { value: string; label: string }[] {
+  return [
+    { value: '', label: t('settings.preferredNavAppAsk') },
+    ...navigationAppChoices().map(app => ({ value: app.id, label: app.labelKey ? t(app.labelKey) : app.label })),
+  ]
+}
+
+function allNavigationTargets(
   place: PlaceLike | null | undefined,
   detailsUrl?: string | null,
 ): NavigationTarget[] {
@@ -117,6 +183,16 @@ export function getNavigationTargets(
     if (amapUrl) targets.push({ id: 'amap', label: '高德地图', url: amapUrl })
   }
 
+  if (place.lat != null && place.lng != null && showsGeoUri()) {
+    const label = name ? `(${encodeURIComponent(name)})` : ''
+    targets.push({
+      id: 'geo',
+      label: 'geo:',
+      labelKey: 'inspector.otherMapApp',
+      url: `geo:${place.lat},${place.lng}?q=${place.lat},${place.lng}${label}`,
+    })
+  }
+
   return targets
 }
 
@@ -137,16 +213,7 @@ export function openNavigationTarget(target: NavigationTarget): void {
     openMapsFallback({ native: target.url, https: target.fallbackUrl })
     return
   }
-  if (isInstalledApp()) window.location.href = target.url
+  // A geo: link is handed to the system, which asks for the app; a new tab would stay blank.
+  if (target.id === 'geo' || isInstalledApp()) window.location.href = target.url
   else window.open(target.url, '_blank', 'noopener,noreferrer')
-}
-
-/** True in a display mode that has no tab strip to close a stray window from. */
-function isInstalledApp(): boolean {
-  if (typeof window === 'undefined') return false
-  const standalone = ['standalone', 'fullscreen', 'minimal-ui'].some(
-    mode => window.matchMedia?.(`(display-mode: ${mode})`).matches,
-  )
-  // iOS predates the display-mode query for home-screen apps.
-  return standalone || (window.navigator as { standalone?: boolean }).standalone === true
 }

@@ -1,4 +1,4 @@
-import type { AssignmentPlace, Place } from '../../types'
+import type { AssignmentPlace, Place } from '../../types';
 
 /**
  * Fork-only: the Google Maps customer id (CID) of a place, and the link built on it.
@@ -12,27 +12,27 @@ import type { AssignmentPlace, Place } from '../../types'
  * A place with neither keeps upstream's link, ftid first.
  */
 
-type PlaceLike = Pick<Place | AssignmentPlace, 'google_cid'>
+type PlaceLike = Pick<Place | AssignmentPlace, 'google_cid'>;
 
 /** An unsigned 64-bit integer in decimal. */
-const CID_RE = /^\d{1,20}$/
+const CID_RE = /^\d{1,20}$/;
 
 function cidFromUrl(url: string): string | null {
-  let cid: string | null
+  let cid: string | null;
   try {
-    cid = new URL(url).searchParams.get('cid')
+    cid = new URL(url).searchParams.get('cid');
   } catch {
-    return null // not a URL at all, so there is no id in it
+    return null; // not a URL at all, so there is no id in it
   }
-  return cid && CID_RE.test(cid) ? cid : null
+  return cid && CID_RE.test(cid) ? cid : null;
 }
 
 export function googleCidOf(place: PlaceLike, detailsUrl?: string | null): string | null {
-  const stored = place.google_cid?.trim()
-  if (stored && CID_RE.test(stored)) return stored
-  return detailsUrl ? cidFromUrl(detailsUrl) : null
+  const stored = place.google_cid?.trim();
+  if (stored && CID_RE.test(stored)) return stored;
+  return detailsUrl ? cidFromUrl(detailsUrl) : null;
 }
 
 export function googleMapsCidUrl(cid: string): string {
-  return `https://maps.google.com/?cid=${cid}`
+  return `https://maps.google.com/?cid=${cid}`;
 }

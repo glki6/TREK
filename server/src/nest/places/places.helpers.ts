@@ -1,52 +1,23 @@
-import { XMLParser } from 'fast-xml-parser';
-import unzipper from 'unzipper';
-import {
-  externalIdsOf,
-  normalizePlaceName,
-  placeMatchStrategies,
-  type PlaceMatchCandidate,
-} from '@trek/shared';
-import type { Place } from '../../types';
-import type { PlaceWithTags } from '../database/database.service';
-import type { KmlImportSummary } from './kml-import.helpers';
-import type { PlacePhotoCacheService } from '../place-photos/place-photo-cache.service';
+import type { PlaceWithTagsRow as PlaceWithTags } from '../../db/repositories/Places.repository';
 import { haversineMetres } from '../common/geo';
+import type { KmlImportSummary } from '../place-import/place-import.types';
+import type { PlacePhotoCacheService } from '../place-photos/place-photo-cache.service';
+import { externalIdsOf, normalizePlaceName, placeMatchStrategies, type PlaceMatchCandidate } from '@trek/shared';
 
 /**
  * Pure helpers and module-scope constants of the places domain, moved verbatim
  * out of the legacy services/placeService.ts when it went DI-native. Same
  * split as maps.helpers.ts / transit.helpers.ts / files.constants.ts: nothing
  * here touches the DB, so it stays plain exports rather than becoming methods
- * on PlacesService — which also keeps the frozen-at-import XML parsers a
- * single shared instance and lets the KMZ unpacker be unit-tested on its own.
+ * on PlacesService. Reading files and shared lists (the XML parsers, the KMZ
+ * unpacker, the list fetchers) lives in place-import/.
  */
-
-const gpxParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  isArray: (name) => ['wpt', 'trkpt', 'rtept', 'trk', 'trkseg', 'rte'].includes(name),
-});
-
-const kmlParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  removeNSPrefix: true,
-  isArray: (name) => ['Placemark', 'Folder', 'Document'].includes(name),
-  // Treat <description> as raw text so mixed-content HTML (e.g. <br/>, <i>)
-  // is returned as a string instead of a parsed object.
-  stopNodes: ['*.description'],
-});
-
-export { gpxParser, kmlParser };
-
-export const KMZ_DECOMPRESSED_SIZE_LIMIT = 50 * 1024 * 1024; // 50 MB
 
 // Re-exported so the importers that already read these from here keep working,
 // while the values themselves live in @trek/shared with the rule that uses them.
 export { COORD_DEDUP_TOLERANCE, externalIdsOf } from '@trek/shared';
 
-/** Cap on a provider list-import response body — the payload is attacker-influenced via the list id. */
-export const MAX_LIST_RESPONSE_BYTES = 8 * 1024 * 1024; // 8 MB
+export type { GpxImportOptions, KmlImportOptions } from '../place-import/place-import.types';
 
 /**
  * Escape the LIKE metacharacters in a user-supplied search term so `%` and `_`
@@ -62,12 +33,6 @@ export interface ListImportOptions {
   enrich?: boolean;
   userId?: number;
   lang?: string;
-}
-
-export interface PlaceWithCategory extends Place {
-  category_name: string | null;
-  category_color: string | null;
-  category_icon: string | null;
 }
 
 export interface PlaceImportResult {
@@ -88,34 +53,30 @@ export interface ListImportResult {
   skipped: number;
 }
 
-export interface ListImportError {
-  error: string;
-  status: number;
-}
-
-export interface GpxImportOptions {
-  importWaypoints?: boolean;
-  importRoutes?: boolean;
-  importTracks?: boolean;
-  /** Source filename used to name unnamed routes/tracks (keeps multiple imports distinct). */
-  defaultName?: string;
-}
-
-export interface KmlImportOptions {
-  importPoints?: boolean;
-  importPaths?: boolean;
-}
-
 // Reclaim a deleted place's cached marker photo if nothing else references it.
 // The cache key is the Google place_id, or — for coordinate-only places — the
 // pseudo-id embedded in the stored proxy URL (/api/maps/place-photo/{id}/bytes).
-export async function reclaimPhotoCache(cache: PlacePhotoCacheService, googlePlaceId: string | null, imageUrl: string | null): Promise<void> {
+export async function reclaimPhotoCache(
+  cache: PlacePhotoCacheService,
+  googlePlaceId: string | null,
+  imageUrl: string | null,
+): Promise<void> {
   const candidates = new Set<string>();
   if (googlePlaceId) candidates.add(googlePlaceId);
   const m = imageUrl?.match(/^\/api\/maps\/place-photo\/(.+)\/bytes$/);
-  if (m) { try { candidates.add(decodeURIComponent(m[1])); } catch { /* malformed url */ } }
+  if (m) {
+    try {
+      candidates.add(decodeURIComponent(m[1]));
+    } catch {
+      /* malformed url */
+    }
+  }
   for (const id of candidates) {
-    try { await cache.removeIfUnreferenced(id); } catch { /* best-effort */ }
+    try {
+      await cache.removeIfUnreferenced(id);
+    } catch {
+      /* best-effort */
+    }
   }
 }
 
@@ -152,14 +113,38 @@ export function isPlaceDuplicate(candidate: PlaceMatchCandidate, dedup: DedupSet
     } else if (
       dedup.coords.some(
         (c) =>
-          Math.abs(c.lat - strategy.lat) <= strategy.tolerance &&
-          Math.abs(c.lng - strategy.lng) <= strategy.tolerance,
+          Math.abs(c.lat - strategy.lat) <= strategy.tolerance && Math.abs(c.lng - strategy.lng) <= strategy.tolerance,
       )
     ) {
       return true;
     }
   }
   return false;
+}
+
+/**
+ * The lookup of the places already in a trip: names lowercased and trimmed,
+ * coordinates only for unnamed rows, provider ids for every row. Provider ids
+ * are collected named or not: they are what lets a renamed place still be
+ * recognised on a re-import (#1550).
+ */
+export function dedupSetOf(
+  rows: ReadonlyArray<
+    { name: string | null; lat: number | null; lng: number | null } & Parameters<typeof externalIdsOf>[0]
+  >,
+): DedupSet {
+  const names = new Set<string>();
+  const coords: Array<{ lat: number; lng: number }> = [];
+  const externalIds = new Set<string>();
+  for (const row of rows) {
+    for (const id of externalIdsOf(row)) externalIds.add(id);
+    if (row.name) {
+      names.add(row.name.trim().toLowerCase());
+    } else if (row.lat != null && row.lng != null) {
+      coords.push({ lat: row.lat, lng: row.lng });
+    }
+  }
+  return { names, coords, externalIds };
 }
 
 /** Record a newly inserted place so subsequent candidates in the same batch are checked against it. */
@@ -171,41 +156,6 @@ export function trackInsertedInDedupSet(place: PlaceMatchCandidate, dedup: Dedup
   } else if (place.lat != null && place.lng != null) {
     dedup.coords.push({ lat: place.lat, lng: place.lng });
   }
-}
-
-// ---------------------------------------------------------------------------
-// Google Maps list id parsing
-// ---------------------------------------------------------------------------
-
-export function googleMapsHexId(value: unknown): string | null {
-  if (typeof value !== 'string' && typeof value !== 'number') return null;
-  const raw = String(value).trim();
-  if (/^0x[0-9a-f]+$/i.test(raw)) return raw.toLowerCase();
-  if (!/^-?\d+$/.test(raw)) return null;
-  try {
-    const parsed = BigInt(raw);
-    const unsigned = parsed < 0n ? (1n << 64n) + parsed : parsed;
-    return `0x${unsigned.toString(16)}`;
-  } catch {
-    return null;
-  }
-}
-
-export function googleMapsFeatureIdFromItem(item: unknown): string | null {
-  if (!Array.isArray(item)) return null;
-  const candidates = [
-    Array.isArray(item[1]) ? item[1][6] : null,
-    Array.isArray(item[7]) ? item[7][1] : null,
-  ];
-
-  for (const ids of candidates) {
-    if (!Array.isArray(ids) || ids.length < 2) continue;
-    const first = googleMapsHexId(ids[0]);
-    const second = googleMapsHexId(ids[1]);
-    if (first && second) return `${first}:${second}`;
-  }
-
-  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,51 +191,19 @@ export const ENRICH_CONCURRENCY = 3;
 export const ADDRESS_BACKFILL_MAX_PLACES = 250;
 
 /**
- * Words that name a natural/geographic feature (larger extent → wider tolerance).
- * Whole words only: as substrings they caught "Cambridge" (bridge), "Lakeside Inn"
- * (lake) and "Compass Café" (pass), and widened the match for ordinary venues.
- */
-const NATURAL_FEATURE_RE =
-  /\b(?:lakes?|glaciers?|falls|waterfalls?|canyons?|peaks?|mountains?|rivers?|cliffs?|bridges?|viewpoints?|trails?|pass(?:es)?|plateaus?|plateaux)\b/i;
-export function isNaturalFeature(name: string): boolean {
-  return NATURAL_FEATURE_RE.test(name);
-}
-
-/**
- * How far an exact-name hit may sit from a natural feature's imported point.
- *
- * A pin saved on a lake or a peak is often a viewpoint or a car park kilometres from
- * the centre Google stores, so there the name is better evidence than the distance.
- * But a name alone is not enough: many lakes and falls share one, and a search with
- * no location bias ranks the famous namesake first, so without a bound "Mirror Lake"
- * in Oregon became the one in Yosemite.
- */
-export const EXACT_NAME_MAX_METERS = 50_000;
-
-const sameName = (a: unknown, b: string): boolean =>
-  typeof a === 'string' && a.trim().toLowerCase() === b.trim().toLowerCase();
-
-/**
  * Pick the search result that is the same place as the import: it must be a
- * Google result (have a google_place_id) with coordinates within `maxMeters`
- * (MATCH_RADIUS_METERS by default) of the imported point. Returns the closest
- * such hit, or null when nothing is close enough — in which case the place is
- * left as imported rather than risking a wrong-place overwrite (common-name /
- * romanized lists).
- *
- * `exactName` is for natural features only: a candidate whose name equals it
- * (case-insensitive) is accepted up to EXACT_NAME_MAX_METERS away and wins over
- * a nearer candidate with another name — the lodge beside a lake is closer to a
- * shoreline pin than the lake's own centre. Exported for unit testing.
+ * Google result (have a google_place_id) with coordinates within
+ * MATCH_RADIUS_METERS of the imported point. Returns the closest such hit, or
+ * null when nothing is close enough — in which case the place is left as
+ * imported rather than risking a wrong-place overwrite (common-name / romanized
+ * lists). Exported for unit testing.
  */
 export function pickEnrichmentMatch(
   candidates: Record<string, unknown>[],
   target: { lat: number; lng: number },
   maxMeters: number = MATCH_RADIUS_METERS,
-  exactName?: string,
 ): Record<string, unknown> | null {
   let best: { c: Record<string, unknown>; dist: number } | null = null;
-  let bestByName: { c: Record<string, unknown>; dist: number } | null = null;
   for (const c of candidates || []) {
     const gpid = c.google_place_id;
     const lat = c.lat;
@@ -293,13 +211,10 @@ export function pickEnrichmentMatch(
     if (typeof gpid !== 'string' || !gpid) continue;
     if (typeof lat !== 'number' || typeof lng !== 'number') continue;
     const dist = haversineMetres(target.lat, target.lng, lat, lng);
-    if (exactName && sameName(c.name, exactName) && dist <= EXACT_NAME_MAX_METERS) {
-      if (!bestByName || dist < bestByName.dist) bestByName = { c, dist };
-    }
     if (dist > maxMeters) continue;
     if (!best || dist < best.dist) best = { c, dist };
   }
-  return bestByName?.c ?? best?.c ?? null;
+  return best?.c ?? null;
 }
 
 export async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
@@ -317,30 +232,24 @@ export async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item
 export const trimOrNull = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
 // ---------------------------------------------------------------------------
-// KMZ unpacking
+// KML folder → trip category
 // ---------------------------------------------------------------------------
 
-export async function unpackKmzToKml(
-  kmzBuffer: Buffer,
-  decompressedSizeLimit = KMZ_DECOMPRESSED_SIZE_LIMIT,
-): Promise<Buffer> {
-  let zip;
-  try {
-    zip = await unzipper.Open.buffer(kmzBuffer);
-  } catch {
-    throw new Error('Invalid KMZ archive.');
+export function buildCategoryNameLookup(categories: { id: number; name: string }[]): Map<string, number> {
+  const lookup = new Map<string, number>();
+  for (const category of categories) {
+    const normalizedName = category.name.trim().toLowerCase();
+    if (!normalizedName) continue;
+    if (!lookup.has(normalizedName)) {
+      lookup.set(normalizedName, category.id);
+    }
   }
+  return lookup;
+}
 
-  const kmlEntries = zip.files.filter((entry) => !entry.path.endsWith('/') && entry.path.toLowerCase().endsWith('.kml'));
-  if (kmlEntries.length === 0) {
-    throw new Error('KMZ archive does not contain a KML file.');
-  }
-
-  const preferredEntry = kmlEntries.find((entry) => entry.path.toLowerCase().endsWith('doc.kml')) || kmlEntries[0];
-
-  if (preferredEntry.uncompressedSize > decompressedSizeLimit) {
-    throw new Error('KMZ archive exceeds the maximum allowed decompressed size.');
-  }
-
-  return preferredEntry.buffer();
+export function resolveCategoryIdForFolder(folderName: string | null, lookup: Map<string, number>): number | null {
+  if (!folderName) return null;
+  const normalizedFolder = folderName.trim().toLowerCase();
+  if (!normalizedFolder) return null;
+  return lookup.get(normalizedFolder) ?? null;
 }

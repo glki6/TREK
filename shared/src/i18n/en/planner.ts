@@ -21,10 +21,12 @@ const planner: TranslationStrings = {
   'planner.days': 'Days',
   'planner.allPlaces': 'All Places',
   'planner.totalPlaces': '{n} places total',
+  'planner.totalPlaces.one': '{n} place total',
   'planner.noDaysPlanned': 'No days planned yet',
   'planner.editTrip': 'Edit trip →',
   'planner.placeOne': '1 place',
   'planner.placeN': '{n} places',
+  'planner.placeN.one': '{n} place',
   'planner.addNote': 'Add note',
   'planner.noEntries': 'No entries for this day',
   'planner.addPlace': 'Add place/activity',
@@ -59,12 +61,15 @@ const planner: TranslationStrings = {
   'planner.noDays': 'No days yet',
   'planner.editTripToAddDays': 'Edit trip to add days',
   'planner.dayCount': '{n} Days',
+  'planner.dayCount.one': '{n} Day',
   'planner.clickToUnlock': 'Click to unlock',
   'planner.keepPosition': 'Keep position during route optimization',
   'planner.dayDetails': 'Day details',
   'planner.dayN': 'Day {n}',
   'planner.exportAllStops': 'Open all stops in Google Maps',
   'planner.exportAllStopsTruncated':
+    'Google Maps takes at most {max} stops, so only the first {max} of {count} were opened.',
+  'planner.exportAllStopsTruncated.one':
     'Google Maps takes at most {max} stops, so only the first {max} of {count} were opened.',
 };
 export default planner;

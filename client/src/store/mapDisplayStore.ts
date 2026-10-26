@@ -1,5 +1,5 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 /**
  * Fork-only: how the trip map draws its stops — coloured by day, and grouped into
@@ -8,11 +8,11 @@ import { persist } from 'zustand/middleware'
  */
 interface MapDisplayState {
   /** Colour every stop, its route and its day by the day it belongs to. */
-  dayColors: boolean
+  dayColors: boolean;
   /** Draw every marker on its own instead of grouping nearby ones into a bubble. */
-  noCluster: boolean
-  toggleDayColors: () => void
-  toggleClustering: () => void
+  noCluster: boolean;
+  toggleDayColors: () => void;
+  toggleClustering: () => void;
 }
 
 export const useMapDisplayStore = create<MapDisplayState>()(
@@ -26,6 +26,6 @@ export const useMapDisplayStore = create<MapDisplayState>()(
     {
       name: 'trek.fork.map-display',
       partialize: (s) => ({ dayColors: s.dayColors, noCluster: s.noCluster }),
-    },
-  ),
-)
+    }
+  )
+);

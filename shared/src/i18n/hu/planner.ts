@@ -21,10 +21,12 @@ const planner: TranslationStrings = {
   'planner.days': 'nap',
   'planner.allPlaces': 'Összes hely',
   'planner.totalPlaces': 'Összesen {n} hely',
+  'planner.totalPlaces.one': 'Összesen {n} hely',
   'planner.noDaysPlanned': 'Még nincsenek napok tervezve',
   'planner.editTrip': 'Utazás szerkesztése →',
   'planner.placeOne': '1 hely',
   'planner.placeN': '{n} hely',
+  'planner.placeN.one': '{n} hely',
   'planner.addNote': 'Jegyzet hozzáadása',
   'planner.noEntries': 'Nincsenek bejegyzések erre a napra',
   'planner.addPlace': 'Hely/tevékenység hozzáadása',
@@ -59,12 +61,15 @@ const planner: TranslationStrings = {
   'planner.noDays': 'Még nincsenek napok',
   'planner.editTripToAddDays': 'Szerkeszd az utazást napok hozzáadásához',
   'planner.dayCount': '{n} nap',
+  'planner.dayCount.one': '{n} nap',
   'planner.clickToUnlock': 'Kattints a feloldáshoz',
   'planner.keepPosition': 'Pozíció megtartása útvonal-optimalizálás során',
   'planner.dayDetails': 'Nap részletei',
   'planner.dayN': '{n}. nap',
   'planner.exportAllStops': 'Az összes megálló megnyitása a Google Térképben',
   'planner.exportAllStopsTruncated':
+    'A Google Térkép legfeljebb {max} megállót fogad, ezért csak az első {max} nyílt meg a(z) {count} közül.',
+  'planner.exportAllStopsTruncated.one':
     'A Google Térkép legfeljebb {max} megállót fogad, ezért csak az első {max} nyílt meg a(z) {count} közül.',
 };
 export default planner;

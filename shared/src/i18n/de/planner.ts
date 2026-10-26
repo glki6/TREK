@@ -21,10 +21,12 @@ const planner: TranslationStrings = {
   'planner.days': 'Tage',
   'planner.allPlaces': 'Alle Orte',
   'planner.totalPlaces': '{n} Orte gesamt',
+  'planner.totalPlaces.one': '{n} Ort gesamt',
   'planner.noDaysPlanned': 'Noch keine Tage geplant',
   'planner.editTrip': 'Reise bearbeiten →',
   'planner.placeOne': '1 Ort',
   'planner.placeN': '{n} Orte',
+  'planner.placeN.one': '{n} Ort',
   'planner.addNote': 'Notiz hinzufügen',
   'planner.noEntries': 'Keine Einträge für diesen Tag',
   'planner.addPlace': 'Ort/Aktivität hinzufügen',
@@ -44,7 +46,7 @@ const planner: TranslationStrings = {
   'planner.new': 'Neu',
   'planner.addToDay': '+ Tag',
   'planner.calculating': 'Berechne…',
-  'planner.route': 'Route',
+  'planner.route': 'Route', // same-as-en
   'planner.optimize': 'Optimieren',
   'planner.openGoogleMaps': 'In Google Maps öffnen',
   'planner.openCoMaps': 'In CoMaps öffnen',
@@ -59,12 +61,15 @@ const planner: TranslationStrings = {
   'planner.noDays': 'Noch keine Tage',
   'planner.editTripToAddDays': 'Reise bearbeiten um Tage hinzuzufügen',
   'planner.dayCount': '{n} Tage',
+  'planner.dayCount.one': '{n} Tag',
   'planner.clickToUnlock': 'Klicken zum Entsperren',
   'planner.keepPosition': 'Position bei Routenoptimierung beibehalten',
   'planner.dayDetails': 'Tagesdetails',
   'planner.dayN': 'Tag {n}',
   'planner.exportAllStops': 'Alle Stopps in Google Maps öffnen',
   'planner.exportAllStopsTruncated':
+    'Google Maps nimmt höchstens {max} Stopps an, deshalb wurden nur die ersten {max} von {count} geöffnet.',
+  'planner.exportAllStopsTruncated.one':
     'Google Maps nimmt höchstens {max} Stopps an, deshalb wurden nur die ersten {max} von {count} geöffnet.',
 };
 export default planner;
