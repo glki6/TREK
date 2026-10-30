@@ -370,10 +370,16 @@ const aiProviderStateSchema = z.discriminatedUnion('adapter', [
     adapter: z.literal('openai-responses'),
     items: z.array(z.record(z.string(), z.unknown())),
   }),
-  // Anthropic's content blocks of an answer that searched the web, replayed with their search results.
+  // Anthropic's content blocks of an answer that searched the web or thought, replayed as they came.
   z.object({
     adapter: z.literal('anthropic-messages'),
     blocks: z.array(z.record(z.string(), z.unknown())),
+  }),
+  // Gemini's thought signature per tool call id, which its Chat Completions endpoint wants back with the call.
+  z.object({
+    adapter: z.literal('openai-chat'),
+    model: z.string(),
+    signatures: z.record(z.string(), z.string()),
   }),
 ]);
 export type AiProviderState = z.infer<typeof aiProviderStateSchema>;

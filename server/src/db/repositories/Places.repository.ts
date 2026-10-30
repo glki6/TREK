@@ -606,16 +606,15 @@ export class PlacesRepository extends TrekRepository<Places> {
    * it was.
    */
   async listDedupInputs(trip_id: string): Promise<{
-    name: string | null; lat: number | null; lng: number | null;
+    name: string | null; lat: number | null; lng: number | null; route_geometry: string | null;
     google_place_id: string | null; google_ftid: string | null; osm_id: string | null; amap_poi_id: string | null;
   }[]> {
+    // route_geometry tells a track from a pin: a track to import matches only tracks (#2810).
     return this.qb('p')
-      .select(['p.name', 'p.lat', 'p.lng', 'p.google_place_id', 'p.google_ftid', 'p.osm_id', 'p.amap_poi_id'])
+      .select(['p.name', 'p.lat', 'p.lng', 'p.route_geometry',
+        'p.google_place_id', 'p.google_ftid', 'p.osm_id', 'p.amap_poi_id'])
       .where('p.trip_id = ?', [trip_id])
-      .execute<{
-        name: string | null; lat: number | null; lng: number | null;
-        google_place_id: string | null; google_ftid: string | null; osm_id: string | null; amap_poi_id: string | null;
-      }[]>('all', false);
+      .execute<Awaited<ReturnType<PlacesRepository['listDedupInputs']>>>('all', false);
   }
 
   /**

@@ -50,16 +50,10 @@ import { pluginsApi, type PluginMapMarker, type PluginMapLayer } from '../../api
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '../../constants/mapDefaults'
 import { alongShortestArc, computeMapViewport, TILE_SIZE_GL } from '../../utils/mapViewport'
 import { selectedPlaceTarget } from './selectedPlaceTarget'
-import { PLACE_CLUSTER_CIRCLE_LAYER_ID, PLACE_CLUSTER_COUNT_LAYER_ID } from './placeClusterLayers'
-
-// Marker grouping for the GL map (#1385): MapLibre/Mapbox can't show the rich
-// HTML photo markers *and* cluster them natively, so we feed the place points
-// into a clustered GeoJSON source. The cluster bubbles render as GL circles +
-// a count label; the individual rich HTML markers are then only drawn for the
-// points the source reports as currently unclustered. Grouping is always on,
-// matching the Leaflet map's MarkerClusterGroup.
-const PLACE_CLUSTER_SOURCE_ID = 'trip-place-clusters'
-const PLACE_UNCLUSTERED_LAYER_ID = 'trip-place-unclustered-hit'
+import {
+  PLACE_CLUSTER_CIRCLE_LAYER_ID, PLACE_CLUSTER_COUNT_LAYER_ID, PLACE_CLUSTER_SOURCE_ID,
+  addPlaceClusterLayers, drawClusterBubbles, expandCluster,
+} from './placeClusterLayers'
 
 type PlaceWithCoords = Place & { lat: number; lng: number }
 
@@ -111,72 +105,6 @@ interface Props extends MapViewProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gl: any
 }
-
-/**
- * How eagerly place markers merge into a cluster.
- *
- * The overview band the Leaflet map clusters in as well (`CLUSTER_UNTIL_ZOOM` there),
- * kept as plain numbers rather than shared constants so the GL bundle does not have to
- * carry Leaflet for them. Above the cutoff supercluster hands every point back on its
- * own, and the stops that share a coordinate are folded together at the pin level
- * instead — see the reconcile below.
- */
-const CLUSTER_RADIUS = 20
-const CLUSTER_MAX_ZOOM = 8
-
-/** The cluster source and the three layers over it. Extracted so the rebuild on a mode
- *  change and the initial build cannot drift apart. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addPlaceClusterLayers(map: any): void {
-      map.addSource(PLACE_CLUSTER_SOURCE_ID, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-        cluster: true,
-        clusterRadius: CLUSTER_RADIUS,
-        clusterMaxZoom: CLUSTER_MAX_ZOOM,
-      })
-      map.addLayer({
-        id: PLACE_CLUSTER_CIRCLE_LAYER_ID,
-        type: 'circle',
-        source: PLACE_CLUSTER_SOURCE_ID,
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': '#111827',
-          'circle-opacity': 0.97,
-          'circle-radius': ['step', ['get', 'point_count'], 18, 10, 21, 50, 24],
-          'circle-stroke-width': 2.5,
-          'circle-stroke-color': 'rgba(255,255,255,0.9)',
-        },
-      })
-      map.addLayer({
-        id: PLACE_CLUSTER_COUNT_LAYER_ID,
-        type: 'symbol',
-        source: PLACE_CLUSTER_SOURCE_ID,
-        filter: ['has', 'point_count'],
-        layout: {
-          'text-field': ['get', 'point_count_abbreviated'],
-          'text-size': 12,
-          'text-allow-overlap': true,
-        },
-        paint: {
-          'text-color': '#ffffff',
-          'text-halo-color': 'rgba(17,24,39,0.35)',
-          'text-halo-width': 1,
-        },
-      })
-      map.addLayer({
-        id: PLACE_UNCLUSTERED_LAYER_ID,
-        type: 'circle',
-        source: PLACE_CLUSTER_SOURCE_ID,
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-radius': 24,
-          'circle-opacity': 0,
-          'circle-stroke-opacity': 0,
-        },
-      })
-}
-
 
 function createMarkerElement(place: Place & PlaceMarkerFlags & { category_color?: string; category_icon?: string }, photoUrl: string | null, orderNumbers: number[] | null, selected: boolean): HTMLDivElement {
   // A stop that interrupts the drive gets its own small disc, decided before the photo
@@ -612,6 +540,8 @@ export function MapViewGL({
   useDawarichTrailGL(mapRef.current, mapReady, dawarichTrack, dawarichSelectedDate, 'trip-route-casing', dawarichHiddenDates)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<Map<number, PlacePin>>(new Map())
+  /** The count bubbles, one per cluster the source currently reports. */
+  const clusterPinsRef = useRef<PlacePin[]>([])
   // Own layer for the hand-positioned place pins (MapLibre path, see makePlacePin).
   const pinLayerRef = useRef<HTMLDivElement | null>(null)
   const locationMarkerRef = useRef<LocationMarkerHandle | null>(null)
@@ -642,6 +572,7 @@ export function MapViewGL({
   // in the same frame the canvas draws, or the ones left out swim against the ones in.
   const repositionPins = useCallback(() => {
     markersRef.current.forEach(pin => pin.reposition())
+    clusterPinsRef.current.forEach(pin => pin.reposition())
     poiMarkersRef.current.forEach(pin => pin.reposition())
     pluginMarkersRef.current.forEach(pin => pin.reposition())
     routeViaMarkersRef.current.forEach(pin => pin.reposition())
@@ -1304,21 +1235,7 @@ export function MapViewGL({
             ? map.queryRenderedFeatures(e.point, { layers: [PLACE_CLUSTER_CIRCLE_LAYER_ID, PLACE_CLUSTER_COUNT_LAYER_ID] })
             : []
           const feature = features?.[0]
-          const clusterId = feature?.properties?.cluster_id
-          const coordinates = feature?.geometry?.coordinates
-          if (clusterId == null || !Array.isArray(coordinates)) return
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const source = map.getSource(PLACE_CLUSTER_SOURCE_ID) as any
-          const easeToZoom = (nextZoom: number) => {
-            try { map.easeTo({ center: coordinates, zoom: nextZoom, duration: 350 }) } catch { /* noop */ }
-          }
-          try {
-            const maybeZoom = source?.getClusterExpansionZoom?.(clusterId, (err: Error | null, nextZoom: number) => {
-              if (!err && typeof nextZoom === 'number') easeToZoom(nextZoom)
-            })
-            if (typeof maybeZoom === 'number') easeToZoom(maybeZoom)
-            else if (maybeZoom && typeof maybeZoom.then === 'function') maybeZoom.then(easeToZoom).catch(() => {})
-          } catch { /* noop */ }
+          expandCluster(map, feature?.properties?.cluster_id, feature?.geometry?.coordinates)
         }
         const setClusterCursor = () => {
           const canvas = typeof map.getCanvas === 'function' ? map.getCanvas() : null
@@ -1703,8 +1620,17 @@ export function MapViewGL({
     source.setData(buildPlaceClusterData(places) as any)
     const placesById = new Map<number, PlaceWithCoords>(validPlaces.map(place => [place.id, place]))
     let raf: number | null = null
+    const dropClusterPins = () => {
+      clusterPinsRef.current.forEach(pin => pin.remove())
+      clusterPinsRef.current = []
+    }
+    const reconcileClusterPins = () => {
+      dropClusterPins()
+      clusterPinsRef.current = drawClusterBubbles(map, (el, lng, lat) => attachPin(map, gl, pinLayerRef.current, el, lng, lat))
+    }
     const runReconcile = () => {
       raf = null
+      reconcileClusterPins()
       const features = map.querySourceFeatures(PLACE_CLUSTER_SOURCE_ID, { filter: ['!', ['has', 'point_count']] }) || []
       const seen = new Set<number>()
       const visiblePlaces: PlaceWithCoords[] = []
@@ -1751,6 +1677,7 @@ export function MapViewGL({
 
     return () => {
       if (raf !== null) cancelAnimationFrame(raf)
+      dropClusterPins()
       map.off('moveend', scheduleReconcile)
       map.off('zoomend', scheduleReconcile)
       map.off('idle', scheduleReconcile)

@@ -100,6 +100,7 @@ const UNNUMBERED = [
   'Migration20200101046300_an_attached_file_stays_with_its_conversation',
   // Fork: gives places their google_cid column, or keeps the one the 4.3.x fork added.
   'Migration20200101046301_fork_a_place_keeps_its_google_customer_id',
+  'Migration20200101046310_an_admin_can_run_a_plugin_outside_its_trek_range',
 ];
 // The last step the positional runner ever had; planLegacyBaseline refuses a
 // schema_version past it.

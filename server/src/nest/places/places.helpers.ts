@@ -86,10 +86,15 @@ export async function reclaimPhotoCache(
 
 export interface DedupSet {
   names: Set<string>;
+  /** The names of the places with a line: a track to import matches only these (#2810). Absent where none is read. */
+  trackNames?: Set<string>;
   coords: Array<{ lat: number; lng: number }>;
   /** Provider ids (google_place_id, google_ftid, osm_id, amap_poi_id) of the places already in the trip. */
   externalIds: Set<string>;
 }
+
+/** A candidate for the dedup set; `track` when it is a line (a GPX track or route, a KML path). */
+export type DedupCandidate = PlaceMatchCandidate & { track?: boolean };
 
 /**
  * Returns true if a candidate place is already represented in the dedup set.
@@ -104,12 +109,14 @@ export interface DedupSet {
  * JavaScript's is not, and only unnamed rows contribute coordinates to a dedup
  * set. `findDuplicatePlace` spells out where the two still answer differently.
  */
-export function isPlaceDuplicate(candidate: PlaceMatchCandidate, dedup: DedupSet): boolean {
+export function isPlaceDuplicate(candidate: DedupCandidate, dedup: DedupSet): boolean {
   for (const strategy of placeMatchStrategies(candidate)) {
     if (strategy.by === 'externalId') {
       if (dedup.externalIds.has(strategy.id)) return true;
     } else if (strategy.by === 'name') {
-      if (dedup.names.has(strategy.name)) return true;
+      // A track is the same as a track of that name, never as a sight of that name:
+      // a watch names a hike after the place it went to (#2810).
+      if ((candidate.track ? dedup.trackNames : dedup.names)?.has(strategy.name)) return true;
     } else if (
       dedup.coords.some(
         (c) =>
@@ -130,29 +137,34 @@ export function isPlaceDuplicate(candidate: PlaceMatchCandidate, dedup: DedupSet
  */
 export function dedupSetOf(
   rows: ReadonlyArray<
-    { name: string | null; lat: number | null; lng: number | null } & Parameters<typeof externalIdsOf>[0]
+    { name: string | null; lat: number | null; lng: number | null; route_geometry?: string | null } & Parameters<
+      typeof externalIdsOf
+    >[0]
   >,
 ): DedupSet {
   const names = new Set<string>();
+  const trackNames = new Set<string>();
   const coords: Array<{ lat: number; lng: number }> = [];
   const externalIds = new Set<string>();
   for (const row of rows) {
     for (const id of externalIdsOf(row)) externalIds.add(id);
     if (row.name) {
       names.add(row.name.trim().toLowerCase());
+      if (row.route_geometry) trackNames.add(row.name.trim().toLowerCase());
     } else if (row.lat != null && row.lng != null) {
       coords.push({ lat: row.lat, lng: row.lng });
     }
   }
-  return { names, coords, externalIds };
+  return { names, trackNames, coords, externalIds };
 }
 
 /** Record a newly inserted place so subsequent candidates in the same batch are checked against it. */
-export function trackInsertedInDedupSet(place: PlaceMatchCandidate, dedup: DedupSet): void {
+export function trackInsertedInDedupSet(place: DedupCandidate, dedup: DedupSet): void {
   for (const id of externalIdsOf(place)) dedup.externalIds.add(id);
   const normalizedName = normalizePlaceName(place.name);
   if (normalizedName) {
     dedup.names.add(normalizedName);
+    if (place.track) (dedup.trackNames ??= new Set()).add(normalizedName);
   } else if (place.lat != null && place.lng != null) {
     dedup.coords.push({ lat: place.lat, lng: place.lng });
   }

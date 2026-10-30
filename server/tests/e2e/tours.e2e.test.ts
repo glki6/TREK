@@ -535,6 +535,51 @@ describe('Tours e2e (real guards + temp SQLite)', () => {
       expect(await countRows(orm, Tours)).toBe(1);
     });
 
+    it('takes over a track from before Tours with the same name instead of skipping it (#2810)', async () => {
+      // 4.x stored a GPX track as a plain place: a line, no tours row.
+      const line = '[[49,12,100],[49.01,12.01,150],[49.02,12.02,120]]';
+      const legacy = (await makePlace(orm, 5, { name: 'Alpine Loop ', lat: 49, lng: 12, route_geometry: line })).id;
+      const elsewhere = (await makePlace(orm, 6, { name: 'Alpine loop', lat: 49, lng: 12, route_geometry: line })).id;
+
+      const preview = await previewGpx(OWNER, TRACK_GPX);
+      expect(preview.status).toBe(200);
+      expect(preview.body.tracks[0]).toMatchObject({ duplicate: false, adopts_track: true });
+      expect(await countRows(orm, Tours)).toBe(0);
+
+      const res = await importGpx(OWNER, TRACK_GPX);
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({ caution: false, skipped: 0 });
+      expect(res.body.tours.map((tour: { place_id: number }) => tour.place_id)).toEqual([legacy]);
+      expect(await countRows(orm, Places, { trip: 5 })).toBe(1);
+      expect(await placeColumns(legacy, 'name', 'route_geometry')).toEqual({
+        name: 'Alpine Loop ',
+        route_geometry: line,
+      });
+      expect(await findRow(orm, Tours, { place: legacy })).toMatchObject({ tour_type: 'hike', origin: 'gpx' });
+      expect(await findRow(orm, Tours, { place: elsewhere })).toBeNull();
+      expect(broadcast.mock.calls.map((c) => c[1])).toEqual(expect.arrayContaining(['tours:changed', 'place:updated']));
+      expect(broadcast.mock.calls.map((c) => c[1])).not.toContain('place:created');
+
+      // Now a tour, the same file is a duplicate again.
+      expect((await previewGpx(OWNER, TRACK_GPX)).body.tracks[0]).toMatchObject({ duplicate: true });
+      expect((await importGpx(OWNER, TRACK_GPX)).body).toEqual({ tours: [], caution: false, skipped: 1 });
+    });
+
+    it('imports a hike named after a sight of the trip instead of skipping it as a duplicate (#2810)', async () => {
+      // A watch names the hike after where it went, and that place is already planned.
+      const sight = (await makePlace(orm, 5, { name: 'alpine loop', lat: 47, lng: 11 })).id;
+
+      const preview = await previewGpx(OWNER, TRACK_GPX);
+      expect(preview.body.tracks[0]).toMatchObject({ name: 'Alpine loop', duplicate: false });
+
+      const res = await importGpx(OWNER, TRACK_GPX);
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({ skipped: 0 });
+      expect(res.body.tours).toHaveLength(1);
+      expect(res.body.tours[0].place_id).not.toBe(sight);
+      expect(await placeColumns(sight, 'route_geometry')).toEqual({ route_geometry: null });
+    });
+
     it('400 without a file, and for a file with no track or route', async () => {
       const missing = await importGpx(OWNER, null);
       expect(missing.status).toBe(400);
