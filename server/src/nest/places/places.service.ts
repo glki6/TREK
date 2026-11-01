@@ -58,7 +58,7 @@ import {
   buildCategoryNameLookup,
   escapeLikePattern,
   dedupSetOf,
-  isPlaceDuplicate,
+  isPlaceDuplicate, lineCandidate,
   mapWithConcurrency,
   reclaimPhotoCache,
   resolveCategoryIdForFolder,
@@ -757,7 +757,7 @@ export class PlacesService {
   async gpxDuplicates(tripId: string, rows: PreparedGpxPlace[]): Promise<boolean[]> {
     const dedup = await this.buildDedupSet(tripId);
     return rows.map((wp) => {
-      const candidate = { name: wp.name, lat: wp.lat, lng: wp.lng, track: !!wp.routeGeometry };
+      const candidate = lineCandidate(wp.name, wp);
       if (isPlaceDuplicate(candidate, dedup)) return true;
       trackInsertedInDedupSet(candidate, dedup);
       return false;
@@ -924,7 +924,7 @@ export class PlacesService {
     // `findWithTagsAndRatings` INSIDE the caller's transaction, so the read
     // sees the still-uncommitted row.
     for (const wp of waypoints) {
-      if (isPlaceDuplicate({ name: wp.name, lat: wp.lat, lng: wp.lng, track: !!wp.routeGeometry }, dedup)) {
+      if (isPlaceDuplicate(lineCandidate(wp.name, wp), dedup)) {
         skipped++;
         continue;
       }
@@ -959,7 +959,7 @@ export class PlacesService {
       });
       const place = (await this.placesRepo.findWithTagsAndRatings(placeId))!;
       created.push(place);
-      trackInsertedInDedupSet({ name: wp.name, lat: wp.lat, lng: wp.lng, track: !!wp.routeGeometry }, dedup);
+      trackInsertedInDedupSet(lineCandidate(wp.name, wp), dedup);
     }
 
     return { places: created, count: created.length, skipped };
@@ -1032,7 +1032,7 @@ export class PlacesService {
         const fallbackName = `Placemark ${fallbackIndex}`;
         const name = parsedPlacemark.name || fallbackName;
 
-        if (isPlaceDuplicate({ name, lat: parsedPlacemark.lat, lng: parsedPlacemark.lng, track: isPath }, dedup)) {
+        if (isPlaceDuplicate(lineCandidate(name, parsedPlacemark), dedup)) {
           summary.skippedCount += 1;
           dupCount++;
           fallbackIndex += 1;
@@ -1078,7 +1078,7 @@ export class PlacesService {
 
         const place = (await this.placesRepo.findWithTagsAndRatings(placeId))!;
         created.push(place);
-        trackInsertedInDedupSet({ name, lat: parsedPlacemark.lat, lng: parsedPlacemark.lng, track: isPath }, dedup);
+        trackInsertedInDedupSet(lineCandidate(name, parsedPlacemark), dedup);
         summary.createdCount += 1;
         fallbackIndex += 1;
       }

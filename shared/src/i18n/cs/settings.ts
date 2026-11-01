@@ -29,7 +29,14 @@ const settings: TranslationStrings = {
     'Vlastní instance OSRM. Prázdné použije veřejné servery s limitem asi jednoho požadavku za sekundu — na den to stačí, na road trip je to málo. Projeví se po restartu serveru.',
   'settings.valhallaBase': 'Vlastní instance Valhalla',
   'settings.valhallaBaseHint':
-    'TREK ve výchozím nastavení používá veřejnou Valhallu FOSSGIS k vyhýbání se mýtnému, dálnicím a trajektům. Zde můžete zadat URL vlastní Valhally a používat ji místo veřejné. Pokud je nastavena pouze vlastní směrovací instance, veřejná Valhalla se nepoužije. Po zadání vlastní URL restartujte server a znovu načtěte stránku.',
+    'Vlastní Valhalla, dotazovaná, když je směrovací služba výše nastavena na ni nebo na Automaticky. Pokud je nastavena jen vlastní směrovací instance a žádná směrovací služba není zvolena, žádná Valhalla se nedotazuje. Po zadání URL restartujte server a znovu načtěte stránku.',
+  'settings.valhallaProvider': 'Směrovací služba',
+  'settings.valhallaProviderHint':
+    'Se službami TREK nebo vlastní Valhallou počítá všechny trasy Valhalla: dny a silniční výlety pěšky, na kole i autem, trasy bez mýtného, dálnic nebo trajektů a trasy, výšky a cesty výletů. Když nemůže odpovědět, spočítá daný den OSRM. Služby TREK se dotazují přes tento server. S veřejnou Valhallou FOSSGIS počítá trasy OSRM a Valhalla odpovídá jen na to, co OSRM neumí. Automaticky se ptá služeb TREK, pokud není nastavena vlastní Valhalla nebo jen vlastní směrovací instance.',
+  'settings.valhallaProviderOption.auto': 'Automaticky',
+  'settings.valhallaProviderOption.trek': 'Služby TREK',
+  'settings.valhallaProviderOption.fossgis': 'Veřejná Valhalla (FOSSGIS)',
+  'settings.valhallaProviderOption.custom': 'Vlastní instance Valhally',
   'settings.mapHint': 'URL šablony pro mapové dlaždice',
   'settings.mapProvider': 'Poskytovatel mapy',
   'settings.mapProviderHint': 'Ovlivňuje mapy v Trip Planneru a Journey. Atlas vždy používá Leaflet.',
@@ -202,6 +209,14 @@ const settings: TranslationStrings = {
   'settings.about.featureRequest': 'Navrhnout funkci',
   'settings.about.featureRequestHint': 'Navrhněte novou funkci',
   'settings.about.wikiHint': 'Dokumentace a návody',
+  'settings.about.sponsor.eyebrow': 'Sponzorovaná infrastruktura',
+  'settings.about.sponsor.title': 'Vlastní servery TREK běží na dataforest cloud',
+  'settings.about.sponsor.body':
+    'Hledání míst, hledání adres a trasy pocházejí z vlastních serverů TREK místo od Google a spol. a stroje, na kterých běží, sponzoruje dataforest cloud.',
+  'settings.about.sponsor.cta': 'Navštívit dataforest cloud',
+  'settings.about.sponsor.search': 'Hledání míst',
+  'settings.about.sponsor.address': 'Hledání adres',
+  'settings.about.sponsor.routing': 'Trasy',
   'settings.about.descriptionManaged':
     'TREK vám pomáhá organizovat cesty od prvního nápadu po poslední vzpomínku. Plánování dnů, rozpočet, balicí seznamy, fotky a mnohem víc, vše na jednom místě.',
   'settings.about.sourceTitle': 'Zdrojový kód',

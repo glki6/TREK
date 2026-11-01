@@ -29,7 +29,14 @@ const settings: TranslationStrings = {
     'Instans OSRM milik sendiri. Kosong berarti server publik, yang mengizinkan sekitar satu permintaan per detik — cukup untuk sehari, mepet untuk perjalanan darat. Berlaku setelah server dimulai ulang.',
   'settings.valhallaBase': 'Instans Valhalla sendiri',
   'settings.valhallaBaseHint':
-    'Secara bawaan, TREK menggunakan Valhalla publik FOSSGIS untuk menghindari tol, jalan bebas hambatan, dan feri. Masukkan URL Valhalla Anda sendiri di sini untuk menggunakannya sebagai pengganti. Jika hanya instans perutean sendiri yang dikonfigurasi, Valhalla publik tidak digunakan. Setelah memasukkan URL sendiri, mulai ulang server dan muat ulang halaman.',
+    'Valhalla milik Anda sendiri, ditanyakan saat layanan perutean di atas diatur ke sana atau ke Otomatis. Jika hanya instans perutean sendiri yang dikonfigurasi dan tidak ada layanan perutean yang dipilih, tidak ada Valhalla yang ditanyakan. Setelah memasukkan URL, mulai ulang server dan muat ulang halaman.',
+  'settings.valhallaProvider': 'Layanan perutean',
+  'settings.valhallaProviderHint':
+    'Dengan layanan TREK atau Valhalla sendiri, Valhalla menghitung semua rute: hari dan perjalanan darat dengan berjalan kaki, bersepeda, dan bermobil, rute tanpa tol, jalan bebas hambatan, atau feri, serta rute, ketinggian, dan jalur tur. Jika tidak dapat menjawab, OSRM menghitung hari itu sebagai gantinya. Layanan TREK ditanyakan melalui server ini. Dengan Valhalla publik FOSSGIS, OSRM menghitung rute dan Valhalla hanya menjawab apa yang tidak bisa dilakukan OSRM. Otomatis menanyakan layanan TREK, kecuali Valhalla sendiri atau hanya instans perutean sendiri yang diatur.',
+  'settings.valhallaProviderOption.auto': 'Otomatis',
+  'settings.valhallaProviderOption.trek': 'Layanan TREK',
+  'settings.valhallaProviderOption.fossgis': 'Valhalla publik (FOSSGIS)',
+  'settings.valhallaProviderOption.custom': 'Instans Valhalla sendiri',
   'settings.mapHint': 'Template URL untuk tile peta',
   'settings.mapProvider': 'Penyedia peta',
   'settings.mapProviderHint': 'Berlaku untuk peta Trip Planner dan Journey. Atlas selalu menggunakan Leaflet.',
@@ -255,6 +262,14 @@ const settings: TranslationStrings = {
   'settings.about.featureRequest': 'Permintaan Fitur',
   'settings.about.featureRequestHint': 'Sarankan fitur baru',
   'settings.about.wikiHint': 'Dokumentasi & panduan',
+  'settings.about.sponsor.eyebrow': 'Infrastruktur bersponsor',
+  'settings.about.sponsor.title': 'Server milik TREK sendiri berjalan di dataforest cloud',
+  'settings.about.sponsor.body':
+    'Pencarian tempat, pencarian alamat, dan perutean berasal dari server milik TREK sendiri, bukan dari Google dan sejenisnya, dan dataforest cloud mensponsori mesin tempat server itu berjalan.',
+  'settings.about.sponsor.cta': 'Kunjungi dataforest cloud',
+  'settings.about.sponsor.search': 'Pencarian tempat',
+  'settings.about.sponsor.address': 'Pencarian alamat',
+  'settings.about.sponsor.routing': 'Perutean',
   'settings.about.descriptionManaged':
     'TREK membantumu mengatur perjalanan dari ide pertama sampai kenangan terakhir. Perencanaan harian, anggaran, daftar bawaan, foto, dan banyak lagi, semua di satu tempat.',
   'settings.about.sourceTitle': 'Kode sumber',

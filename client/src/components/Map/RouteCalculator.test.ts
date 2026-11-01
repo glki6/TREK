@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../tests/helpers/msw/server'
 import { pluginsApi, type PluginRouteResult } from '../../api/client'
@@ -15,8 +15,8 @@ import {
   calculateAlternatives,
   avoidedClasses,
   routeEngineFor,
-  osrmLegSegment,
 } from './RouteCalculator'
+import { legSegment } from './routeText'
 
 // Every route now goes to the FOSSGIS per-profile hosts. The car-only project-osrm.org
 // demo ignored the profile in the URL, so walking routes followed the road network.
@@ -386,6 +386,12 @@ function pluginRouteResult(over: Partial<PluginRouteResult> = {}): PluginRouteRe
     ...over,
   }
 }
+
+// FOSSGIS: OSRM routes the days and Valhalla only what OSRM cannot. Where Valhalla routes
+// every day is valhallaDayRoute.test.ts.
+beforeEach(() => {
+  useSettingsStore.setState(st => ({ settings: { ...st.settings, routing_valhalla_provider: 'fossgis' } }))
+})
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -913,7 +919,8 @@ describe('calculateAlternatives', () => {
 
   it('FE-COMP-ROUTECALCULATOR-053: an instance with its own OSRM is never sent to the public Valhalla', async () => {
     let valhallaCalls = 0
-    useSettingsStore.setState(st => ({ settings: { ...st.settings, routing_base_url: 'https://osrm.example.org' } }))
+    // No routing service chosen: the own OSRM alone decides.
+    useSettingsStore.setState(st => ({ settings: { ...st.settings, routing_base_url: 'https://osrm.example.org', routing_valhalla_provider: '' } }))
     server.use(
       http.get('https://osrm.example.org/route/v1/driving/:coords', ({ request }) => {
         const exclude = new URL(request.url).searchParams.get('exclude')
@@ -1232,11 +1239,11 @@ describe('a trip that avoids something', () => {
   })
 })
 
-describe('osrmLegSegment', () => {
+describe('legSegment', () => {
   const waypoints = [{ lat: 48, lng: 2 }, { lat: 50, lng: 4 }, { lat: 52, lng: 6 }]
 
   it('spans waypoint i to i + 1 with the label at the midpoint', () => {
-    const seg = osrmLegSegment({ distance: 1500, duration: 600 }, 1, waypoints)
+    const seg = legSegment({ distance: 1500, duration: 600 }, 1, waypoints)
     expect(seg.from).toEqual([50, 4])
     expect(seg.to).toEqual([52, 6])
     expect(seg.mid).toEqual([51, 5])
@@ -1245,7 +1252,7 @@ describe('osrmLegSegment', () => {
   })
 
   it('formats driving as measured and walking at 5 km/h', () => {
-    const seg = osrmLegSegment({ distance: 5000, duration: 600 }, 0, waypoints)
+    const seg = legSegment({ distance: 5000, duration: 600 }, 0, waypoints)
     expect(seg.drivingText).toBe('10 min')
     expect(seg.walkingText).toBe('1 h 0 min')
     expect(seg.durationText).toBeUndefined()
@@ -1253,6 +1260,6 @@ describe('osrmLegSegment', () => {
 
   it('writes short metric distances in metres', () => {
     useSettingsStore.setState({ settings: { ...useSettingsStore.getState().settings, distance_unit: 'metric' } })
-    expect(osrmLegSegment({ distance: 420.4, duration: 60 }, 0, waypoints).distanceText).toBe('420 m')
+    expect(legSegment({ distance: 420.4, duration: 60 }, 0, waypoints).distanceText).toBe('420 m')
   })
 })

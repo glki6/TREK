@@ -25,12 +25,13 @@ import type { TransitProvider } from '@trek/shared';
  * regions Transitous has no feed for. This class stays the entry point and the
  * validator either way: the request is checked here, then dispatched, so both
  * backends are held to the same coordinate/mode/transfer contract and answer in
- * the same compact shape. Transitous remains the default and the fallback —
- * see GoogleTransitProvider.isActive.
+ * the same compact shape. Transitous remains the default. Empty plans try the
+ * other backend when available; Google fallback requires an admin-set key.
  *
- * Both responses name the backend that answered. The fallback is silent by
- * design, so without this an empty result is indistinguishable between "this
- * provider has no data here" and "the provider you picked never ran" — which is
+ * Both responses name the backend that answered. Both fallbacks (no Google key,
+ * and the empty-plan retry) are silent by design, so without this an empty
+ * result is indistinguishable between "this provider has no data here" and
+ * "the provider you picked never ran" — which is
  * exactly the guessing game a Paris search ran into when the Île-de-France feed
  * ended before the trip date.
  *
@@ -159,7 +160,7 @@ export class TransitService {
     @Inject(transitConfig.KEY) private readonly transitEnv: ConfigType<typeof transitConfig>,
   ) {}
 
-  /** The backend that answers this user's searches: Google where it is set up and keyed, Transitous otherwise. */
+  /** Configured primary for this user; an empty plan may be answered by the other provider. */
   async activeProvider(userId = 0): Promise<TransitProvider> {
     return (await this.google.isActive(userId)) ? 'google' : 'transitous';
   }
@@ -222,7 +223,13 @@ export class TransitService {
     return { ...data, provider };
   }
 
-  /** Route search between two coordinates. Returns compact itineraries for the picker. */
+  /**
+   * Route search between two coordinates. Returns compact itineraries for the picker.
+   *
+   * @txIndependent the only writes are Google's daily call counter, one after each
+   * upstream request; each count stands on its own and cannot share a transaction
+   * with the HTTP call it records.
+   */
   async plan(
     q: PlanQuery,
     language?: string,
@@ -264,10 +271,33 @@ export class TransitService {
 
     // After validation on purpose: whichever backend answers, the caller is held
     // to the same coordinate/mode/transfer contract and gets the same 400s.
-    if ((await this.activeProvider(userId)) === 'google') {
-      return { ...(await this.google.plan(q, language, userId)), provider: 'google' };
-    }
+    const googlePrimary = (await this.activeProvider(userId)) === 'google';
+    const primary = googlePrimary
+      ? { ...(await this.google.plan(q, language, userId)), provider: 'google' as const }
+      : await this.planTransitous(params);
+    if (primary.itineraries.length > 0) return primary;
 
+    // An empty successful response alone triggers fallback. Primary errors keep
+    // propagating; a secondary outage must not replace a valid empty response.
+    try {
+      if (googlePrimary) {
+        const secondary = await this.planTransitous(params);
+        if (secondary.itineraries.length > 0) return secondary;
+      } else if (await this.google.isAvailableForFallback()) {
+        // Resolve again without a user id so a changed instance key can never
+        // cause the fallback to bill the caller's personal key.
+        const secondary = await this.google.plan(q, language, 0);
+        if (secondary.itineraries.length > 0) return { ...secondary, provider: 'google' };
+      }
+    } catch {
+      // Keep the primary's empty result and its provider attribution.
+    }
+    return primary;
+  }
+
+  private async planTransitous(
+    params: URLSearchParams,
+  ): Promise<{ itineraries: TransitItinerary[]; provider: TransitProvider }> {
     const key = `plan:${params.toString()}`;
     const cached = cacheGet(key);
     if (cached) return { ...(cached as { itineraries: TransitItinerary[] }), provider: 'transitous' };

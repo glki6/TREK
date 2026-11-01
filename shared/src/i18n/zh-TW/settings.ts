@@ -29,7 +29,14 @@ const settings: TranslationStrings = {
     '你自己的 OSRM 實例。留空則使用公共伺服器，約每秒一個請求 — 單日夠用，長途自駕則吃緊。需重新啟動伺服器後生效。',
   'settings.valhallaBase': '自建 Valhalla 執行個體',
   'settings.valhallaBaseHint':
-    'TREK 預設使用 FOSSGIS 的公共 Valhalla 來避開收費道路、高速公路和渡輪。若要改用自己的 Valhalla，請在此輸入網址。如果只設定了自己的路線規劃伺服器，就不會使用公共 Valhalla。輸入自己的網址後，請重新啟動伺服器並重新載入頁面。',
+    '你自己的 Valhalla，當上方的路線服務設為它或設為「自動」時使用。如果只設定了自己的路線規劃伺服器且未選擇路線服務，就不會請求任何 Valhalla。輸入網址後，請重新啟動伺服器並重新載入頁面。',
+  'settings.valhallaProvider': '路線服務',
+  'settings.valhallaProviderHint':
+    '使用 TREK 服務或自己的 Valhalla 時，所有路線都由 Valhalla 計算：步行、騎乘和開車的每日路線與公路旅行，避開收費道路、高速公路或渡輪的路線，以及行程的路線、海拔和道路。無法回應時，由 OSRM 計算當天的路線。TREK 服務透過此伺服器請求。使用 FOSSGIS 的公共 Valhalla 時，路線由 OSRM 計算，Valhalla 只處理 OSRM 做不到的事。「自動」會請求 TREK 服務，除非已設定自己的 Valhalla 或只設定了自己的路線規劃伺服器。',
+  'settings.valhallaProviderOption.auto': '自動',
+  'settings.valhallaProviderOption.trek': 'TREK 服務',
+  'settings.valhallaProviderOption.fossgis': '公共 Valhalla（FOSSGIS）',
+  'settings.valhallaProviderOption.custom': '自己的 Valhalla',
   'settings.mapHint': '地圖瓦片 URL 模板',
   'settings.mapProvider': '地圖提供商',
   'settings.mapProviderHint': '影響行程規劃和旅程地圖。Atlas 始終使用 Leaflet。',
@@ -242,6 +249,14 @@ const settings: TranslationStrings = {
   'settings.about.featureRequest': '功能建議',
   'settings.about.featureRequestHint': '建議新功能',
   'settings.about.wikiHint': '文件與指南',
+  'settings.about.sponsor.eyebrow': '贊助的基礎設施',
+  'settings.about.sponsor.title': 'TREK 自己的伺服器執行於 dataforest cloud',
+  'settings.about.sponsor.body':
+    '地點搜尋、地址搜尋和路線規劃都來自 TREK 自己的伺服器，而不是 Google 等服務，執行這些伺服器的機器由 dataforest cloud 贊助。',
+  'settings.about.sponsor.cta': '前往 dataforest cloud',
+  'settings.about.sponsor.search': '地點搜尋',
+  'settings.about.sponsor.address': '地址搜尋',
+  'settings.about.sponsor.routing': '路線規劃',
   'settings.about.descriptionManaged':
     'TREK 協助你整理旅行，從第一個想法到最後一份回憶。每日規劃、預算、行李清單、照片等功能，全都集中在同一處。',
   'settings.about.sourceTitle': '原始碼',

@@ -30,6 +30,7 @@ import type {
   Tag,
   Category,
   AppearanceConfig,
+  ValhallaProvider,
   WeekStart,
 } from '@trek/shared'
 
@@ -126,6 +127,11 @@ export interface Settings {
    * operator turned the second engine off and "other ways" goes back to OSRM alone.
    */
   valhalla_base_url?: string
+  /**
+   * Which Valhalla answers: the public FOSSGIS one, the TREK services' one through the
+   * server's relay, or `valhalla_base_url`. Empty means not chosen; see valhallaBase().
+   */
+  routing_valhalla_provider?: ValhallaProvider | ''
   dark_mode: boolean | string
   /** Display currency for Costs. Empty/null = follow each trip's own currency. */
   default_currency: string | null
@@ -343,7 +349,20 @@ export interface RouteWithLegs {
   avoidance?: { asked: RouteAvoidClass[]; achieved: RouteAvoidClass[]; fellBack?: boolean }
   /** Whether the road crosses by ferry, where the engine that drew it says so. */
   hasFerry?: boolean
+  /**
+   * The engine that drew this route, which is not always the one the day is planned with:
+   * where Valhalla routes the days and cannot answer one, OSRM draws it.
+   */
+  engine?: RouteEngine
 }
+
+/**
+ * Which engine priced a route: OSRM, Valhalla (which routes the days with the TREK
+ * services or an own Valhalla, and otherwise weighs road classes away), or a route
+ * provider plugin. Their figures are three different speed models, so a figure from one
+ * read against a figure from another measures the models, not the roads.
+ */
+export type RouteEngine = 'osrm' | 'valhalla' | 'plugin'
 
 /** A road class a route can be asked to leave out. */
 export type RouteAvoidClass = 'motorway' | 'toll' | 'ferry'

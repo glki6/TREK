@@ -28,7 +28,14 @@ const settings: TranslationStrings = {
     'خادم OSRM خاص بك. اتركه فارغًا لاستخدام الخوادم العامة التي تسمح بطلب واحد تقريبًا في الثانية — يكفي ليوم واحد، وضيّق لرحلة برية. يسري بعد إعادة تشغيل الخادم.',
   'settings.valhallaBase': 'خادم Valhalla خاص بك',
   'settings.valhallaBaseHint':
-    'يستخدم TREK خدمة Valhalla العامة من FOSSGIS افتراضيًا لتجنب الطرق ذات الرسوم والطرق السريعة والعبّارات. أدخل رابط خادم Valhalla الخاص بك هنا لاستخدامه بدلًا منها. إذا تم إعداد خادم توجيه خاص فقط، فلن تُستخدم خدمة Valhalla العامة. بعد إدخال رابط خاص، أعد تشغيل الخادم وحمّل الصفحة مجددًا.',
+    'خادم Valhalla خاص بك، يُسأل عندما تكون خدمة التوجيه أعلاه مضبوطة عليه أو على «تلقائي». إذا لم يُضبط سوى خادم توجيه خاص ولم تُختر أي خدمة توجيه، فلا يُسأل أي خادم Valhalla. بعد إدخال الرابط، أعد تشغيل الخادم وحمّل الصفحة مجددًا.',
+  'settings.valhallaProvider': 'خدمة التوجيه',
+  'settings.valhallaProviderHint':
+    'مع خدمات TREK أو خادم Valhalla خاص، تحسب Valhalla كل المسارات: الأيام والرحلات البرية سيرًا على الأقدام وبالدراجة وبالسيارة، والمسارات بلا طرق برسوم أو طرق سريعة أو عبّارات، ومسارات الجولات وارتفاعاتها وطرقها. وإذا تعذّر عليها الرد يحسب OSRM ذلك اليوم بدلًا منها. تُسأل خدمات TREK عبر هذا الخادم. ومع خدمة Valhalla العامة من FOSSGIS يحسب OSRM المسارات ولا تجيب Valhalla إلا عمّا لا يستطيعه OSRM. يسأل الوضع التلقائي خدمات TREK ما لم يُضبط خادم Valhalla خاص أو خادم توجيه خاص فقط.',
+  'settings.valhallaProviderOption.auto': 'تلقائي',
+  'settings.valhallaProviderOption.trek': 'خدمات TREK',
+  'settings.valhallaProviderOption.fossgis': 'Valhalla العامة (FOSSGIS)',
+  'settings.valhallaProviderOption.custom': 'خادم Valhalla خاص',
   'settings.mapHint': 'قالب URL لبلاطات الخريطة',
   'settings.mapProvider': 'مزود الخريطة',
   'settings.mapProviderHint': 'يؤثر على خرائط Trip Planner و Journey. يستخدم Atlas دائمًا Leaflet.',
@@ -220,6 +227,14 @@ const settings: TranslationStrings = {
   'settings.about.featureRequest': 'اقتراح ميزة',
   'settings.about.featureRequestHint': 'اقترح ميزة جديدة',
   'settings.about.wikiHint': 'التوثيق والأدلة',
+  'settings.about.sponsor.eyebrow': 'بنية تحتية برعاية',
+  'settings.about.sponsor.title': 'خوادم TREK الخاصة تعمل على dataforest cloud',
+  'settings.about.sponsor.body':
+    'يأتي البحث عن الأماكن والبحث عن العناوين وتخطيط المسارات من خوادم TREK الخاصة بدلًا من Google وأمثالها، وترعى dataforest cloud الأجهزة التي تعمل عليها.',
+  'settings.about.sponsor.cta': 'زيارة dataforest cloud',
+  'settings.about.sponsor.search': 'البحث عن الأماكن',
+  'settings.about.sponsor.address': 'البحث عن العناوين',
+  'settings.about.sponsor.routing': 'تخطيط المسارات',
   'settings.about.descriptionManaged':
     'يساعدك TREK على تنظيم رحلاتك من الفكرة الأولى حتى آخر ذكرى. تخطيط الأيام والميزانية وقوائم الأمتعة والصور وأكثر من ذلك بكثير، كل ذلك في مكان واحد.',
   'settings.about.sourceTitle': 'الشيفرة المصدرية',

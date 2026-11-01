@@ -1202,7 +1202,7 @@ jobs:
           docker stop -t 30 trek-ci >/dev/null
           code="$(docker inspect -f '{{.State.ExitCode}}' trek-ci)"
           [ "$code" = "0" ] || { echo "::error::docker stop ended with exit code $code, not a graceful shutdown"; exit 1; }
-          docker logs trek-ci 2>&1 | grep -q 'SIGTERM received' \
+          docker logs trek-ci 2>&1 | grep 'SIGTERM received' >/dev/null \
             || { echo "::error::the server never saw SIGTERM"; exit 1; }
 
       - name: Container log
@@ -1263,11 +1263,31 @@ jobs:
             --set 'extraEnv[0].name=SESSION_DURATION' \
             --set 'extraEnv[0].value=7d' \
             --set 'extraEnvFrom[0].secretRef.name=trek-smtp' \
+            --set 'extraVolumes[0].name=kitinerary-extractors' \
+            --set 'extraVolumes[0].configMap.name=trek-kitinerary-extractors' \
+            --set 'extraVolumeMounts[0].name=kitinerary-extractors' \
+            --set 'extraVolumeMounts[0].mountPath=/usr/local/share/kitinerary/extractors' \
+            --set 'extraVolumeMounts[0].readOnly=true' \
             --set probes.liveness=null \
             > "$out/variants.yaml"
+          helm template trek charts/trek \
+            --set httpRoute.enabled=true \
+            --set 'httpRoute.parentRefs[0].name=gateway' \
+            > "$out/http-route.yaml"
+          helm template trek charts/trek \
+            --set ingress.enabled=true \
+            --set fullnameOverride=custom-trek \
+            --set service.port=8080 \
+            --set-json 'httpRoute={"enabled":true,"parentRefs":[{"name":"gateway","namespace":"gateway-system","sectionName":"https"}],"hostnames":["trek.example.com"],"paths":["/","/api"],"annotations":{"example.com/note":"custom route"},"timeouts":{"request":"0s","backendRequest":"0s"}}' \
+            > "$out/http-route-variants.yaml"
 
       - name: Check the manifests against the Kubernetes schemas
-        run: kubeconform -strict -summary "$RUNNER_TEMP"/rendered/*.yaml
+        # The pinned Gateway API schema adds HTTPRoute validation without skipping unknown resources.
+        run: >-
+          kubeconform -strict -summary
+          -schema-location default
+          -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/041baf4c1d3740ca21461cab765e7432ecd073ef/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          "$RUNNER_TEMP"/rendered/*.yaml
 
       - name: Check every compose file
         run: |
