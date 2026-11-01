@@ -69,6 +69,13 @@ const planner: TranslationStrings = {
   'planner.keepPosition': 'שמירת המיקום במהלך אופטימיזציית המסלול',
   'planner.dayDetails': 'פרטי היום',
   'planner.dayN': 'יום {n}',
+  'planner.exportAllStops': 'פתיחת כל העצירות ב-Google Maps',
+  'planner.exportAllStopsTruncated':
+    'Google Maps מקבל עד {max} עצירות, ולכן נפתחו רק {max} העצירות הראשונות מתוך {count}.',
+  'planner.exportAllStopsTruncated.one':
+    'Google Maps מקבל עד {max} עצירות, ולכן נפתחו רק {max} העצירות הראשונות מתוך {count}.',
+  'planner.exportAllStopsTruncated.two':
+    'Google Maps מקבל עד {max} עצירות, ולכן נפתחו רק {max} העצירות הראשונות מתוך {count}.',
 };
 
 export default planner;

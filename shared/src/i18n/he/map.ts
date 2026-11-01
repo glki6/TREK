@@ -45,6 +45,10 @@ const map: TranslationStrings = {
   'map.baseLayer.topo': 'טופוגרפית',
   'map.webgl2.fallback': 'הדפדפן הזה לא תומך ב-WebGL2, שמפות GL צריכות, ולכן המפות מוצגות עם Leaflet.',
   'map.webgl2.terrain': 'תלת-ממד דורש WebGL2, והדפדפן הזה לא תומך בו. המפה נשארת בדו-ממד.',
+  'map.dayColors.show': 'צביעת העצירות לפי יום',
+  'map.dayColors.hide': 'הפסקת הצביעה לפי יום',
+  'map.clustering.off': 'הצגת כל סמן בנפרד',
+  'map.clustering.on': 'קיבוץ סמנים קרובים',
 };
 
 export default map;
