@@ -108,14 +108,7 @@ import { MulterModule } from '@nestjs/platform-express';
     ]),
   ],
   controllers: [PlacesController, PlacesEnrichController], // fork: the enrich route
-  providers: [
-    PlacesService,
-    PlacesMcp,
-    PlacesRpc,
-    PlaceOriginsService,
-    PlacesStorageRefsService,
-    PlacesEnrichService,
-  ],
+  providers: [PlacesService, PlacesMcp, PlacesRpc, PlaceOriginsService, PlacesStorageRefsService, PlacesEnrichService],
   // The origin bookkeeping too: the booking import writes places as well.
   exports: [PlacesService, PlaceOriginsService],
 })
