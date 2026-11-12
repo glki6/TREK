@@ -47,5 +47,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Berhenti mewarnai per hari',
   'map.clustering.off': 'Tampilkan setiap penanda terpisah',
   'map.clustering.on': 'Kelompokkan penanda yang berdekatan',
+  'map.offlineBasemap': 'Peta offline',
+  'map.offlineShowStored': 'Tampilkan peta offline',
 };
 export default map;

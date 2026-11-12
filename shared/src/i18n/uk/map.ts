@@ -52,5 +52,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Вимкнути розфарбування за днями',
   'map.clustering.off': 'Показувати кожну мітку окремо',
   'map.clustering.on': 'Групувати близькі мітки',
+  'map.offlineBasemap': 'Офлайн-карта',
+  'map.offlineShowStored': 'Показати офлайн-карту',
 };
 export default map;

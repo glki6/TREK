@@ -49,5 +49,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Stop coloring by day',
   'map.clustering.off': 'Show each marker separately',
   'map.clustering.on': 'Group nearby markers',
+  'map.offlineBasemap': 'Offline map',
+  'map.offlineShowStored': 'Show offline map',
 };
 export default map;

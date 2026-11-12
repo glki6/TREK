@@ -50,5 +50,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Zrušit obarvení podle dne',
   'map.clustering.off': 'Zobrazit každou značku zvlášť',
   'map.clustering.on': 'Seskupit blízké značky',
+  'map.offlineBasemap': 'Offline mapa',
+  'map.offlineShowStored': 'Zobrazit offline mapu',
 };
 export default map;

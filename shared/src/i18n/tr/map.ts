@@ -48,5 +48,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Güne göre renklendirmeyi kapat',
   'map.clustering.off': 'Her işaretçiyi ayrı göster',
   'map.clustering.on': 'Yakındaki işaretçileri grupla',
+  'map.offlineBasemap': 'Çevrimdışı harita',
+  'map.offlineShowStored': 'Çevrimdışı haritayı göster',
 };
 export default map;

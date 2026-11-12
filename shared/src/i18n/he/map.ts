@@ -49,6 +49,8 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'הפסקת הצביעה לפי יום',
   'map.clustering.off': 'הצגת כל סמן בנפרד',
   'map.clustering.on': 'קיבוץ סמנים קרובים',
+  'map.offlineBasemap': 'מפה לא מקוונת',
+  'map.offlineShowStored': 'הצגת מפה לא מקוונת',
 };
 
 export default map;

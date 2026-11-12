@@ -48,5 +48,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Sluta färglägga per dag',
   'map.clustering.off': 'Visa varje markör för sig',
   'map.clustering.on': 'Gruppera närliggande markörer',
+  'map.offlineBasemap': 'Offlinekarta',
+  'map.offlineShowStored': 'Visa offlinekarta',
 };
 export default map;

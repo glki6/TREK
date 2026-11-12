@@ -51,5 +51,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Parar de colorir por dia',
   'map.clustering.off': 'Mostrar cada marcador separadamente',
   'map.clustering.on': 'Agrupar marcadores próximos',
+  'map.offlineBasemap': 'Mapa offline',
+  'map.offlineShowStored': 'Mostrar mapa offline',
 };
 export default map;

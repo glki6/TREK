@@ -54,6 +54,8 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Günlərə görə rəngləməni söndür',
   'map.clustering.off': 'Hər nişanı ayrıca göstər',
   'map.clustering.on': 'Yaxın nişanları qruplaşdır',
+  'map.offlineBasemap': 'Oflayn xəritə',
+  'map.offlineShowStored': 'Oflayn xəritəni göstər',
 };
 
 export default map;

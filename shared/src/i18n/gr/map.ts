@@ -50,5 +50,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Διακοπή χρωματισμού ανά ημέρα',
   'map.clustering.off': 'Εμφάνιση κάθε δείκτη χωριστά',
   'map.clustering.on': 'Ομαδοποίηση κοντινών δεικτών',
+  'map.offlineBasemap': 'Χάρτης εκτός σύνδεσης',
+  'map.offlineShowStored': 'Εμφάνιση χάρτη εκτός σύνδεσης',
 };
 export default map;

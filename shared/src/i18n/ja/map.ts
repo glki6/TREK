@@ -47,5 +47,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': '日ごとの色分けをやめる',
   'map.clustering.off': 'マーカーを個別に表示',
   'map.clustering.on': '近くのマーカーをまとめる',
+  'map.offlineBasemap': 'オフライン地図',
+  'map.offlineShowStored': 'オフライン地図を表示',
 };
 export default map;

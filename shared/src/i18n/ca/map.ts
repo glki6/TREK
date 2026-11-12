@@ -49,5 +49,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Deixa d’acolorir per dia',
   'map.clustering.off': 'Mostra cada marcador per separat',
   'map.clustering.on': 'Agrupa els marcadors propers',
+  'map.offlineBasemap': 'Mapa fora de línia',
+  'map.offlineShowStored': 'Mostra el mapa fora de línia',
 };
 export default map;

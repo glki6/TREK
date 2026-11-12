@@ -6,8 +6,9 @@ import { SYMBOLS, currenciesWith } from '../../../components/Budget/BudgetPanel.
 import { TRIP_TAB_IDS, TRIP_TAB_LABEL_KEYS, isTripTabId } from '../../../constants/tripTabs'
 import { DEFAULT_START_PAGE, DEFAULT_START_TRIP_TAB, type StartPage } from '../../../utils/startDestination'
 import type { Settings, DistanceUnit, WeekStart } from '../../../types'
-import { DEFAULT_WEEK_START } from '@trek/shared'
+import { DEFAULT_DATE_FORMAT, DEFAULT_WEEK_START } from '@trek/shared'
 import { weekStartOptions } from '../../../utils/calendarWeek'
+import { dateFormatOptions } from '../../../utils/dateFormat'
 import { MSetCard, MSetEyebrow, MSetHint, MSetSelectRow, MSetSegments, MSetRow } from './MSettingsUi'
 import MToggle from '../../components/MToggle'
 import MSetPickerSheet from './MSetPickerSheet'
@@ -27,6 +28,7 @@ export default function MSettingsGeneral() {
   const [langOpen, setLangOpen] = useState(false)
   const [startTabOpen, setStartTabOpen] = useState(false)
   const [navAppOpen, setNavAppOpen] = useState(false)
+  const [dateFormatOpen, setDateFormatOpen] = useState(false)
   const navAppOptions = preferredNavAppOptions(t)
   const navAppValue = settings.preferred_nav_app || ''
 
@@ -37,6 +39,7 @@ export default function MSettingsGeneral() {
   const language = SUPPORTED_LANGUAGES.find((l) => l.value === settings.language) || SUPPORTED_LANGUAGES[0]
 
   const chevron = <ChevronDown size={13} strokeWidth={2} className="flex-none text-m-faint" />
+  const dateFormats = dateFormatOptions(locale, t('settings.dateFormatAuto'))
 
   const travelRows: {
     key: keyof Settings
@@ -134,9 +137,10 @@ export default function MSettingsGeneral() {
         <MSetSegments
           value={settings.temperature_unit || 'celsius'}
           onChange={(v) => save('temperature_unit', v)}
+          // The unit names are Latin in every language: isolated, so Arabic keeps "°F Fahrenheit" whole.
           options={[
-            { value: 'celsius', label: '°C Celsius' },
-            { value: 'fahrenheit', label: '°F Fahrenheit' },
+            { value: 'celsius', label: <bdi>°C Celsius</bdi> },
+            { value: 'fahrenheit', label: <bdi>°F Fahrenheit</bdi> },
           ]}
         />
 
@@ -145,8 +149,8 @@ export default function MSettingsGeneral() {
           value={settings.distance_unit || 'metric'}
           onChange={(v) => save('distance_unit', v)}
           options={[
-            { value: 'metric', label: 'km Metric' },
-            { value: 'imperial', label: 'mi Imperial' },
+            { value: 'metric', label: <bdi>km Metric</bdi> },
+            { value: 'imperial', label: <bdi>mi Imperial</bdi> },
           ]}
         />
 
@@ -166,6 +170,15 @@ export default function MSettingsGeneral() {
           onChange={(v) => save('week_start', v)}
           options={weekStartOptions(locale)}
         />
+
+        {/* Date format (#2971) */}
+        <MSetEyebrow className="mb-[6px] mt-[14px]">{t('settings.dateFormat')}</MSetEyebrow>
+        <MSetSelectRow
+          label={dateFormats.find((o) => o.value === (settings.date_format || DEFAULT_DATE_FORMAT))?.label ?? ''}
+          trailing={chevron}
+          onClick={() => setDateFormatOpen(true)}
+        />
+        <MSetHint>{t('settings.dateFormatHint')}</MSetHint>
       </MSetCard>
 
       <MSetCard title={t('settings.general.travelMap')} icon={Map} className="mt-3">
@@ -204,6 +217,17 @@ export default function MSettingsGeneral() {
           { value: '', label: t('settings.currencyTrip') },
           ...currenciesWith(currency).map((c) => ({ value: c, label: `${c} — ${SYMBOLS[c] || c}` })),
         ]}
+      />
+
+      <MSetPickerSheet
+        open={dateFormatOpen}
+        onClose={() => setDateFormatOpen(false)}
+        title={t('settings.dateFormat')}
+        value={settings.date_format || DEFAULT_DATE_FORMAT}
+        onSelect={(v) => {
+          void save('date_format', v)
+        }}
+        options={dateFormats}
       />
 
       <MSetPickerSheet

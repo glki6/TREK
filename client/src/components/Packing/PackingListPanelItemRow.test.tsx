@@ -379,13 +379,16 @@ describe('ArtikelZeile — category picker', () => {
 })
 
 describe('ArtikelZeile — sharing badges', () => {
-  it('FE-W5ROW-018: an item somebody else brings shows their name', () => {
+  it('FE-W5ROW-018: an item somebody else brings shows their name in the TREK tooltip', async () => {
     setup({
       item: buildPackingItem({ id: 1, name: 'Stove', is_private: 1, owner_id: 2, owner_username: 'Bob' } as Partial<PackingItem>),
       currentUserId: 1,
     })
 
-    expect(screen.getByLabelText('by Bob')).toHaveAttribute('title', 'by Bob')
+    const badge = screen.getByLabelText('by Bob')
+    expect(badge).not.toHaveAttribute('title')
+    fireEvent.mouseEnter(badge)
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('by Bob')
   })
 
   it('FE-W5ROW-019: a nameless bringer degrades to an empty name', () => {
@@ -394,10 +397,10 @@ describe('ArtikelZeile — sharing badges', () => {
       currentUserId: 1,
     })
 
-    expect(screen.getByTitle('by')).toBeInTheDocument()
+    expect(screen.getByLabelText('by')).toBeInTheDocument()
   })
 
-  it('FE-W5ROW-020: an item shared by me counts its recipients', () => {
+  it('FE-W5ROW-020: an item shared by me counts its recipients', async () => {
     setup({
       item: buildPackingItem({
         id: 1, name: 'Stove', is_private: 1, owner_id: 1,
@@ -407,10 +410,11 @@ describe('ArtikelZeile — sharing badges', () => {
     })
 
     expect(screen.getByLabelText('shared with 2')).toHaveTextContent('2')
-    expect(screen.getByTitle('shared with 2: alice, bob')).toBeInTheDocument()
+    fireEvent.mouseEnter(screen.getByLabelText('shared with 2'))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('shared with 2: alice, bob')
   })
 
-  it('FE-W5ROW-021: a common item names its bringer and counts co-bringers', () => {
+  it('FE-W5ROW-021: a common item names its bringer and counts co-bringers', async () => {
     setup({
       item: buildPackingItem({
         id: 1, name: 'Stove', is_private: 0, owner_username: 'Bob',
@@ -419,8 +423,15 @@ describe('ArtikelZeile — sharing badges', () => {
       currentUserId: 1,
     })
 
-    // The bringer's initial on an avatar, the co-bringers as a count.
-    expect(screen.getByTitle('brought by Bob')).toHaveTextContent('B+1')
+    // The bringer's initial on an avatar, the co-bringers as a "+N" circle; the tooltip
+    // names everyone, each on a line of their own (#2782).
+    const badge = screen.getByLabelText('brought by Bob, cleo')
+    expect(badge).toHaveTextContent('B+1')
+    fireEvent.mouseEnter(badge)
+    const rows = within(await screen.findByRole('tooltip')).getAllByRole('listitem')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toHaveTextContent('Bob')
+    expect(rows[1]).toHaveTextContent('cleo')
   })
 
   it('FE-W5ROW-022: a bringer without co-bringers shows no counter', () => {
@@ -429,7 +440,7 @@ describe('ArtikelZeile — sharing badges', () => {
       currentUserId: 1,
     })
 
-    expect(screen.getByTitle('brought by Bob')).toHaveTextContent(/^B$/)
+    expect(screen.getByLabelText('brought by Bob')).toHaveTextContent(/^B$/)
   })
 
   it('FE-W5ROW-023: the placeholder row carries no badges and no share control', () => {
@@ -558,7 +569,9 @@ describe('ArtikelZeile — weight and bag', () => {
     )
     const { container } = setup({ bagTrackingEnabled: true, bags: BAGS })
 
-    fireEvent.change(container.querySelector('input[placeholder="—"]')!, { target: { value: '450' } })
+    const weightField = container.querySelector('input[placeholder="—"]')!
+    fireEvent.change(weightField, { target: { value: '450' } })
+    fireEvent.blur(weightField)
 
     await waitFor(() => expect(body).toMatchObject({ weight_grams: 450 }))
   })
@@ -576,7 +589,9 @@ describe('ArtikelZeile — weight and bag', () => {
       bagTrackingEnabled: true,
     })
 
-    fireEvent.change(container.querySelector('input[placeholder="—"]')!, { target: { value: '' } })
+    const weightField = container.querySelector('input[placeholder="—"]')!
+    fireEvent.change(weightField, { target: { value: '' } })
+    fireEvent.blur(weightField)
 
     await waitFor(() => expect(body).toMatchObject({ weight_grams: null }))
   })
@@ -585,7 +600,9 @@ describe('ArtikelZeile — weight and bag', () => {
     server.use(http.put('/api/trips/1/packing/1', () => new HttpResponse(null, { status: 500 })))
     const { container } = setup({ bagTrackingEnabled: true })
 
-    fireEvent.change(container.querySelector('input[placeholder="—"]')!, { target: { value: '450' } })
+    const weightField = container.querySelector('input[placeholder="—"]')!
+    fireEvent.change(weightField, { target: { value: '450' } })
+    fireEvent.blur(weightField)
 
     await waitFor(() => expect(toastSpy).toHaveBeenCalledWith('Failed to save', 'error', undefined))
   })
@@ -598,6 +615,7 @@ describe('ArtikelZeile — weight and bag', () => {
     const weight = container.querySelector<HTMLInputElement>('input[placeholder="—"]')!
     expect(weight.readOnly).toBe(true)
     fireEvent.change(weight, { target: { value: '450' } })
+    fireEvent.blur(weight)
     fireEvent.click(bagButton(container))
 
     await waitFor(() => expect(screen.queryByRole('button', { name: /Carry-on/ })).toBeNull())
@@ -918,6 +936,7 @@ describe('ArtikelZeile — overflow menu', () => {
 
     const weight = fieldOf(container, 'Total weight')
     fireEvent.change(weight, { target: { value: '900' } })
+    fireEvent.blur(weight)
     await waitFor(() => expect(bodies[0]).toMatchObject({ weight_grams: 900 }))
 
     // The first entry mirrors the current bag and clears it when tapped.
@@ -934,6 +953,7 @@ describe('ArtikelZeile — overflow menu', () => {
     fireEvent.click(overflowTrigger(container))
 
     fireEvent.change(fieldOf(container, 'Total weight'), { target: { value: '900' } })
+    fireEvent.blur(fieldOf(container, 'Total weight'))
 
     await waitFor(() => expect(toastSpy).toHaveBeenCalledWith('Failed to save', 'error', undefined))
 
@@ -984,6 +1004,7 @@ describe('ArtikelZeile — overflow menu', () => {
     fireEvent.click(overflowTrigger(container))
 
     fireEvent.change(fieldOf(container, 'Total weight'), { target: { value: '' } })
+    fireEvent.blur(fieldOf(container, 'Total weight'))
 
     await waitFor(() => expect(body).toMatchObject({ weight_grams: null }))
   })

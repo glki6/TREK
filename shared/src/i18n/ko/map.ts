@@ -46,5 +46,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': '날짜별 색상 표시 끄기',
   'map.clustering.off': '마커를 하나씩 표시',
   'map.clustering.on': '가까운 마커 묶기',
+  'map.offlineBasemap': '오프라인 지도',
+  'map.offlineShowStored': '오프라인 지도 보기',
 };
 export default map;

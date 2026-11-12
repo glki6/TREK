@@ -50,5 +50,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Niet meer per dag kleuren',
   'map.clustering.off': 'Elke markering apart tonen',
   'map.clustering.on': 'Markeringen in de buurt groeperen',
+  'map.offlineBasemap': 'Offline kaart',
+  'map.offlineShowStored': 'Offline kaart tonen',
 };
 export default map;

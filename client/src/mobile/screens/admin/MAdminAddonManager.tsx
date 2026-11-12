@@ -3,7 +3,7 @@ import { useTranslation } from '../../../i18n'
 import { useIsDark } from '../../../hooks/useIsDark'
 import {
   Puzzle, ListChecks, Wallet, FileText, CalendarDays, Globe, Briefcase, Image, Terminal, Link2, Compass, BookOpen,
-  Sparkles, Luggage, Plane, Bookmark, Users, Loader2, Mountain, CarFront, Settings2, ChevronRight,
+  Sparkles, Luggage, Plane, Bookmark, Users, Mountain, CarFront, Settings2, ChevronRight,
 } from 'lucide-react'
 import DawarichIcon from '../../../components/shared/DawarichIcon'
 import AirTrailIcon from '../../../components/shared/AirTrailIcon'
@@ -23,6 +23,7 @@ import { useAiAddonTile } from '../../../components/Admin/addons/useAiAddonTile'
 import { ImmichIcon, SynologyIcon } from '../../../components/Admin/addons/PhotoProviderIcons'
 import { MAdminCard, MAdminClampedText } from './MAdminUi'
 import WandererMark from '../../../components/Tours/wanderer/WandererMark'
+import MSkeleton from '../../components/MSkeleton'
 
 // Keys are the `icon` column from the addons table; anything unknown falls back to
 // Puzzle. Users/Sparkles cover collab and llm_parsing, as on the desktop.
@@ -63,15 +64,14 @@ export default function MAdminAddonManager({ bagTrackingEnabled, onToggleBagTrac
   const {
     addons, loading, handleToggle, tripAddons, globalAddons, integrationAddons, aiAddons, providerOptions, documentProviderOptions,
     toursWanderer,
+    wandererOffered,
     toggleToursWanderer,
     mapSwitches,
   } = useAddonManager()
 
   if (loading) {
     return (
-      <div className="flex justify-center py-10">
-        <Loader2 size={22} className="animate-spin text-m-faint" />
-      </div>
+      <MSkeleton variant="rows" count={5} />
     )
   }
 
@@ -115,13 +115,15 @@ export default function MAdminAddonManager({ bagTrackingEnabled, onToggleBagTrac
                   {addon.id === 'documents' && addon.enabled && <MProviderShelf options={documentProviderOptions} />}
                   {addon.id === 'tours' && addon.enabled && (
                     <>
-                      <MSubRow
-                        providerIcon={WandererMark}
-                        title={t('admin.toursWanderer.title')}
-                        subtitle={t('admin.toursWanderer.subtitle')}
-                        enabled={toursWanderer}
-                        onToggle={() => void toggleToursWanderer()}
-                      />
+                      {wandererOffered && (
+                        <MSubRow
+                          providerIcon={WandererMark}
+                          title={t('admin.toursWanderer.title')}
+                          subtitle={t('admin.toursWanderer.subtitle')}
+                          enabled={toursWanderer}
+                          onToggle={() => void toggleToursWanderer()}
+                        />
+                      )}
                       {mapSwitches.map(({ key, Icon, titleKey, subtitleKey, enabled, toggle }) => (
                         <MSubRow
                           key={key}

@@ -54,5 +54,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Отключить раскраску по дням',
   'map.clustering.off': 'Показывать каждый маркер отдельно',
   'map.clustering.on': 'Группировать близкие маркеры',
+  'map.offlineBasemap': 'Офлайн-карта',
+  'map.offlineShowStored': 'Показать офлайн-карту',
 };
 export default map;

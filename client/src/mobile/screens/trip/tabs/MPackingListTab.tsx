@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { selectionHaptic } from '../../../../native/haptics'
 import type { LucideIcon } from 'lucide-react'
 import {
   Briefcase, Check, CheckCheck, ChevronDown, ChevronUp, HandHelping, Minus,
@@ -6,6 +7,7 @@ import {
   Trash2, UserPlus, UserRound,
 } from 'lucide-react'
 import MDancingTrek from '../../../components/MDancingTrek'
+import MSwipeRow, { type SwipeAction } from '../../../components/MSwipeRow'
 import { useAuthStore } from '../../../../store/authStore'
 import { useAddonStore } from '../../../../store/addonStore'
 import type { PackingBag, PackingItem, TripMember } from '../../../../types'
@@ -28,6 +30,7 @@ import MPackItemSheet from './MPackItemSheet'
 import MPackingImportSheet from './MPackingImportSheet'
 import PackingPrintPreview from '../../../../components/Packing/PackingPrintPreview'
 import { usePackingExport } from '../../../../components/Packing/usePackingExport'
+import { packingBringerNames } from '../../../../components/Packing/packingBringers'
 
 type ActionView = 'menu' | 'apply' | 'save'
 
@@ -104,16 +107,20 @@ export default function MPackingListTab({ planner }: { planner: TripPlanner }) {
     }
   }
 
+  // Two switches, each a segmented control of its own on its own track: whose
+  // list, and which items. As five loose pills in one row with two of them lit,
+  // they read as one control with two answers.
+  const filterTrackCls = 'flex min-w-0 gap-[2px] rounded-full bg-[color:var(--m-ic)] p-[3px] wide:flex-none'
   const filterPillCls = (active: boolean) =>
-    `flex-1 whitespace-nowrap rounded-full px-2 py-[6px] text-center text-[0.71875rem] font-semibold ${
-      active ? 'bg-m-act text-m-actfg' : 'bg-[color:var(--m-ic)] text-m-ink'
+    `flex-1 whitespace-nowrap rounded-full px-2 py-[5px] text-center text-[0.71875rem] font-semibold wide:flex-none wide:px-[14px] ${
+      active ? 'bg-m-act text-m-actfg' : 'text-m-ink'
     }`
 
   const trueEmpty = items.length === 0
   const viewEmpty = viewItems.length === 0
 
   return (
-    <TabScroller>
+    <TabScroller wide="full">
       {/* ── Progress card (spec §4.1) ── */}
       <div className="rounded-2xl border border-[color:var(--m-rowbr)] bg-m-sheetop px-[14px] py-[13px]">
         <div className="flex items-baseline gap-[7px]">
@@ -163,7 +170,9 @@ export default function MPackingListTab({ planner }: { planner: TripPlanner }) {
 
       {/* ── Action menu (spec §4.2) ── */}
       {actionsOpen && hasActions && (
-        <div className="mt-[6px] overflow-hidden rounded-2xl border border-[color:var(--m-rowbr)] bg-[color:var(--m-glass)] backdrop-blur-[24px]">
+        // On a wide window the menu drops from the button that opened it, at the
+        // width of a popover, instead of running across the whole page.
+        <div className="mt-[6px] overflow-hidden rounded-2xl border border-[color:var(--m-rowbr)] bg-[color:var(--m-glass)] backdrop-blur-[24px] wide:ms-auto wide:max-w-[380px]">
           {actionView === 'menu' && (
             <>
               {canEdit && checkedCount > 0 && (
@@ -277,13 +286,16 @@ export default function MPackingListTab({ planner }: { planner: TripPlanner }) {
 
       {/* ── Filters (spec §4.3) ── */}
       {!trueEmpty && (
-        <div className="mt-[10px] flex items-center gap-[6px]">
-          <button type="button" onClick={() => setView('common')} className={filterPillCls(view === 'common')}>{t('packing.viewCommon')}</button>
-          <button type="button" onClick={() => setView('personal')} className={filterPillCls(view === 'personal')}>{t('packing.viewPersonal')}</button>
-          <span className="h-4 w-px flex-none bg-[color:var(--m-rowbr)]" />
-          <button type="button" onClick={() => setStatusFilter('all')} className={filterPillCls(statusFilter === 'all')}>{t('packing.filterAll')}</button>
-          <button type="button" onClick={() => setStatusFilter('open')} className={filterPillCls(statusFilter === 'open')}>{t('packing.filterOpen')}</button>
-          <button type="button" onClick={() => setStatusFilter('done')} className={filterPillCls(statusFilter === 'done')}>{t('packing.filterDone')}</button>
+        <div className="mt-[10px] flex items-center gap-[10px]">
+          <div className={`${filterTrackCls} flex-[2]`}>
+            <button type="button" aria-pressed={view === 'common'} onClick={() => setView('common')} className={filterPillCls(view === 'common')}>{t('packing.viewCommon')}</button>
+            <button type="button" aria-pressed={view === 'personal'} onClick={() => setView('personal')} className={filterPillCls(view === 'personal')}>{t('packing.viewPersonal')}</button>
+          </div>
+          <div className={`${filterTrackCls} flex-[3]`}>
+            <button type="button" aria-pressed={statusFilter === 'all'} onClick={() => setStatusFilter('all')} className={filterPillCls(statusFilter === 'all')}>{t('packing.filterAll')}</button>
+            <button type="button" aria-pressed={statusFilter === 'open'} onClick={() => setStatusFilter('open')} className={filterPillCls(statusFilter === 'open')}>{t('packing.filterOpen')}</button>
+            <button type="button" aria-pressed={statusFilter === 'done'} onClick={() => setStatusFilter('done')} className={filterPillCls(statusFilter === 'done')}>{t('packing.filterDone')}</button>
+          </div>
         </div>
       )}
 
@@ -302,7 +314,10 @@ export default function MPackingListTab({ planner }: { planner: TripPlanner }) {
           {t('packing.emptyFiltered')}
         </div>
       ) : (
-        groups.map(group => (
+        // Categories stand in columns on a wide window, as many as the page
+        // holds, each card whole in its column like a masonry board.
+        <div className="wide:mt-[10px] wide:columns-[300px] wide:gap-3">
+        {groups.map(group => (
           <PackingCategoryCard
             key={group.category}
             group={group}
@@ -327,7 +342,8 @@ export default function MPackingListTab({ planner }: { planner: TripPlanner }) {
             bags={bags}
             onCreateBag={createBag}
           />
-        ))
+        ))}
+        </div>
       )}
 
       <MBagsSheet
@@ -466,7 +482,7 @@ function PackingCategoryCard({
   }
 
   return (
-    <div className="mt-[10px] overflow-hidden rounded-2xl border border-[color:var(--m-rowbr)] bg-m-sheetop">
+    <div className="mt-[10px] overflow-hidden rounded-2xl border border-[color:var(--m-rowbr)] bg-m-sheetop wide:mb-[10px] wide:mt-0 wide:inline-block wide:w-full wide:break-inside-avoid wide:align-top">
       {/* A <div role="button"> rather than a real <button type="button"> — the rename input and
           the assign/menu triggers below are interactive elements a <button type="button"> may
           not contain (invalid HTML); this stays keyboard-operable via onKeyDown. */}
@@ -495,7 +511,7 @@ function PackingCategoryCard({
             className="min-w-0 flex-1 border-b border-[color:var(--m-rowbr)] bg-transparent text-[0.875rem] font-bold text-m-ink outline-none"
           />
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[0.875rem] font-bold text-m-ink">{group.category}</span>
+          <span dir="auto" className="min-w-0 flex-1 truncate text-[0.875rem] font-bold text-m-ink">{group.category}</span>
         )}
         {editMode && (
           <button
@@ -657,7 +673,10 @@ function PackingItemRow({ item, planner, currentUserId, editMode, canEdit, bagTr
   const ownerMember = planner.tripMembers.find(m => m.id === item.owner_id)
   const ownerAvatarUrl = ownerMember?.avatar_url ?? (item.owner_id === me?.id ? me?.avatar_url ?? null : null)
 
-  const toggle = () => tripActions.togglePackingItem(tripId, item.id, !item.checked)
+  const toggle = () => {
+    selectionHaptic()
+    return tripActions.togglePackingItem(tripId, item.id, !item.checked)
+  }
   // Multi-piece items count their pieces into the bag (#2296).
   const quantity = item.quantity || 1
   const packed = packedOf(item)
@@ -676,16 +695,36 @@ function PackingItemRow({ item, planner, currentUserId, editMode, canEdit, bagTr
     setCreatingBag(false)
   }
 
+  // A swipe does what the row's own controls do: tick it off, or edit and delete it.
+  const swipeTrailing: SwipeAction[] = canEdit && !isPlaceholder
+    ? [
+        { label: t('common.delete'), icon: Trash2, tone: 'danger', onAction: onDelete },
+        { label: t('common.edit'), icon: Pencil, tone: 'neutral', onAction: onEdit },
+      ]
+    : []
+  const swipeLeading: SwipeAction | undefined = isPlaceholder
+    ? undefined
+    : item.checked
+      ? { label: t('packing.filterOpen'), icon: RotateCcw, tone: 'neutral', onAction: () => void toggle() }
+      : { label: t('packing.filterDone'), icon: Check, tone: 'accent', onAction: () => void toggle() }
+
   return (
     <>
-      <div className="flex items-center gap-[9px] border-t border-[color:var(--m-rowbr)] py-2 first:border-t-0">
+      <MSwipeRow
+        leading={swipeLeading}
+        trailing={swipeTrailing}
+        surface="bg-m-sheetop"
+        inset={4}
+        className="border-t border-[color:var(--m-rowbr)] first:border-t-0"
+      >
+      <div className="flex items-center gap-[9px] py-2">
         <button
           type="button"
           onClick={toggle}
           aria-label={item.name}
           aria-pressed={!!item.checked}
           className={`flex h-[22px] w-[22px] flex-none items-center justify-center rounded-[7px] border-[1.5px] ${
-            item.checked ? 'border-m-act bg-m-act text-m-actfg' : partlyPacked ? 'border-m-act text-transparent' : 'border-[color:var(--m-rowbr)] text-transparent'
+            item.checked ? 'border-m-act bg-m-act text-m-actfg' : partlyPacked ? 'border-m-act text-transparent' : 'border-[color:var(--m-checkbr)] text-transparent'
           }`}
         >
           <Check size={12} strokeWidth={3} />
@@ -718,7 +757,7 @@ function PackingItemRow({ item, planner, currentUserId, editMode, canEdit, bagTr
           </span>
         )}
         {!badgeSharedToMe && !badgeSharedByMe && badgeBroughtBy && (
-          <span className="flex flex-none items-center gap-[3px]" title={item.owner_username || undefined}>
+          <span className="flex flex-none items-center gap-[3px]" title={t('packing.broughtBy', { name: packingBringerNames(item) })} aria-label={t('packing.broughtBy', { name: packingBringerNames(item) })}>
             {ownerAvatarUrl
               ? <img src={ownerAvatarUrl} alt={item.owner_username || ''} className="h-5 w-5 flex-none rounded-full object-cover" />
               : <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-[color:var(--m-ic)] font-geist text-[0.5625rem] font-bold text-m-muted">{(item.owner_username || '?')[0]?.toUpperCase()}</span>}
@@ -785,6 +824,7 @@ function PackingItemRow({ item, planner, currentUserId, editMode, canEdit, bagTr
           </button>
         )}
       </div>
+      </MSwipeRow>
 
       {menuOpen && editMode && canEdit && (
         <div className="mb-[6px] ms-[28px] overflow-hidden rounded-[13px] border border-[color:var(--m-rowbr)] bg-[color:var(--m-glass)] backdrop-blur-[24px]">

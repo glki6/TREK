@@ -47,5 +47,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Lõpeta päevade kaupa värvimine',
   'map.clustering.off': 'Näita iga tähist eraldi',
   'map.clustering.on': 'Rühmita lähedased tähised',
+  'map.offlineBasemap': 'Võrguühenduseta kaart',
+  'map.offlineShowStored': 'Näita võrguühenduseta kaarti',
 };
 export default map;

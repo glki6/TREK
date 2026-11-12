@@ -48,5 +48,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Nap szerinti színezés kikapcsolása',
   'map.clustering.off': 'Minden jelölő külön megjelenítése',
   'map.clustering.on': 'Közeli jelölők csoportosítása',
+  'map.offlineBasemap': 'Offline térkép',
+  'map.offlineShowStored': 'Offline térkép megjelenítése',
 };
 export default map;

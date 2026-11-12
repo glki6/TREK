@@ -1,8 +1,10 @@
-import { Key, Trash2, User, Loader2, Shield } from 'lucide-react'
+import { Key, Trash2, User, Shield } from 'lucide-react'
 import { SCOPES_PREVIEW, useMcpTokensAdmin } from '../../../components/Admin/useMcpTokensAdmin'
 import { useTranslation } from '../../../i18n'
+import { useFormatDate } from '../../../hooks/useDateFormat'
 import { MAdminCard } from './MAdminUi'
 import MConfirmSheet from '../settings/MConfirmSheet'
+import MSkeleton from '../../components/MSkeleton'
 
 // Mobile MCP tokens admin section: OAuth sessions + long-lived MCP tokens, each
 // as a card list with loading/empty states, expandable scope chips and a
@@ -13,7 +15,8 @@ export default function MAdminMcpTokensPanel() {
     sessions, sessionsLoading, tokens, tokensLoading, expandedScopes, toggleScopes,
     revokeConfirmId, setRevokeConfirmId, deleteConfirmId, setDeleteConfirmId, handleRevoke, handleDelete,
   } = useMcpTokensAdmin()
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
+  const { formatDate } = useFormatDate()
 
   return (
     <div className="space-y-3">
@@ -32,9 +35,7 @@ export default function MAdminMcpTokensPanel() {
         </div>
         <MAdminCard>
           {sessionsLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-m-faint" />
-            </div>
+            <MSkeleton variant="rows" count={3} framed={false} />
           ) : sessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-10">
               <Shield className="h-8 w-8 text-m-faint" />
@@ -58,7 +59,7 @@ export default function MAdminMcpTokensPanel() {
                         {session.username}
                       </span>
                       <span className="text-m-faint">·</span>
-                      <span>{new Date(session.created_at).toLocaleDateString(locale)}</span>
+                      <span>{formatDate(new Date(session.created_at))}</span>
                     </div>
                     <div className="mt-[6px] flex flex-wrap gap-1">
                       {visible.map(scope => (
@@ -112,9 +113,7 @@ export default function MAdminMcpTokensPanel() {
         </div>
         <MAdminCard>
           {tokensLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-m-faint" />
-            </div>
+            <MSkeleton variant="rows" count={3} framed={false} />
           ) : tokens.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-10">
               <Key className="h-8 w-8 text-m-faint" />
@@ -135,11 +134,11 @@ export default function MAdminMcpTokensPanel() {
                       {token.username}
                     </span>
                     <span className="text-m-faint">·</span>
-                    <span>{new Date(token.created_at).toLocaleDateString(locale)}</span>
+                    <span>{formatDate(new Date(token.created_at))}</span>
                     <span className="text-m-faint">·</span>
                     <span>
                       {token.last_used_at
-                        ? new Date(token.last_used_at).toLocaleDateString(locale)
+                        ? formatDate(new Date(token.last_used_at))
                         : t('admin.mcpTokens.never')}
                     </span>
                   </div>

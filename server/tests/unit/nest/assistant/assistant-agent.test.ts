@@ -65,6 +65,7 @@ const KINDS: Record<string, AssistantToolKind> = {
   get_weather: 'read',
   get_place_details: 'read',
   create_place: 'write',
+  open_trip_chat: 'read',
 };
 
 /** What the fake tools answer, per tool; anything else fails. */
@@ -75,6 +76,7 @@ const ANSWERS: Record<string, unknown> = {
   },
   get_weather: { weather: { temp: 20, main: 'Clouds', description: 'cloudy', type: 'climate' } },
   get_place_details: { details: { name: 'Ginkaku-ji' } },
+  open_trip_chat: { offered: true },
 };
 
 function fakeTools() {
@@ -808,6 +810,118 @@ describe('runAgentLoop', () => {
       expect(t.requests).toHaveLength(2);
       expect(t.chunks.some((chunk) => chunk.type === 'data-trek-follow-ups')).toBe(false);
     });
+
+    it('ASTAGT-043: follow-ups with no answer before them are told none was seen, the step goes back whole, and their chips come under the answer (#2789)', async () => {
+      const state = {
+        adapter: 'anthropic-messages' as const,
+        blocks: [
+          { type: 'thinking', thinking: '', signature: 'sig' },
+          { type: 'tool_use', id: 'toolu_5', name: ASSISTANT_FOLLOW_UPS_TOOL, input: {} },
+        ],
+      };
+      const t = setup([
+        [
+          { type: 'provider-state', state },
+          ask('toolu_5', ['Stops on the drive']),
+          { type: 'finish', reason: 'tool-calls' },
+        ],
+        [
+          { type: 'text-delta', delta: 'You leave Lisbon on day 4.' },
+          { type: 'finish', reason: 'stop' },
+        ],
+      ]);
+      const outcome = await runAgentLoop(t.deps, t.input, t.writer, new AbortController().signal);
+      expect(outcome.end).toBe('stop');
+      // Only the step after the ask may not call a tool: a model offering follow-ups again has to write (#3016).
+      expect(t.requests[0].toolChoice).toBeUndefined();
+      expect(t.requests[1].toolChoice).toBe('none');
+      expect(t.requests[1].tools.length).toBeGreaterThan(0);
+      const second = t.requests[1].messages;
+      expect(second.at(-2)).toEqual({
+        role: 'assistant',
+        text: '',
+        toolCalls: [{ id: 'toolu_5', name: ASSISTANT_FOLLOW_UPS_TOOL, args: { questions: ['Stops on the drive'] } }],
+        providerState: state,
+      });
+      expect(second.at(-1)).toMatchObject({
+        role: 'tool',
+        toolCallId: 'toolu_5',
+        output: expect.stringContaining('Not shown yet'),
+      });
+      expect(t.memory.saved[0].status).toBe('complete');
+      expect(t.memory.saved[1].step.parts).toEqual([
+        { type: 'text', text: 'You leave Lisbon on day 4.' },
+        { type: 'data-trek-follow-ups', data: { questions: ['Stops on the drive'] } },
+      ]);
+      expect(t.chunks).toContainEqual({ type: 'data-trek-follow-ups', data: { questions: ['Stops on the drive'] } });
+    });
+
+    it('ASTAGT-044: follow-ups with no answer twice in a row end in empty_answer', async () => {
+      const t = setup([
+        [ask('toolu_6', ['x']), { type: 'finish', reason: 'tool-calls' }],
+        [ask('toolu_7', ['x']), { type: 'finish', reason: 'tool-calls' }],
+      ]);
+      const outcome = await runAgentLoop(t.deps, t.input, t.writer, new AbortController().signal);
+      expect(outcome).toMatchObject({ end: 'failed', code: 'empty_answer' });
+      expect(t.requests).toHaveLength(2);
+    });
+
+    it('ASTAGT-047: the text-only request is the one step after the ask, never the ones before or after it (#3016)', async () => {
+      const t = setup([
+        [{ type: 'tool-call', call: { id: 'l1', name: 'list_places', args: {} } }],
+        [ask('toolu_9', ['More stops']), { type: 'finish', reason: 'tool-calls' }],
+        [
+          { type: 'text-delta', delta: 'Two stops so far.' },
+          { type: 'finish', reason: 'stop' },
+        ],
+      ]);
+      const outcome = await runAgentLoop(t.deps, t.input, t.writer, new AbortController().signal);
+      expect(outcome.end).toBe('stop');
+      expect(t.requests.map((request) => request.toolChoice)).toEqual([undefined, undefined, 'none']);
+    });
+
+    it('ASTAGT-045: follow-ups with no answer after an announcing first answer are still asked for the answer', async () => {
+      const t = setup([
+        [{ type: 'text-delta', delta: 'Let me check your places:' }],
+        [{ type: 'tool-call', call: { id: 'l1', name: 'list_places', args: {} } }],
+        [ask('toolu_8', ['Add Ginkaku-ji']), { type: 'finish', reason: 'tool-calls' }],
+        [{ type: 'text-delta', delta: 'Kinkaku-ji is the only place so far.' }],
+      ]);
+      const outcome = await runAgentLoop(t.deps, t.input, t.writer, new AbortController().signal);
+      expect(outcome.end).toBe('stop');
+      expect(t.requests).toHaveLength(4);
+      expect(t.requests[1].messages.at(-1)).toMatchObject({ role: 'user', text: expect.stringContaining('now') });
+      expect(t.requests[3].messages.at(-1)).toMatchObject({
+        role: 'tool',
+        toolCallId: 'toolu_8',
+        output: expect.stringContaining('Not shown yet'),
+      });
+      expect(t.chunks).toContainEqual({ type: 'data-trek-follow-ups', data: { questions: ['Add Ginkaku-ji'] } });
+      expect(t.memory.saved.map((saved) => saved.status)).not.toContain('error');
+    });
+  });
+
+  it('ASTAGT-046: a change its session sends back (called before its tools were loaded) is a tool error, never held (#2967)', async () => {
+    const t = setup([
+      [{ type: 'tool-call', call: { id: 'w1', name: 'create_place', args: { name: 'Blind' } } }],
+      [{ type: 'tool-call', call: { id: 'w2', name: 'create_place', args: { name: 'With schema' } } }],
+    ]);
+    t.tools.pinArgs.mockImplementationOnce(() => ({ error: 'create_place did not run: send it again' }));
+    const outcome = await runAgentLoop(t.deps, t.input, t.writer, new AbortController().signal);
+    expect(outcome.end).toBe('awaiting');
+    expect(t.memory.saved[0].step.parts).toContainEqual({
+      type: 'tool-call',
+      toolCallId: 'w1',
+      toolName: 'create_place',
+      args: { name: 'Blind' },
+      result: 'create_place did not run: send it again',
+      isError: true,
+    });
+    const sentBack = t.requests[1].messages.find((m) => m.role === 'tool' && m.toolCallId === 'w1');
+    expect(sentBack).toMatchObject({ isError: true, output: expect.stringContaining('did not run') });
+    expect(t.deps.describe).toHaveBeenCalledTimes(1);
+    expect(t.memory.held).toHaveLength(1);
+    expect(t.memory.held[0].held.map((call) => call.args)).toEqual([{ name: 'With schema' }]);
   });
 
   it('ASTAGT-038: followUpsOf trims, drops duplicates and blanks, cuts each to a chip and keeps three', () => {
@@ -909,5 +1023,55 @@ describe('runAgentLoop', () => {
     ]);
     expect(JSON.stringify(t.chunks)).not.toContain('HM4X2');
     expect(JSON.stringify(t.memory.saved)).not.toContain('HM4X2');
+  });
+
+  it('ASTAGT-048: an answer that hands the talk on to a trip chat ends the turn; the model is not asked to answer twice', async () => {
+    const t = setup([
+      [
+        { type: 'text-delta', delta: 'Your next trip is Florida.' },
+        {
+          type: 'tool-call',
+          call: { id: 'toolu_h', name: 'open_trip_chat', args: { tripId: 1, question: 'Book the Uber' } },
+        },
+        { type: 'finish', reason: 'tool-calls' },
+      ],
+      [{ type: 'text-delta', delta: 'Your next trip is Florida.' }],
+    ]);
+    const outcome = await runAgentLoop(t.deps, t.input, t.writer, new AbortController().signal);
+    expect(outcome.end).toBe('stop');
+    expect(t.requests).toHaveLength(1);
+    expect(t.tools.call).toHaveBeenCalledTimes(1);
+    expect(t.memory.saved).toHaveLength(1);
+    expect(t.memory.saved[0].step.parts.map((part) => part.type)).toEqual(['text', 'tool-call']);
+  });
+
+  it('ASTAGT-049: a hand-on without any answer, or beside a read, still asks the model again', async () => {
+    const alone = setup([
+      [
+        {
+          type: 'tool-call',
+          call: { id: 'toolu_h', name: 'open_trip_chat', args: { tripId: 1, question: 'Book it' } },
+        },
+        { type: 'finish', reason: 'tool-calls' },
+      ],
+      [{ type: 'text-delta', delta: 'Go on in the trip chat.' }],
+    ]);
+    await runAgentLoop(alone.deps, alone.input, alone.writer, new AbortController().signal);
+    expect(alone.requests).toHaveLength(2);
+
+    const withRead = setup([
+      [
+        { type: 'text-delta', delta: 'Let me look.' },
+        { type: 'tool-call', call: { id: 'toolu_r', name: 'list_places', args: { tripId: 1 } } },
+        {
+          type: 'tool-call',
+          call: { id: 'toolu_h', name: 'open_trip_chat', args: { tripId: 1, question: 'Book it' } },
+        },
+        { type: 'finish', reason: 'tool-calls' },
+      ],
+      [{ type: 'text-delta', delta: 'Kinkaku-ji is on the list.' }],
+    ]);
+    await runAgentLoop(withRead.deps, withRead.input, withRead.writer, new AbortController().signal);
+    expect(withRead.requests).toHaveLength(2);
   });
 });

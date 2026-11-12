@@ -56,5 +56,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'إيقاف التلوين حسب اليوم',
   'map.clustering.off': 'إظهار كل علامة على حدة',
   'map.clustering.on': 'تجميع العلامات المتقاربة',
+  'map.offlineBasemap': 'خريطة دون اتصال',
+  'map.offlineShowStored': 'عرض الخريطة دون اتصال',
 };
 export default map;

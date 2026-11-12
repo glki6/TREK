@@ -45,5 +45,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'เลิกแยกสีจุดแวะตามวัน',
   'map.clustering.off': 'แสดงหมุดแต่ละอันแยกกัน',
   'map.clustering.on': 'รวมหมุดที่อยู่ใกล้กัน',
+  'map.offlineBasemap': 'แผนที่ออฟไลน์',
+  'map.offlineShowStored': 'แสดงแผนที่ออฟไลน์',
 };
 export default map;

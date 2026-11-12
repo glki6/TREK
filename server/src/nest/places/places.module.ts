@@ -30,6 +30,7 @@ import { UnsplashModule } from '../unsplash/unsplash.module';
 import { PlaceOriginsService } from './place-origins.service';
 import { PlacesEnrichController } from './places-enrich.controller';
 import { PlacesEnrichService } from './places-enrich.service';
+import { PlacesStorageRefsService } from './places-storage-refs.service';
 import { PlacesController } from './places.controller';
 import { PlacesMcp } from './places.mcp';
 import { PlacesRpc } from './places.rpc';
@@ -107,7 +108,14 @@ import { MulterModule } from '@nestjs/platform-express';
     ]),
   ],
   controllers: [PlacesController, PlacesEnrichController], // fork: the enrich route
-  providers: [PlacesService, PlacesMcp, PlacesRpc, PlaceOriginsService, PlacesEnrichService],
+  providers: [
+    PlacesService,
+    PlacesMcp,
+    PlacesRpc,
+    PlaceOriginsService,
+    PlacesStorageRefsService,
+    PlacesEnrichService,
+  ],
   // The origin bookkeeping too: the booking import writes places as well.
   exports: [PlacesService, PlaceOriginsService],
 })

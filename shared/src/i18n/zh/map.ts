@@ -44,5 +44,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': '停止按天着色',
   'map.clustering.off': '单独显示每个标记',
   'map.clustering.on': '合并邻近的标记',
+  'map.offlineBasemap': '离线地图',
+  'map.offlineShowStored': '显示离线地图',
 };
 export default map;

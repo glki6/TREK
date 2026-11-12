@@ -173,6 +173,21 @@ describe('MPlaceSheet', () => {
     expect(screen.queryByRole('button', { name: 'Change image' })).not.toBeInTheDocument()
   })
 
+  it('FE-MOB-PLSH-033: the category pill stands under the name and address, as wide as its name', () => {
+    renderSheet()
+    const pill = screen.getByText('Museum').parentElement as HTMLElement
+    // No cap of its own any more: under the photo it was cut to "Shoppi…".
+    expect(pill.className).not.toMatch(/max-w-\[/)
+    expect(pill).toHaveClass('max-w-full')
+    // In the column with the name, so the photo keeps the leading edge of the cards below.
+    expect(pill.parentElement).toContainElement(screen.getByText('Kunsthistorisches Museum'))
+  })
+
+  it('FE-MOB-PLSH-034: the section labels are the small capitals every sheet uses', () => {
+    renderSheet()
+    expect(screen.getByText('Assigned Days')).toHaveClass('uppercase')
+  })
+
   it('FE-MOB-PLSH-003: clears the place selection when closed', () => {
     const { planner } = renderSheet()
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
@@ -479,29 +494,26 @@ describe('MPlaceSheet', () => {
     expect(screen.getByText('Ferry to Corfu')).toBeInTheDocument()
   })
 
-  it('FE-MOB-PLSH-028: a transport booking opens the transport editor, not the reservation modal', () => {
+  it('FE-MOB-PLSH-028: a transport booking opens its detail sheet, not an editor', () => {
     const planner = bookingPlanner({ id: 7, assignment_id: 11, title: 'Ferry to Corfu', status: 'pending', type: 'ferry', day_id: 2 })
-    renderSheet(planner)
+    const { shell } = renderSheet(planner)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Reservation' }))
+    fireEvent.click(screen.getByText('Ferry to Corfu').closest('button') as HTMLButtonElement)
 
-    expect(planner.setEditingTransport).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }))
-    expect(planner.setTransportModalDayId).toHaveBeenCalledWith(2)
-    expect(planner.setShowTransportModal).toHaveBeenCalledWith(true)
-    expect(planner.setShowReservationModal).not.toHaveBeenCalled()
+    expect(shell.openSheet).toHaveBeenCalledWith('transport', { reservationId: 7 })
+    expect(planner.setShowTransportModal).not.toHaveBeenCalled()
     // and the place sheet gets out of the way
     expect(planner.setSelectedPlaceId).toHaveBeenCalledWith(null)
   })
 
-  it('FE-MOB-PLSH-029: a non-transport booking opens the reservation modal', () => {
+  it('FE-MOB-PLSH-029: a non-transport booking opens the same detail sheet first, as on the desktop', () => {
     const planner = bookingPlanner({ id: 8, assignment_id: 11, title: 'Museum tour', status: 'confirmed', type: 'activity' })
-    renderSheet(planner)
+    const { shell } = renderSheet(planner)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Reservation' }))
+    fireEvent.click(screen.getByText('Museum tour').closest('button') as HTMLButtonElement)
 
-    expect(planner.setEditingReservation).toHaveBeenCalledWith(expect.objectContaining({ id: 8 }))
-    expect(planner.setShowReservationModal).toHaveBeenCalledWith(true)
-    expect(planner.setShowTransportModal).not.toHaveBeenCalled()
+    expect(shell.openSheet).toHaveBeenCalledWith('transport', { reservationId: 8 })
+    expect(planner.setShowReservationModal).not.toHaveBeenCalled()
   })
 
   it('FE-MOB-PLSH-030: a viewer without edit rights sees the booking but gets no live button', () => {
@@ -514,7 +526,6 @@ describe('MPlaceSheet', () => {
 
     // Still readable — just not a control that would do nothing when pressed.
     expect(screen.getByText('Ferry to Corfu')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Edit Reservation' })).not.toBeInTheDocument()
     const row = screen.getByText('Ferry to Corfu').closest('button') as HTMLButtonElement
     expect(row.disabled).toBe(true)
   })

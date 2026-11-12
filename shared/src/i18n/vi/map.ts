@@ -48,5 +48,7 @@ const map: TranslationStrings = {
   'map.dayColors.hide': 'Tắt tô màu theo ngày',
   'map.clustering.off': 'Hiện từng điểm đánh dấu riêng',
   'map.clustering.on': 'Gom các điểm đánh dấu gần nhau',
+  'map.offlineBasemap': 'Bản đồ ngoại tuyến',
+  'map.offlineShowStored': 'Hiện bản đồ ngoại tuyến',
 };
 export default map;
