@@ -12,6 +12,9 @@ import { passwordErrorKey } from '../../utils/passwordError'
 import { isNativeApp } from '../../native/platform'
 import {
   BrowserSignInCancelled,
+  isHandoffReturn,
+  rememberHandoffReturn,
+  resumeBrowserSignIn,
   signInThroughBrowser,
   takeHandoffReturn,
   type BrowserSignInStart,
@@ -255,7 +258,14 @@ export function useLogin() {
         email_link_blocked: t('login.oidc.emailLinkBlocked'),
       }
       setError(errorMessages[oidcError] || oidcError)
-      sessionStorage.removeItem('oidc_redirect')
+      // A round trip the app's sign-in started keeps its way back. The next SSO
+      // attempt from this page is a plain web login, and without the handoff page
+      // to return to it ends in the web app inside the app's browser sheet. The
+      // handoff page asks for a tap before it passes anything on, so keeping the
+      // path hands nothing over by itself; the copy is renewed for a slow retry.
+      const stashed = sessionStorage.getItem('oidc_redirect')
+      if (isHandoffReturn(stashed)) rememberHandoffReturn(stashed)
+      else sessionStorage.removeItem('oidc_redirect')
       window.history.replaceState({}, '', '/login')
       loadConfig(false)
       return
@@ -302,6 +312,23 @@ export function useLogin() {
       setIsLoading(false)
     }
   }
+
+  // In the app: a sign-in the system browser finished while Android started the
+  // app anew. Its return waited natively; redeemed here, it signs the app in.
+  useEffect(() => {
+    if (!nativeApp) return
+    resumeBrowserSignIn()
+      .then(async (signedIn) => {
+        if (!signedIn) return
+        await loadUser({ silent: true })
+        setShowTakeoff(true)
+        void loadSettings()
+        setTimeout(() => {
+          void navigate(redirectTarget)
+        }, 2600)
+      })
+      .catch(() => setError(t('native.login.failed')))
+  }, [nativeApp, loadUser, loadSettings, navigate, redirectTarget, t])
 
   /** In the app: SSO and passkeys run in the system browser (native/browserSignIn.ts). */
   const handleBrowserSignIn = async (start?: BrowserSignInStart): Promise<void> => {

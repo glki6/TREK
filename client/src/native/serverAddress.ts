@@ -43,12 +43,13 @@ const FEATURES_PATH = '/api/health/features';
 
 /**
  * The oldest server API this app can work with (`nativeApi` in the features
- * response). 2 is TREK 5.1.3, the first server whose sign-in from the app does
- * not end in the browser. A server without the field is older still. Raising it
+ * response). 3 is TREK 5.1.4, whose UI follows a widget or Live Activity tap
+ * that starts the app; 2 was 5.1.3, the first server whose sign-in from the app
+ * does not end in the browser. A server without the field is older still. Raising it
  * goes with SERVER_CHECK in TrekServerStore (iOS and Android), so a server the
  * app remembers from before is checked against the new minimum once.
  */
-const MIN_NATIVE_API = 2;
+const MIN_NATIVE_API = 3;
 
 function normalize(raw: string): string | null {
   let parsed: URL;
@@ -72,6 +73,18 @@ export function candidateUrls(input: string): string[] {
     ? [normalize(trimmed)]
     : [normalize(`https://${trimmed}`), normalize(`http://${trimmed}`)];
   return candidates.filter((url): url is string => url !== null);
+}
+
+/**
+ * The host and port a client certificate added on the address screen, before
+ * any check, is kept for: the https address the typed text stands for. Null
+ * for nothing typed or a plain http address, which never gets a certificate.
+ */
+export function certificateTargetFor(input: string): { host: string; port: number } | null {
+  const https = candidateUrls(input).find((url) => url.startsWith('https://'));
+  if (!https) return null;
+  const url = new URL(https);
+  return { host: url.hostname.toLowerCase(), port: url.port ? Number(url.port) : 443 };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -47,7 +47,13 @@ public class MainActivity extends BridgeActivity {
         // Set before any WebView callback can run: they are posted to this thread.
         if (onServer) {
             bridge.setWebViewClient(
-                new TrekWebViewClient(bridge, this::showAddressScreen, this::showSignInBar, TrekServerStore.getSignInHosts(this))
+                new TrekWebViewClient(
+                    bridge,
+                    this::showAddressScreen,
+                    this::showSignInBar,
+                    this::showErrorPageBar,
+                    TrekServerStore.getSignInHosts(this)
+                )
             );
         }
         TrekSharedFiles.receive(this, getIntent());
@@ -84,7 +90,10 @@ public class MainActivity extends BridgeActivity {
     private View signInBar;
     /** Whether the page is a proxy's sign-in page, and whether the keyboard is up over it. */
     private boolean onSignInPage;
+    /** Whether the page is an error page in place of the server's (TrekWebViewClient.onReceivedHttpError). */
+    private boolean onErrorPage;
     private boolean keyboardUp;
+    private TextView signInHint;
 
     /**
      * Over a proxy's sign-in page (Pangolin, authentik, ...): the server's UI is
@@ -100,9 +109,22 @@ public class MainActivity extends BridgeActivity {
         });
     }
 
+    /** The same bar over an error page in place of the server's, with words for that. */
+    private void showErrorPageBar(boolean show) {
+        runOnUiThread(() -> {
+            onErrorPage = show;
+            if (show && signInBar == null) signInBar = buildSignInBar();
+            updateSignInBar();
+        });
+    }
+
     /** Out of the way while the keyboard is up: the form needs the room, and the bar is there again once it closes. */
     private void updateSignInBar() {
-        if (signInBar != null) signInBar.setVisibility(onSignInPage && !keyboardUp ? View.VISIBLE : View.GONE);
+        if (signInBar == null) return;
+        if (signInHint != null) {
+            signInHint.setText(onSignInPage ? TrekServerStore.signInHintLabel(this) : TrekServerStore.errorPageHintLabel(this));
+        }
+        signInBar.setVisibility((onSignInPage || onErrorPage) && !keyboardUp ? View.VISIBLE : View.GONE);
     }
 
     private View buildSignInBar() {
@@ -110,16 +132,20 @@ public class MainActivity extends BridgeActivity {
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(Math.round(14 * dp), Math.round(10 * dp), Math.round(8 * dp), Math.round(10 * dp));
+        bar.setPaddingRelative(Math.round(16 * dp), Math.round(10 * dp), Math.round(10 * dp), Math.round(10 * dp));
+        // The look of the app's own first screens: a white card with a sand edge,
+        // warm grey text and a dark button, over whatever page the proxy shows.
         GradientDrawable background = new GradientDrawable();
-        background.setColor(0xF2111827);
-        background.setCornerRadius(16 * dp);
+        background.setColor(0xF7FFFFFF);
+        background.setCornerRadius(18 * dp);
+        background.setStroke(Math.max(1, Math.round(dp)), 0xFFEFE4D8);
         bar.setBackground(background);
-        bar.setElevation(6 * dp);
+        bar.setElevation(8 * dp);
 
         TextView hint = new TextView(this);
+        signInHint = hint;
         hint.setText(TrekServerStore.signInHintLabel(this));
-        hint.setTextColor(0xFFE5E7EB);
+        hint.setTextColor(0xFF6B5F57);
         hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
         bar.addView(hint, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
@@ -127,12 +153,21 @@ public class MainActivity extends BridgeActivity {
         change.setText(TrekServerStore.changeServerLabel(this));
         change.setAllCaps(false);
         change.setTextColor(0xFFFFFFFF);
+        GradientDrawable pill = new GradientDrawable();
+        pill.setColor(0xFF111827);
+        pill.setCornerRadius(12 * dp);
+        change.setBackground(pill);
+        change.setMinHeight(0);
+        change.setMinimumHeight(0);
+        change.setPaddingRelative(Math.round(14 * dp), Math.round(9 * dp), Math.round(14 * dp), Math.round(9 * dp));
+        LinearLayout.LayoutParams changeParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        changeParams.setMarginStart(Math.round(10 * dp));
         change.setOnClickListener((v) -> {
             TrekServerStore.setUrl(this, null);
             TrekServerStore.markRestart(this);
             recreate();
         });
-        bar.addView(change, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        bar.addView(change, changeParams);
 
         int margin = Math.round(12 * dp);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(

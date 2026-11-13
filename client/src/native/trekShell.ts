@@ -18,7 +18,12 @@ export interface TrekShellPlugin {
    * newer one (SERVER_CHECK in TrekServerStore). Set only while no server is,
    * so the address screen can check it again, pre-filled.
    */
-  getServer(): Promise<{ url: string | null; previousUrl?: string | null }>;
+  /**
+   * The server picked, the one before an update asked to check it again, and
+   * why its page did not load last time (taken once; builds before 5.1.4 leave
+   * it out).
+   */
+  getServer(): Promise<{ url: string | null; previousUrl?: string | null; failure?: string | null }>;
   /**
    * Remembers the server and loads it. The current page is gone afterwards.
    * `signInHosts` are the hosts of a proxy's sign-in page in front of it
@@ -27,13 +32,14 @@ export interface TrekShellPlugin {
    * opens the server's welcome page with it, which signs the buyer in. A build
    * without this option ignores it and opens the server as usual.
    * `labels` are the words of the bar the app shows over a proxy's sign-in page,
-   * in the user's language: the server's UI is not there to say them.
+   * or over an error page in place of the server's (a proxy's block page), in the
+   * user's language: the server's UI is not there to say them.
    */
   setServer(options: {
     url: string;
     signInHosts?: string[];
     welcome?: string;
-    labels?: { signInHint: string; changeServer: string };
+    labels?: { signInHint: string; changeServer: string; errorPageHint?: string };
   }): Promise<void>;
   /** Forgets the server and returns to the address screen. */
   resetServer(): Promise<void>;
@@ -45,6 +51,12 @@ export interface TrekShellPlugin {
    * user closes the browser.
    */
   authenticate(options: { url: string; callbackScheme: string }): Promise<{ url: string }>;
+  /**
+   * Android: a return to the sign-in scheme that found no authenticate() call
+   * waiting, because the app was started anew meanwhile. Handed out once, and
+   * only for two minutes, as long as the server keeps its code. Not in iOS builds, nor in Android builds before 5.1.4.
+   */
+  takeAuthCallback(): Promise<{ url: string | null }>;
   /** iOS: stores the server's start page for a cold start without network. */
   refreshOfflineCopy(): Promise<{ saved: boolean }>;
   /** iOS: loads that copy under the server's origin. False when there is none. */
@@ -105,7 +117,8 @@ export interface TrekShellPlugin {
    * Android `purchaseToken`, which the control plane verifies with Google Play.
    */
   storePurchase(options: { productId: string }): Promise<{
-    kind: 'bought' | 'cancelled' | 'pending' | 'failed';
+    /** `subscribed`: this store account already holds a delivered subscription, so nothing was bought. */
+    kind: 'bought' | 'cancelled' | 'pending' | 'failed' | 'subscribed';
     jws?: string;
     purchaseToken?: string;
     productId?: string;
@@ -127,6 +140,11 @@ export interface TrekShellPlugin {
   }): Promise<{ result: 'shown' | 'unsupported' }>;
   /** iOS, feature storeKit: the newest active subscription under `prefix` on this Apple ID, if any. */
   storeRestore(options: { prefix: string }): Promise<{ jws?: string; transactionId?: string }>;
+  /**
+   * Whether this Apple ID or Google account holds a delivered subscription under
+   * `prefix`, read without asking for a password. Not in builds before 5.1.4.
+   */
+  storeHeld(options: { prefix: string }): Promise<{ held: boolean }>;
   /** Feature watch: what the Apple Watch app shows (native/watch.ts), as JSON, sent on through WatchConnectivity. */
   setWatchSnapshot(options: { json: string }): Promise<void>;
   /** Feature watch: the ticks the watch sent since the last call, oldest first (parsed by parseWatchActions). */

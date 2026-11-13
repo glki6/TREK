@@ -41,6 +41,8 @@ class TrekBridgeViewController: CAPBridgeViewController {
         // reachable" with a server that was there all along.
         if let webView, let inner = webView.navigationDelegate {
             let proxy = TrekNavigationProxy(inner: inner)
+            proxy.onErrorPage = { [weak self] error in self?.errorPageChanged(error) }
+            proxy.onPageShown = { [weak self] in self?.publishSafeArea(force: true) }
             navigationProxy = proxy
             webView.navigationDelegate = proxy
         }
@@ -55,6 +57,79 @@ class TrekBridgeViewController: CAPBridgeViewController {
         // A long press on a link would lift a preview of the page it points to,
         // which no native list does; the press means "drag" or nothing here.
         webView?.allowsLinkPreview = false
+        paintBehindWebView()
+    }
+
+    // MARK: - What shows where the web view does not reach
+
+    /// The UI reports its theme through StatusBar.setStyle (native/nativeApp.ts),
+    /// which lands here; the colour behind the web view follows it.
+    override func setNeedsStatusBarAppearanceUpdate() {
+        super.setNeedsStatusBarAppearanceUpdate()
+        paintBehindWebView()
+    }
+
+    /// Some iOS releases (27.0.x) lay the web view out below the status bar
+    /// instead of under it, and the strip above the page then showed this
+    /// view's black. It now carries the top colour of the screen background
+    /// (mobile.css --m-scr), so the strip reads as part of the page on every
+    /// release, and the rubber band at the ends shows the same colour.
+    private func paintBehindWebView() {
+        let dark: Bool
+        switch preferredStatusBarStyle {
+        case .lightContent: dark = true
+        case .darkContent: dark = false
+        default: dark = traitCollection.userInterfaceStyle == .dark
+        }
+        let color = dark
+            ? UIColor(red: 0x17 / 255, green: 0x17 / 255, blue: 0x1C / 255, alpha: 1)
+            : UIColor(red: 0xFB / 255, green: 0xFA / 255, blue: 0xF7 / 255, alpha: 1)
+        view.backgroundColor = color
+        webView?.scrollView.backgroundColor = color
+        webView?.underPageBackgroundColor = color
+    }
+
+    // MARK: - The safe area the page keeps clear of
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        publishSafeArea()
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        publishSafeArea()
+    }
+
+    private var publishedSafeArea: UIEdgeInsets?
+
+    /// WebKit's env(safe-area-inset-*) is the window's safe area only where the
+    /// web view overlaps it. Where a release lays the web view out below the
+    /// status bar it reports 0, yet a camera in a corner can still reach into
+    /// the page. The part of the window's safe area (and of the status bar) that
+    /// falls inside the web view goes to the page as --trek-native-safe-*, which
+    /// mobile.css takes as a floor under env(), never in its place.
+    func publishSafeArea(force: Bool = false) {
+        guard let webView, let window = view.window else { return }
+        let frame = webView.convert(webView.bounds, to: window)
+        let safe = window.safeAreaInsets
+        let statusBar = window.windowScene?.statusBarManager?.statusBarFrame.height ?? 0
+        let insets = UIEdgeInsets(
+            top: max(0, max(safe.top, statusBar) - frame.minY),
+            left: max(0, safe.left - frame.minX),
+            bottom: max(0, safe.bottom - (window.bounds.maxY - frame.maxY)),
+            right: max(0, safe.right - (window.bounds.maxX - frame.maxX))
+        )
+        if !force, insets == publishedSafeArea { return }
+        publishedSafeArea = insets
+        let px = { (v: CGFloat) in "'\(Int(v.rounded(.up)))px'" }
+        let js = "(function(s){"
+            + "s.setProperty('--trek-native-safe-top',\(px(insets.top)));"
+            + "s.setProperty('--trek-native-safe-left',\(px(insets.left)));"
+            + "s.setProperty('--trek-native-safe-right',\(px(insets.right)));"
+            + "s.setProperty('--trek-native-safe-bottom',\(px(insets.bottom)));"
+            + "})(document.documentElement.style)"
+        webView.evaluateJavaScript(js, completionHandler: nil)
     }
 
     // MARK: - A proxy's sign-in page
@@ -68,6 +143,10 @@ class TrekBridgeViewController: CAPBridgeViewController {
     private var urlObservation: NSKeyValueObservation?
     private var insetObservation: NSKeyValueObservation?
     private var onSignInPage = false
+    /// Whether the main frame shows an error page in place of the server's (a 4xx
+    /// nobody else handled: a proxy's block page, a client certificate it refused).
+    private var onErrorPage = false
+    private var signInHint: UILabel?
     private var keyboardUp = false
     /// How far the keyboard reaches into the view while it is up.
     private var keyboardRoom: CGFloat = 0
@@ -97,9 +176,20 @@ class TrekBridgeViewController: CAPBridgeViewController {
         updateSignInBar()
     }
 
+    private func errorPageChanged(_ error: Bool) {
+        onErrorPage = error
+        if error && signInBar == nil { signInBar = makeSignInBar() }
+        updateSignInBar()
+    }
+
     /// Out of the way while the keyboard is up: the form needs the room.
     private func updateSignInBar() {
-        signInBar?.isHidden = !(onSignInPage && !keyboardUp)
+        let labels = TrekServerStore.labels
+        signInHint?.text = onSignInPage
+            ? labels["signInHint"]
+                ?? "Passkeys and security keys do not work on this page in the app. Sign in with a password, or let the app through your proxy."
+            : labels["errorPageHint"] ?? "This page is not from TREK: the server or a proxy in front of it refused the app. Check your proxy or certificate, or change the server."
+        signInBar?.isHidden = !((onSignInPage || onErrorPage) && !keyboardUp)
         applyInset()
     }
 
@@ -108,7 +198,7 @@ class TrekBridgeViewController: CAPBridgeViewController {
     private func applyInset() {
         guard let scrollView = webView?.scrollView else { return }
         let wanted: CGFloat
-        if onSignInPage {
+        if onSignInPage || onErrorPage {
             if keyboardUp {
                 wanted = keyboardRoom
             } else if let bar = signInBar {
@@ -159,24 +249,38 @@ class TrekBridgeViewController: CAPBridgeViewController {
 
     private func makeSignInBar() -> UIView {
         let labels = TrekServerStore.labels
+        // The look of the app's own first screens: a white card with a sand edge,
+        // warm grey text and a dark button, over whatever page the proxy shows.
         let bar = UIView()
-        bar.backgroundColor = UIColor(red: 17 / 255, green: 24 / 255, blue: 39 / 255, alpha: 0.95)
-        bar.layer.cornerRadius = 16
+        bar.backgroundColor = UIColor(white: 1, alpha: 0.97)
+        bar.layer.cornerRadius = 18
         bar.layer.cornerCurve = .continuous
+        bar.layer.borderWidth = 1
+        bar.layer.borderColor = UIColor(red: 0xEF / 255, green: 0xE4 / 255, blue: 0xD8 / 255, alpha: 1).cgColor
+        bar.layer.shadowColor = UIColor(red: 0x1F / 255, green: 0x1A / 255, blue: 0x17 / 255, alpha: 1).cgColor
+        bar.layer.shadowOpacity = 0.18
+        bar.layer.shadowRadius = 18
+        bar.layer.shadowOffset = CGSize(width: 0, height: 10)
         bar.translatesAutoresizingMaskIntoConstraints = false
 
         let hint = UILabel()
         hint.text = labels["signInHint"]
             ?? "Passkeys and security keys do not work on this page in the app. Sign in with a password, or let the app through your proxy."
-        hint.textColor = UIColor(white: 0.9, alpha: 1)
+        hint.textColor = UIColor(red: 0x6B / 255, green: 0x5F / 255, blue: 0x57 / 255, alpha: 1)
         hint.font = .preferredFont(forTextStyle: .footnote)
         hint.adjustsFontForContentSizeCategory = true
         hint.numberOfLines = 0
+        signInHint = hint
         hint.translatesAutoresizingMaskIntoConstraints = false
 
-        let change = UIButton(type: .system)
+        var look = UIButton.Configuration.filled()
+        look.baseBackgroundColor = UIColor(red: 0x11 / 255, green: 0x18 / 255, blue: 0x27 / 255, alpha: 1)
+        look.baseForegroundColor = .white
+        look.cornerStyle = .fixed
+        look.background.cornerRadius = 12
+        look.contentInsets = NSDirectionalEdgeInsets(top: 9, leading: 14, bottom: 9, trailing: 14)
+        let change = UIButton(configuration: look)
         change.setTitle(labels["changeServer"] ?? "Change server", for: .normal)
-        change.setTitleColor(.white, for: .normal)
         change.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
         change.addTarget(self, action: #selector(changeServerFromSignIn), for: .touchUpInside)
         change.translatesAutoresizingMaskIntoConstraints = false
@@ -308,6 +412,22 @@ enum TrekKeyCommands {
 enum TrekServerStore {
     private static let key = "TrekServerURL"
 
+    private static let failureKey = "TrekLastFailure"
+
+    /// Why the server's page did not load ("NSURLErrorDomain -1003"): the
+    /// address screen shows it small under its message, so a report carries
+    /// the cause. Taken once.
+    static func noteFailure(_ error: Error) {
+        let ns = error as NSError
+        UserDefaults.standard.set("\(ns.domain) \(ns.code)", forKey: failureKey)
+    }
+
+    static func takeFailure() -> String? {
+        let failure = UserDefaults.standard.string(forKey: failureKey)
+        UserDefaults.standard.removeObject(forKey: failureKey)
+        return failure
+    }
+
     private static let previousKey = "TrekPreviousServerURL"
 
     private static let checkedKey = "TrekServerCheck"
@@ -326,7 +446,7 @@ enum TrekServerStore {
     /// A server remembered under a lower value is checked once more: the first
     /// launch after an update that raised it puts the address screen back up,
     /// filled in with that server (previousURL). Raise both together.
-    private static let serverCheck = 2
+    private static let serverCheck = 3
 
     /// Runs before the first bridge is built, so a server picked under an older
     /// minimum is not loaded unchecked.
@@ -665,6 +785,10 @@ final class TrekNavigationProxy: NSObject, WKNavigationDelegate {
     private let inner: WKNavigationDelegate
     /// A page of the server has shown since launch; from then on no sign-in host is learned (TrekSignInRedirect).
     private var serverShown = false
+    /// Told on the main thread whether the main frame now shows an error page in place of the server's.
+    var onErrorPage: ((Bool) -> Void)?
+    /// Told when a page has finished loading: a new document starts without the safe area the controller handed the last one.
+    var onPageShown: (() -> Void)?
 
     init(inner: WKNavigationDelegate) {
         self.inner = inner
@@ -717,7 +841,12 @@ final class TrekNavigationProxy: NSObject, WKNavigationDelegate {
     /// page once (TrekServerStore.takeWelcomeURL); it is on the server's origin.
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         inner.webView?(webView, didFinish: navigation)
-        if TrekSignInRedirect.onServer(server: TrekServerStore.url, url: webView.url) { serverShown = true }
+        onPageShown?()
+        if TrekSignInRedirect.onServer(server: TrekServerStore.url, url: webView.url) {
+            serverShown = true
+            // The server's page is up: an earlier failure is no cause any more.
+            _ = TrekServerStore.takeFailure()
+        }
         if let welcome = TrekServerStore.takeWelcomeURL() {
             webView.load(URLRequest(url: welcome))
         }
@@ -733,6 +862,7 @@ final class TrekNavigationProxy: NSObject, WKNavigationDelegate {
             TrekClientCertWatch.serverAsked(host: space.host, port: space.port) { [weak self, weak webView] in
                 guard let self, let webView else { return }
                 // Capacitor's own answer to a failed load: the address screen (errorPath).
+                TrekServerStore.noteFailure(URLError(.clientCertificateRejected))
                 self.inner.webView?(webView, didFailProvisionalNavigation: nil, withError: URLError(.clientCertificateRejected))
             }
             return
@@ -748,15 +878,22 @@ final class TrekNavigationProxy: NSObject, WKNavigationDelegate {
     /// A proxy that asked the page for a client certificate, got none and
     /// answered with its own refusal (Cloudflare's 403, nginx's 400) sends the
     /// app to the address screen, which says so and offers to add one, rather
-    /// than leaving the proxy's error page up.
+    /// than leaving the proxy's error page up. Any other 4xx page is not TREK's,
+    /// which serves its UI for every path (a proxy's block page, a certificate it
+    /// refused): it stays up with the bar and its way out to another server.
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
                  decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
         if navigationResponse.isForMainFrame, let http = navigationResponse.response as? HTTPURLResponse,
            http.statusCode >= 400, http.statusCode < 500, let asked = TrekClientIdentity.lastRequest, !asked.served,
            let url = http.url, url.host?.lowercased() == asked.host, (url.port ?? 443) == asked.port {
             decisionHandler(.cancel)
+            TrekServerStore.noteFailure(URLError(.clientCertificateRequired))
             inner.webView?(webView, didFailProvisionalNavigation: nil, withError: URLError(.clientCertificateRequired))
             return
+        }
+        if navigationResponse.isForMainFrame, let http = navigationResponse.response as? HTTPURLResponse {
+            let error = http.statusCode >= 400 && http.statusCode < 500
+            DispatchQueue.main.async { [weak self] in self?.onErrorPage?(error) }
         }
         let selector = NSSelectorFromString("webView:decidePolicyForNavigationResponse:decisionHandler:")
         guard (inner as AnyObject).responds(to: selector) else {
@@ -768,11 +905,13 @@ final class TrekNavigationProxy: NSObject, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         if Self.isReplaced(error) { return }
+        TrekServerStore.noteFailure(error)
         inner.webView?(webView, didFail: navigation, withError: error)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         if Self.isReplaced(error) { return }
+        TrekServerStore.noteFailure(error)
         inner.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
     }
 }
